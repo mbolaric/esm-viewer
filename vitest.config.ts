@@ -21,6 +21,7 @@ export function createVitestConfig(options?: {
                 provider: 'v8',
                 reporter: ['text', 'json-summary'],
             },
+            fsModuleCache: true,
             passWithNoTests: false,
             projects: [
                 {
@@ -41,6 +42,7 @@ export function createVitestConfig(options?: {
                         environment: 'jsdom',
                         include: svelteTestFiles,
                         name: 'svelte',
+                        pool: 'vmThreads',
                     },
                 },
             ],
