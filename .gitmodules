@@ -1,0 +1,3 @@
+[submodule "vendor/esm-parser"]
+	path = vendor/esm-parser
+	url = https://github.com/mbolaric/esm-parser.git

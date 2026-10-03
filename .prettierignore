@@ -1,0 +1,9 @@
+apps/viewer/dist/
+apps/viewer/out/
+coverage/
+**/*.md
+**/*.xhtml
+node_modules/
+.claude/
+src/viewer/parser/generated/
+pnpm-lock.yaml

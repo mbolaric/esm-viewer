@@ -1,0 +1,41 @@
+.handbook-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-actions);
+}
+
+.handbook-header h2 {
+    margin: var(--space-none);
+    font-size: var(--font-size-title);
+    font-weight: var(--font-weight-title);
+    color: var(--color-text);
+}
+
+.handbook-intro,
+.handbook-card p {
+    margin-block-start: var(--space-compact);
+    margin-block-end: var(--space-none);
+    font-size: var(--font-size-metadata);
+    color: var(--color-text-muted);
+    line-height: var(--line-height-body);
+}
+
+.handbook-card-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-actions);
+}
+
+.handbook-card {
+    padding: var(--space-panel);
+    background: var(--color-surface-subtle);
+    border: var(--border-control);
+    border-radius: var(--radius-control);
+}
+
+.handbook-card h3 {
+    margin: var(--space-none);
+    font-size: var(--font-size-section);
+    font-weight: var(--font-weight-action);
+    color: var(--color-text);
+}

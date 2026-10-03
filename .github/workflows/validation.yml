@@ -1,0 +1,89 @@
+name: Validation
+
+on:
+    pull_request:
+    push:
+        branches:
+            - master
+
+permissions:
+    contents: read
+
+concurrency:
+    group: validation-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    validate:
+        name: Non-E2E quality gate
+        runs-on: ubuntu-24.04
+        timeout-minutes: 30
+        env:
+            CI: 'true'
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@v7
+              with:
+                  fetch-depth: 1
+                  persist-credentials: false
+                  submodules: recursive
+
+            - name: Install Linux build dependencies
+              run: |
+                  sudo apt-get update
+                  sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+            - name: Set up Rust toolchain
+              uses: dtolnay/rust-toolchain@stable
+              with:
+                  toolchain: stable
+                  components: clippy, rustfmt
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v7
+              with:
+                  architecture: x64
+                  check-latest: false
+                  node-version-file: .node-version
+                  package-manager-cache: false
+
+            - name: Enable pinned pnpm
+              run: |
+                  corepack enable
+                  pnpm --version
+
+            - name: Install frozen dependency graph
+              run: pnpm install --frozen-lockfile
+
+            - name: Check formatting
+              run: pnpm format:check
+
+            - name: Lint
+              run: pnpm lint
+
+            - name: Check translations
+              run: pnpm i18n:check
+
+            - name: Check TypeScript, Svelte, and Rust
+              run: pnpm check
+
+            - name: Run tests (TypeScript and Rust)
+              run: pnpm test
+
+            - name: Check architecture
+              run: pnpm architecture
+
+            - name: Check duplication
+              run: pnpm duplication
+
+            - name: Build production renderer outputs
+              run: pnpm build
+
+            - name: Build Rust debug binary (with devtools)
+              run: cargo build --manifest-path src-tauri/Cargo.toml --features devtools
+
+            - name: Build packaged release binary (without devtools)
+              run: pnpm exec tauri build --no-bundle --config '{"build":{"beforeBuildCommand":""}}'
+
+            - name: Audit dependencies
+              run: pnpm audit --audit-level high

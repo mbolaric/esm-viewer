@@ -1,0 +1,11 @@
+{
+    "absolute": true,
+    "format": ["css", "rust", "svelte", "typescript"],
+    "gitignore": true,
+    "ignore": ["**/coverage/**", "**/dist/**", "**/node_modules/**", "**/out/**", "src/viewer/parser/generated/**"],
+    "minLines": 10,
+    "minTokens": 85,
+    "path": ["apps", "src", "src-tauri/src", "tools"],
+    "reporters": ["console"],
+    "threshold": 0
+}

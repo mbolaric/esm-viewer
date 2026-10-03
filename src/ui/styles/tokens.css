@@ -1,0 +1,499 @@
+:root {
+    color-scheme: light dark;
+
+    --color-canvas: light-dark(#f3f5f8, #10151c);
+    --color-surface: light-dark(#ffffff, #171e27);
+    --color-surface-subtle: light-dark(#f7f9fb, #202a35);
+    --color-surface-hover: light-dark(#edf2f7, #293542);
+    --color-surface-selected: light-dark(#e7f1ff, #173a5e);
+    --color-code-background: light-dark(#eef2f6, #101820);
+    --color-text: light-dark(#172033, #f3f6fa);
+    --color-text-muted: light-dark(#526176, #b7c1ce);
+    --color-transparent: transparent;
+    --color-border: light-dark(#d5dde7, #435163);
+    --color-border-strong: light-dark(#9eacbd, #66788e);
+    --color-focus: var(--color-accent);
+    --color-accent: light-dark(#0b5cad, #78b7ff);
+    --color-accent-hover: light-dark(#084a8c, #9acaff);
+    --color-accent-soft: light-dark(#e7f1ff, #173a5e);
+    --color-on-accent: light-dark(#ffffff, #10151c);
+    --color-success: light-dark(#18794e, #56d69a);
+    --color-warning: light-dark(#925a00, #ffbe5c);
+    --color-warning-soft: light-dark(#fff4e0, #4a3300);
+    --color-danger: light-dark(#b42318, #ff7b72);
+    --color-danger-soft: light-dark(#fff0ef, #442526);
+    --color-info: light-dark(#175cd3, #78b7ff);
+    --color-badge-critical-bg: rgb(239 68 68 / 0.15);
+    --color-badge-critical-border: rgb(239 68 68 / 0.4);
+    --color-badge-serious-bg: rgb(245 158 11 / 0.15);
+    --color-badge-serious-border: rgb(245 158 11 / 0.4);
+    --color-badge-minor-bg: rgb(59 130 246 / 0.15);
+    --color-badge-minor-border: rgb(59 130 246 / 0.4);
+    --color-toast-surface: var(--color-surface);
+    --color-toast-success-surface: light-dark(#ecfdf5, #064e3b);
+    --color-toast-success-border: light-dark(#a7f3d0, #059669);
+    --color-toast-success-text: light-dark(#065f46, #ecfdf5);
+    --color-toast-success-icon: light-dark(#059669, #34d399);
+    --color-toast-success-badge: light-dark(#d1fae5, #047857);
+    --color-toast-warning-surface: light-dark(#fffbeb, #78350f);
+    --color-toast-warning-border: light-dark(#fde68a, #d97706);
+    --color-toast-warning-text: light-dark(#92400e, #fffbeb);
+    --color-toast-warning-icon: light-dark(#d97706, #fbbf24);
+    --color-toast-warning-badge: light-dark(#fef3c7, #b45309);
+    --color-toast-danger-surface: light-dark(#fef2f2, #7f1d1d);
+    --color-toast-danger-border: light-dark(#fecaca, #dc2626);
+    --color-toast-danger-text: light-dark(#991b1b, #fef2f2);
+    --color-toast-danger-icon: light-dark(#dc2626, #f87171);
+    --color-toast-danger-badge: light-dark(#fee2e2, #b91c1c);
+    --color-toast-info-surface: light-dark(#eff6ff, #1e3a8a);
+    --color-toast-info-border: light-dark(#bfdbfe, #2563eb);
+    --color-toast-info-text: light-dark(#1e40af, #eff6ff);
+    --color-toast-info-icon: light-dark(#2563eb, #60a5fa);
+    --color-toast-info-badge: light-dark(#dbeafe, #1d4ed8);
+    --color-drop-feedback-surface: color-mix(in srgb, var(--color-drop-feedback) 85%, transparent);
+    --color-task-state-surface: color-mix(in srgb, var(--color-surface) 88%, transparent);
+    --color-dialog-backdrop: light-dark(rgb(17 24 32 / 45%), rgb(0 0 0 / 65%));
+    --color-drop-feedback: color-mix(in srgb, var(--color-accent) 14%, var(--color-canvas));
+    --color-activity-availability: light-dark(#7c3aed, #be95ff);
+    --color-activity-break-rest: light-dark(#0f766e, #42bea7);
+    --color-activity-driving: light-dark(#0f62fe, #78a9ff);
+    --color-activity-unknown: light-dark(#64748b, #a8b3bf);
+    --color-activity-work: light-dark(#b45309, #ffb454);
+    --color-crew-lane: light-dark(#0e7490, #22d3ee);
+    --color-crew-slot-lane: light-dark(#be185d, #f472b6);
+    --color-speed-series: light-dark(#0b5cad, #78b7ff);
+    --color-compliance-trend-series: light-dark(#9f1239, #fb7185);
+    --color-chart-grid: color-mix(in srgb, var(--color-border) 55%, var(--color-surface));
+    --color-chart-grid-strong: var(--color-border-strong);
+    --color-chart-selection-fill: color-mix(in srgb, var(--color-accent) 15%, transparent);
+    --color-chart-range-fill: color-mix(in srgb, var(--color-accent) 8%, transparent);
+
+    --font-family-body: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-family-source: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+    --font-size-body: 0.875rem;
+    --font-size-metadata: 0.75rem;
+    --font-size-section: 1rem;
+    --font-size-title: 1.375rem;
+    --font-size-task-title: 1.75rem;
+    --font-size-kpi: 1.5rem;
+    --font-size-badge: 0.8125rem;
+    --font-size-heading: 1rem;
+    --font-weight-body: 400;
+    --font-weight-action: 500;
+    --font-weight-title: 650;
+    --letter-spacing-group: 0.06em;
+    --letter-spacing-label: 0.00625rem;
+    --line-height-body: 1.45;
+    --line-height-heading: 1.25;
+    --line-height-tight: 1;
+    --text-transform-group: uppercase;
+    --layout-shell-document-columns: var(--size-navigator) var(--layout-shell-document-columns-main);
+    --layout-shell-document-columns-main: minmax(var(--size-main-content-min), 1fr);
+    --layout-shell-document-workspace-rows: minmax(var(--space-none), 1fr);
+    --layout-shell-document-areas: 'navigation main';
+    --layout-shell-document-inspector-columns: var(--size-navigator) minmax(var(--space-none), 1fr)
+        var(--size-inspector-separator) auto;
+    --layout-shell-document-inspector-rows: minmax(var(--space-none), 1fr);
+    --layout-shell-document-inspector-areas: 'navigation main separator inspector';
+    --layout-shell-document-rows: var(--size-command-bar) var(--size-document-header) minmax(var(--space-none), 1fr);
+    --layout-shell-workspace-rows: var(--size-command-bar) minmax(var(--space-none), 1fr);
+    --layout-app-root-rows: minmax(var(--space-none), 1fr) var(--size-status-bar);
+    --layout-inspector-separator-rows: var(--size-inspector-separator) minmax(var(--space-none), 1fr);
+    --layout-shell-task-rows: minmax(var(--space-none), 1fr);
+    --layout-shell-main-rows: minmax(var(--space-none), 1fr);
+    --layout-detail-row-columns: minmax(7.5rem, 0.75fr) minmax(var(--space-none), 1.25fr);
+    --layout-inspector-row-columns: minmax(var(--space-none), 1.25fr) minmax(var(--space-none), 1fr);
+    --layout-dialog-content-flex: 1 1 auto;
+    --layout-navigation-drawer-rows: auto minmax(var(--space-none), 1fr);
+    --layout-activity-totals: repeat(auto-fit, minmax(min(9rem, var(--size-full)), 1fr));
+    --layout-duty-shift-columns: repeat(auto-fit, minmax(min(8rem, var(--size-full)), 1fr));
+    --layout-edit-grid: repeat(auto-fit, minmax(min(14rem, var(--size-full)), 1fr));
+    --layout-activity-total-row-columns: auto minmax(var(--space-none), 1fr) auto;
+    --layout-toast-columns: auto minmax(var(--space-none), 1fr) auto;
+    --layout-chart-failure-columns: auto minmax(var(--space-none), 1fr);
+    --layout-calendar-grid-columns: repeat(7, minmax(5.5rem, 1fr));
+    --layout-calendar-range-controls: repeat(2, minmax(10rem, 1fr));
+    --layout-date-picker-grid-columns: repeat(7, minmax(0, 1fr));
+    --layout-date-picker-fill-flex: 1;
+    --size-date-picker-popup-max: calc(100% - 2 * var(--space-panel));
+    --layout-comparison-heading-columns: minmax(var(--space-none), 1fr) auto;
+    --layout-heatmap-grid-columns: var(--size-heatmap-day-number) repeat(12, minmax(var(--size-heatmap-cell), 1fr));
+    --layout-overview-columns: repeat(2, minmax(var(--space-none), 1fr));
+    --layout-overview-bento-columns: repeat(12, minmax(var(--space-none), 1fr));
+    --layout-overview-bento-hero-span: span 7;
+    --layout-overview-bento-side-span: span 5;
+    --layout-overview-bento-half-span: span 6;
+    --layout-overview-bento-full-span: span 12;
+    --layout-overview-bento-details-columns: repeat(2, minmax(var(--space-none), 1fr));
+    --layout-overview-bento-item-columns: minmax(var(--space-none), 1fr);
+    --layout-panel-columns: minmax(var(--size-zero), 1fr);
+    --layout-integrity-columns: repeat(2, minmax(var(--space-none), 1fr));
+    --layout-integrity-counts: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
+    --layout-count-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
+    --layout-overview-count-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
+    --layout-kpi-card-compact-columns: minmax(var(--size-zero), 1fr) auto;
+    --layout-overview-warning-flex: 1 1 14rem;
+    --layout-overview-action-flex: 0 0 auto;
+    --layout-comparison-count-grid: repeat(2, minmax(max-content, 1fr));
+    --layout-preferences-density-preview-columns: repeat(2, minmax(var(--space-none), 1fr));
+    --layout-preferences-field-columns: minmax(8rem, 1fr) minmax(12rem, 2fr);
+    --layout-raw-data-columns: minmax(20rem, 3fr) minmax(18rem, 2fr);
+    --layout-raw-data-header-columns: minmax(var(--space-none), 1fr);
+    --layout-raw-data-search-columns: minmax(12rem, 1fr) auto;
+    --layout-button-icon-flex: 0 0 auto;
+    --layout-recent-file-name-flex: 1 1 auto;
+    --layout-recent-file-time-flex: 0 0 auto;
+    --layout-search-input-field-flex: 1 1 auto;
+    --layout-speed-range-field-flex: 1 1 17rem;
+    --layout-speed-summary: repeat(auto-fit, minmax(min(10rem, var(--size-full)), 1fr));
+    --layout-guide-columns: minmax(11rem, 13rem) minmax(var(--space-none), 1fr);
+    --layout-table-column-menu-item-columns: auto minmax(var(--space-none), 1fr);
+    --layout-table-fill-rows: minmax(var(--size-zero), 1fr);
+    --layout-table-fill-title-rows: auto minmax(var(--size-zero), 1fr);
+    --layout-fill-flex: 1 1 0%;
+    --layout-table-fill-flex: 1 0 var(--size-table-fill-min-block);
+    --layout-table-section-flex: 1 0 var(--size-table-section-min-block);
+    --layout-fixed-flex: 0 0 auto;
+    --grid-column-full: 1 / -1;
+
+    --space-compact: 0.25rem;
+    --space-badge-gap: 0.375rem;
+    --space-actions: 0.5rem;
+    --space-control-block: 0.625rem;
+    --space-control-inline: 0.75rem;
+    --space-dialog: 1.25rem;
+    --space-panel: 1rem;
+    --space-row-block: 0.5rem;
+    --space-section: 1.5rem;
+    --space-shell: 1.25rem;
+    --space-stack: 0.75rem;
+    --space-table-screen-block: var(--space-shell);
+    --space-table-screen-gap: var(--space-section);
+    --space-task: 2rem;
+    --space-1: 0.25rem;
+    --space-2: 0.5rem;
+    --space-3: 0.75rem;
+    --space-4: 1rem;
+    --space-5: 1.5rem;
+    --space-6: 2rem;
+    --space-chart-grid-block: 1rem;
+    --space-chart-grid-top: 2.25rem;
+    --space-chart-grid-inline-end: 1rem;
+    --space-chart-grid-inline-start: 1rem;
+    --space-command-bar-start: calc(var(--space-shell) / 2);
+    --space-none: 0;
+    --border-control: 1px solid var(--color-border-strong);
+    --border-chart-interaction: 1px solid var(--color-transparent);
+    --border-dialog: 1px solid var(--color-border);
+    --border-panel: 1px solid var(--color-border);
+    --border-badge-critical: 1px solid var(--color-badge-critical-border);
+    --border-badge-serious: 1px solid var(--color-badge-serious-border);
+    --border-badge-minor: 1px solid var(--color-badge-minor-border);
+    --border-active-tab: 0.1875rem solid var(--color-accent);
+    --border-drop-feedback: 0.1875rem dashed var(--color-accent);
+    --border-region: 1px solid var(--color-border);
+    --border-subtle: 1px solid var(--color-border);
+    --border-callout: 0.25rem solid var(--color-accent);
+    --border-width-hairline: 1px;
+    --border-width-thick: 0.25rem;
+    --duration-fast: 120ms;
+    --duration-chart-hover: 120ms;
+    --easing-standard: cubic-bezier(0.2, 0, 0, 1);
+    --duration-drop-pulse: 1.5s;
+    --effect-blur-drop-feedback: 8px;
+    --effect-blur-task-state: 12px;
+    --opacity-disabled: 0.55;
+    --opacity-hidden: 0;
+    --opacity-visible: 1;
+    --transform-rotate-none: rotate(0deg);
+    --transform-rotate-full: rotate(360deg);
+    --transform-tooltip: translateY(-100%);
+    --radius-control: 0.25rem;
+    --radius-chip: 999px;
+    --radius-pill: 999px;
+    --radius-dialog: 0.625rem;
+    --radius-panel: 0.5rem;
+    --radius-card: 0.5rem;
+    --radius-toast: 0.75rem;
+    --shadow-dialog: 0 0.75rem 2rem rgb(0 0 0 / 25%);
+    --shadow-popover: 0 0.375rem 1.125rem rgb(0 0 0 / 22%);
+    --shadow-toast:
+        0 10px 28px -4px light-dark(rgb(0 0 0 / 12%), rgb(0 0 0 / 45%)),
+        0 4px 10px -2px light-dark(rgb(0 0 0 / 8%), rgb(0 0 0 / 30%)),
+        inset 0 1px 0 0 light-dark(rgb(255 255 255 / 80%), rgb(255 255 255 / 10%));
+    --shadow-tooltip: 0 0.25rem 0.75rem rgb(0 0 0 / 18%);
+    --shadow-card: 0 0.0625rem 0.25rem light-dark(rgb(0 0 0 / 4%), rgb(0 0 0 / 25%));
+    --elevation-flat: var(--shadow-card);
+    --shadow-drop-pulse-soft: inset 0 0 1.5rem color-mix(in srgb, var(--color-accent) 25%, transparent);
+    --shadow-drop-pulse-strong: inset 0 0 3rem color-mix(in srgb, var(--color-accent) 45%, transparent);
+    --size-control: 2.5rem;
+    --size-control-compact: 2rem;
+    --size-date-picker-popup: 16rem;
+    --size-command-bar: 2.75rem;
+    --size-chart-description: 1.25rem;
+    --size-chart-height: 18rem;
+    --size-chart-legend-swatch: 0.875rem;
+    --size-chart-line: 0.125rem;
+    /* Resolved at the chart host, so a chart keeps 40rem where it fits and shrinks to its container otherwise. */
+    --size-chart-min-inline: min(40rem, 100%);
+    --size-chart-pattern-dash: 0.125rem;
+    --size-chart-pattern-gap: 0.1875rem;
+    --size-chart-pattern-symbol: 0.0625rem;
+    --size-chart-point: 0.5rem;
+    --size-chart-segment: 1.5rem;
+    --size-chart-selection-marker: 0.25rem;
+    --size-chart-selection: 0.125rem;
+    --size-chart-separator: 0.0625rem;
+    --size-chart-tooltip: 20rem;
+    --size-calendar-day: 5.5rem;
+    --size-calendar-strip: 0.375rem;
+    --size-brand-divider: 1.25rem;
+    --size-brand-mark: 1.75rem;
+    --size-heatmap-cell: 1.75rem;
+    --size-heatmap-day-number: 1.25rem;
+    --angle-chart-pattern: 45deg;
+    --size-content-readable: 38rem;
+    --size-content-boundary: 32rem;
+    --size-content-wide: 84rem;
+    --size-document-header: 2.5rem;
+    --size-dialog: 36rem;
+    --size-dialog-wide: 52rem;
+    --size-dialog-large: 64rem;
+    --size-dialog-block-large: 52rem;
+    --size-attestation-sig-line: 14rem;
+    --size-attestation-sig-block: 1.25rem;
+    --size-modal-scroll: 24rem;
+    --size-focus-ring: 0.125rem;
+    --border-focus: var(--size-focus-ring) solid var(--color-focus);
+    --space-focus-offset: var(--space-none);
+    --size-full: 100%;
+    --size-half: 50%;
+    --size-icon: 1.125rem;
+    --size-icon-large: 2rem;
+    --size-icon-small: 0.875rem;
+    --size-progress: 8rem;
+    --size-inspector: 20rem;
+    --size-inspector-current: var(--size-inspector);
+    --size-inspector-max: 27.5rem;
+    --size-inspector-min: 17.5rem;
+    --size-inspector-separator: 2rem;
+    --size-inspector-grip-block: 2.5rem;
+    --size-inspector-grip-inline: 0.25rem;
+    --size-inspector-menu-min-inline: 8rem;
+    --size-main-content-min: 35rem;
+    --size-navigator: 13.5rem;
+    --size-navigation-drawer: 20rem;
+    --size-zero: 0px;
+    --size-progress: 0.5rem;
+    --size-scrollbar: 0.5rem;
+    --size-search-input-inline: 20rem;
+    --size-selection-marker: 0.1875rem;
+    --size-tab-indicator: 0.125rem;
+    --size-status-bar: var(--size-control-compact);
+    --size-table-body-min-block: 6rem;
+    --size-table-fill-min-block: 18rem;
+    --size-table-section-min-block: 22rem;
+    /*
+     * Was 40rem, exactly equal to the app's own minimum window width
+     * (`minWidth: 640` in src-tauri/tauri.conf.json) - a table can never
+     * actually fit at that size, since some of the window is always spent
+     * on `.table-screen`'s own `padding-inline: var(--space-shell)` (1.25rem
+     * default, up to 1.5rem at `data-density="comfortable"`, so up to 3rem
+     * total) plus a vertical scrollbar when content overflows block-wise
+     * (~1rem). Below the `max-width: 56rem` breakpoint the navigator sidebar
+     * itself already collapses to a trigger button and stops taking any
+     * inline space, so that overhead - not the sidebar - is what was
+     * guaranteeing horizontal scroll for every table at the literal minimum
+     * window, regardless of how little room its own columns actually
+     * needed. 32rem leaves real margin under the ~36rem worst case.
+     */
+    --size-table-min-inline: 32rem;
+    --size-table-wide-min-inline: 70rem;
+    --size-table-comparison-min-inline: 90rem;
+    --size-comparison-counts-min-inline: max-content;
+    --size-column-menu-min-inline: 14rem;
+    --size-database-action-button-inline: 15rem;
+    --size-table-column-compact: 1%;
+    --size-sr-only: 1px;
+    --size-task-leading: 3.5rem;
+    --size-tree-indent: 1rem;
+    --size-viewport: 100vh;
+    --size-toast-min-inline: 19rem;
+    --size-toast-max-inline: 28rem;
+    --size-toast-icon: 1.75rem;
+    --size-toast-container-max-block: calc(var(--size-viewport) - 2 * var(--space-panel));
+    --space-toast-gap: 0.75rem;
+    --space-toast-block: 0.75rem;
+    --space-toast-inline: 0.875rem;
+    --size-progress-bar-track: 0.375rem;
+    --size-journey-step-badge: 2rem;
+    --size-journey-connector-inline: 2rem;
+    --size-journey-connector-block: 0.125rem;
+    --size-journey-connector-margin-top: 0.9375rem;
+    --border-badge: 1px solid var(--color-border);
+    --border-danger-badge: 1px solid var(--color-danger);
+    --padding-badge: 0.125rem var(--space-compact);
+    --gap-step-info: 0.125rem;
+    --transition-progress: inline-size 120ms ease;
+    --z-index-sticky-header: 1;
+    --z-index-popover: 30;
+    --z-index-toast: 100;
+    --z-drop-feedback: 10;
+    --size-map-height: 26rem;
+    --size-map-control: 2rem;
+    --size-map-empty-max: 22rem;
+    --padding-kbd-block: 0.0625rem;
+    --z-index-map-overlay: 10;
+    --stroke-dasharray-route: 6 3;
+    --display-command-bar-brand-name: inline;
+    --display-command-bar-button-label: inline-flex;
+    --display-command-bar-divider: inline-block;
+    --display-inspector-separator: grid;
+    --display-navigator-inline: block;
+    --display-navigator-trigger: none;
+    --overflow-command-bar-inline: visible;
+    --overflow-shell-navigation-block: auto;
+    --overflow-shell-navigation-inline: auto;
+    --border-shell-navigation-inline: var(--border-region);
+    --border-shell-navigation-block: none;
+    --border-inspector-inline: var(--border-region);
+    --border-inspector-block: none;
+    --margin-document-integrity-inline-start: auto;
+    --padding-document-header-block: var(--space-none);
+}
+
+:root[data-theme='light'] {
+    color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+    color-scheme: dark;
+}
+
+:root[data-density='compact'],
+[data-density='compact'] {
+    --size-control: 2rem;
+    --space-control-block: 0.375rem;
+    --space-shell: 1rem;
+    --space-panel: 0.875rem;
+    --space-row-block: 0.375rem;
+    --space-stack: 0.5rem;
+}
+
+:root[data-density='comfortable'],
+[data-density='comfortable'] {
+    --size-control: 2.5rem;
+    --space-control-block: 0.625rem;
+    --space-shell: 1.5rem;
+    --space-panel: 1.25rem;
+    --space-row-block: 0.625rem;
+    --space-stack: 0.75rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --duration-fast: 0s;
+    }
+}
+
+@media (max-height: 40rem) {
+    :root {
+        --space-table-screen-block: var(--space-actions);
+        --space-table-screen-gap: var(--space-actions);
+    }
+}
+
+@media (max-width: 68rem) {
+    :root {
+        --layout-overview-bento-hero-span: span 12;
+        --layout-overview-bento-side-span: span 12;
+        --layout-overview-bento-half-span: span 12;
+    }
+}
+
+@media (max-width: 56rem) {
+    :root {
+        --layout-app-root-rows: minmax(var(--space-none), 1fr) auto;
+        --layout-shell-document-columns: minmax(var(--space-none), 1fr);
+        --layout-shell-document-columns-main: minmax(var(--space-none), 1fr);
+        --layout-shell-document-workspace-rows: auto minmax(var(--space-none), 1fr);
+        --layout-shell-document-areas: 'navigation' 'main';
+        --layout-shell-document-inspector-columns: minmax(var(--space-none), 1fr);
+        --layout-shell-document-inspector-rows: auto minmax(var(--space-none), 1fr) minmax(10rem, 40%);
+        --layout-shell-document-inspector-areas: 'navigation' 'main' 'inspector';
+        --layout-shell-document-rows: auto auto minmax(var(--space-none), 1fr);
+        --layout-shell-workspace-rows: auto minmax(var(--space-none), 1fr);
+        --layout-integrity-columns: minmax(var(--space-none), 1fr);
+        --layout-overview-columns: minmax(var(--space-none), 1fr);
+        --layout-overview-bento-columns: minmax(var(--space-none), 1fr);
+        --layout-overview-bento-hero-span: span 1;
+        --layout-overview-bento-side-span: span 1;
+        --layout-overview-bento-half-span: span 1;
+        --layout-overview-bento-full-span: span 1;
+        --layout-overview-bento-details-columns: minmax(var(--space-none), 1fr);
+        --layout-preferences-field-columns: minmax(var(--space-none), 1fr);
+        --layout-raw-data-columns: minmax(var(--space-none), 1fr);
+        --layout-raw-data-header-columns: minmax(var(--space-none), 1fr);
+        --layout-raw-data-search-columns: minmax(var(--space-none), 1fr);
+        --display-command-bar-brand-name: none;
+        --display-command-bar-button-label: none;
+        --display-command-bar-divider: none;
+        --display-inspector-separator: none;
+        --display-navigator-inline: none;
+        --display-navigator-trigger: inline-flex;
+        --overflow-command-bar-inline: auto;
+        --overflow-shell-navigation-block: hidden;
+        --overflow-shell-navigation-inline: hidden;
+        --border-shell-navigation-inline: none;
+        --border-shell-navigation-block: var(--border-region);
+        --border-inspector-inline: none;
+        --border-inspector-block: var(--border-region);
+        --margin-document-integrity-inline-start: var(--space-none);
+        --size-inspector-responsive: var(--size-full);
+        --padding-document-header-block: var(--space-compact);
+    }
+}
+
+@media (max-width: 40rem) {
+    :root {
+        --display-workspace-tab-label: none;
+    }
+}
+
+@media (forced-colors: active) {
+    :root {
+        --color-accent: LinkText;
+        --color-accent-hover: LinkText;
+        --color-accent-soft: Canvas;
+        --color-activity-availability: CanvasText;
+        --color-activity-break-rest: CanvasText;
+        --color-activity-driving: CanvasText;
+        --color-activity-unknown: CanvasText;
+        --color-activity-work: CanvasText;
+        --color-chart-grid: CanvasText;
+        --color-chart-range-fill: Canvas;
+        --color-crew-lane: CanvasText;
+        --color-crew-slot-lane: CanvasText;
+        --color-chart-grid-strong: CanvasText;
+        --color-border: CanvasText;
+        --color-border-strong: CanvasText;
+        --color-canvas: Canvas;
+        --color-code-background: Canvas;
+        --color-danger: CanvasText;
+        --color-danger-soft: Canvas;
+        --color-focus: Highlight;
+        --color-info: CanvasText;
+        --color-on-accent: Canvas;
+        --color-success: CanvasText;
+        --color-surface: Canvas;
+        --color-surface-hover: Canvas;
+        --color-surface-selected: Canvas;
+        --color-surface-subtle: Canvas;
+        --color-speed-series: CanvasText;
+        --color-compliance-trend-series: CanvasText;
+        --color-text: CanvasText;
+        --color-text-muted: CanvasText;
+        --color-warning: CanvasText;
+        --color-warning-soft: Canvas;
+    }
+}

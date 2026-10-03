@@ -1,0 +1,14 @@
+.preferences-field {
+    display: grid;
+    gap: var(--space-stack);
+    align-items: center;
+    grid-template-columns: var(--layout-preferences-field-columns);
+    padding-block: var(--space-stack);
+    border-block-end: var(--border-region);
+}
+
+.preferences-field-label {
+    min-inline-size: var(--space-none);
+    overflow-wrap: break-word;
+    font-weight: var(--font-weight-action);
+}

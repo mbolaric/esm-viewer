@@ -1,0 +1,549 @@
+@import './tokens.css';
+@import './handbook.css';
+@import './preferences.css';
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+    min-block-size: var(--size-viewport);
+}
+
+html:not([data-preferences-ready]) body {
+    visibility: hidden;
+}
+
+body {
+    margin: var(--space-none);
+    background: var(--color-canvas);
+    color: var(--color-text);
+    font-family: var(--font-family-body);
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-body);
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+input,
+textarea,
+[contenteditable='true'],
+.selectable-text,
+.evidence-details,
+.data-table-cell,
+.raw-tree-value,
+code,
+pre {
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+h1,
+h2,
+h3,
+p,
+dl,
+dt,
+dd,
+ul,
+pre {
+    margin: var(--space-none);
+}
+
+/*
+ * A native `title` attribute renders the OS's own tooltip, whose font size
+ * the page cannot control - too small to read comfortably at this app's
+ * control scale. This CSS-generated-content bubble replaces it: same
+ * hover/focus trigger, legible app-controlled font size, and - unlike a
+ * real child element holding the tooltip text - `::after` content is not
+ * part of the DOM, so it can never leak into an element's accessible-name-
+ * from-content computation or match a test's `getByText` query. Shared here
+ * (rather than living only in `Button.svelte`) so any element that needs
+ * this exact bubble - a table's sort-column header, say - can opt in with
+ * `class="has-tooltip"` and `data-tooltip="..."` instead of duplicating it.
+ */
+.has-tooltip {
+    position: relative;
+}
+
+.has-tooltip[data-tooltip]::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    inset-block-end: calc(var(--size-full) + var(--space-compact));
+    inset-inline-start: var(--size-half);
+    z-index: var(--z-index-popover);
+    padding-block: var(--space-compact);
+    padding-inline: var(--space-actions);
+    border-radius: var(--radius-control);
+    background: var(--color-text);
+    color: var(--color-canvas);
+    font-size: var(--font-size-body);
+    font-weight: normal;
+    line-height: var(--line-height-heading);
+    letter-spacing: normal;
+    white-space: nowrap;
+    text-align: center;
+    opacity: var(--opacity-hidden);
+    pointer-events: none;
+    transform: translateX(-50%);
+    transition: opacity var(--duration-fast) var(--easing-standard);
+}
+
+.has-tooltip[data-tooltip]:hover::after,
+.has-tooltip[data-tooltip]:focus-visible::after {
+    opacity: var(--opacity-visible);
+}
+
+.has-tooltip.tooltip-end[data-tooltip]::after {
+    inset-inline-start: auto;
+    inset-inline-end: var(--space-none);
+    transform: none;
+}
+
+.has-tooltip.tooltip-start[data-tooltip]::after {
+    inset-inline-start: var(--space-none);
+    transform: none;
+}
+
+.has-tooltip.tooltip-below[data-tooltip]::after {
+    inset-block-start: calc(var(--size-full) + var(--space-compact));
+    inset-block-end: auto;
+}
+
+/*
+ * Opt-in escape hatch for a trigger whose tooltip would otherwise be
+ * clipped by an `overflow: hidden`/`auto` ancestor (e.g. a narrow side
+ * panel too short to fit the bubble above the trigger). `position: fixed`
+ * is clipped only by an ancestor that is its own containing block
+ * (a transformed/`filter`/`will-change` ancestor) - an ordinary `overflow`
+ * ancestor further up the tree cannot touch it, unlike `position: absolute`
+ * above. The trigger's own JS (`Button.svelte`) measures its rect on
+ * hover/focus and publishes it as these `--tooltip-fixed-*` custom
+ * properties, which this pseudo-element inherits; physical `top`/`left`/
+ * `right`/`bottom` are used (not logical `inset-*`) because the JS values
+ * are viewport-relative `getBoundingClientRect()` coordinates, and the
+ * JS itself already resolves which physical side to set for RTL.
+ */
+.has-tooltip.tooltip-floating[data-tooltip]::after {
+    position: fixed;
+    inset-block-start: auto;
+    inset-block-end: auto;
+    inset-inline-start: auto;
+    top: var(--tooltip-fixed-top, auto);
+    right: var(--tooltip-fixed-right, auto);
+    bottom: var(--tooltip-fixed-bottom, auto);
+    left: var(--tooltip-fixed-left, auto);
+    transform: var(--tooltip-fixed-transform, none);
+    /*
+     * A floating tooltip is no longer confined by the trigger's own
+     * container, so unlike the base bubble it can afford to size itself to
+     * its content on each line rather than forcing one `nowrap` line - a
+     * caller with genuinely multi-part content (a label plus a raw-data
+     * path, say) puts an explicit `\n` between them, and `pre-line` here
+     * respects that line break while still collapsing ordinary whitespace,
+     * without imposing its own width cap that would wrap the path a second
+     * time.
+     */
+    inline-size: max-content;
+    white-space: pre-line;
+    text-align: start;
+}
+
+.popover-surface {
+    position: absolute;
+    z-index: var(--z-index-popover);
+    inset-inline-end: var(--space-none);
+    display: grid;
+    gap: var(--space-compact);
+    min-inline-size: var(--size-column-menu-min-inline);
+    padding: var(--space-panel);
+    background: var(--color-surface);
+    border: var(--border-panel);
+    border-radius: var(--radius-panel);
+    box-shadow: var(--shadow-popover);
+}
+
+.sr-only {
+    position: absolute;
+    inline-size: var(--size-sr-only);
+    block-size: var(--size-sr-only);
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+h1 {
+    font-size: var(--font-size-title);
+    font-weight: var(--font-weight-title);
+    line-height: var(--line-height-heading);
+}
+
+h2 {
+    font-size: var(--font-size-section);
+    line-height: var(--line-height-heading);
+}
+
+h3 {
+    font-size: var(--font-size-body);
+    line-height: var(--line-height-heading);
+}
+
+button,
+input,
+select {
+    font: inherit;
+}
+
+.form-field {
+    display: grid;
+    gap: var(--space-compact);
+}
+
+.form-field label {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-metadata);
+    font-weight: var(--font-weight-action);
+}
+
+.viewer-input {
+    min-block-size: var(--size-control);
+    padding-block: var(--space-control-block);
+    padding-inline: var(--space-control-inline);
+    background: var(--color-surface);
+    border: var(--border-control);
+    border-radius: var(--radius-control);
+    color: var(--color-text);
+}
+
+.status-line {
+    display: flex;
+    align-items: center;
+    gap: var(--space-actions);
+}
+
+.status-line[data-status='valid'] {
+    color: var(--color-success);
+}
+
+.status-line[data-status='partiallyValid'] {
+    color: var(--color-warning);
+}
+
+.status-line[data-status='failed'],
+.status-line[data-status='invalid'] {
+    color: var(--color-danger);
+}
+
+.status-line[data-status='notChecked'],
+.status-line[data-status='unsupported'] {
+    color: var(--color-text-muted);
+}
+
+code,
+pre {
+    overflow-wrap: anywhere;
+    font-family: var(--font-family-source);
+    font-variant-numeric: tabular-nums;
+}
+
+::selection {
+    background: var(--color-accent-soft);
+}
+
+:focus-visible {
+    outline: var(--size-focus-ring) solid var(--color-focus);
+    outline-offset: var(--space-none);
+}
+
+.evidence-panel {
+    display: grid;
+    grid-template-columns: var(--layout-panel-columns);
+    align-content: start;
+    gap: var(--space-stack);
+    padding: var(--space-panel);
+    background: var(--color-surface);
+    border: var(--border-panel);
+    border-radius: var(--radius-panel);
+    inline-size: var(--size-full);
+    max-inline-size: var(--size-full);
+    min-inline-size: var(--size-zero);
+}
+
+.evidence-panel > h2 {
+    padding-block-end: var(--space-actions);
+    border-block-end: var(--border-region);
+}
+
+.evidence-details {
+    display: grid;
+    gap: var(--space-stack);
+}
+
+.evidence-details > div {
+    display: grid;
+    grid-template-columns: var(--layout-detail-row-columns);
+    align-items: baseline;
+    gap: var(--space-stack);
+    padding-block: var(--space-row-block);
+    border-block-end: var(--border-region);
+}
+
+.evidence-details > div:last-child {
+    border-block-end: none;
+}
+
+.evidence-details dt {
+    min-inline-size: var(--space-none);
+    overflow-wrap: break-word;
+}
+
+.evidence-details dd {
+    min-inline-size: var(--space-none);
+    overflow-wrap: anywhere;
+}
+
+.evidence-details.dense {
+    gap: var(--space-compact);
+}
+
+.evidence-details.dense > div {
+    align-items: center;
+    padding-block: var(--space-compact);
+}
+
+.evidence-details.dense dd {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-compact);
+}
+
+.wide-workspace {
+    display: grid;
+    grid-template-columns: var(--layout-panel-columns);
+    inline-size: var(--size-full);
+    max-inline-size: var(--size-content-wide);
+    min-inline-size: var(--size-zero);
+    margin-inline: auto;
+    gap: var(--space-section);
+}
+
+.table-screen {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-table-screen-gap);
+    padding-block: var(--space-table-screen-block);
+    padding-inline: var(--space-shell);
+    block-size: var(--size-full);
+    max-block-size: var(--size-full);
+    min-block-size: var(--space-none);
+    box-sizing: border-box;
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+.table-section {
+    display: flex;
+    flex-direction: column;
+    flex: var(--layout-table-section-flex);
+    min-block-size: var(--size-table-section-min-block);
+}
+
+.kpi-hero-bar {
+    display: grid;
+    gap: var(--space-panel);
+}
+
+.kpi-card {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-compact);
+    padding: var(--space-panel);
+    background: var(--color-surface);
+    border: var(--border-panel);
+    border-radius: var(--radius-panel);
+    box-shadow: var(--shadow-card);
+}
+
+.kpi-card[data-size='compact'] {
+    display: grid;
+    grid-template-columns: var(--layout-kpi-card-compact-columns);
+    align-items: center;
+    gap: var(--space-compact) var(--space-actions);
+    padding-block: var(--space-actions);
+    padding-inline: var(--space-stack);
+}
+
+.kpi-card[data-size='compact'] .kpi-header {
+    min-inline-size: var(--size-zero);
+}
+
+.kpi-card[data-size='compact'] .kpi-value {
+    font-size: var(--font-size-section);
+}
+
+.kpi-card[data-size='compact'] .kpi-subtext {
+    grid-column: var(--grid-column-full);
+}
+
+.kpi-label {
+    min-inline-size: var(--space-none);
+    overflow-wrap: break-word;
+    font-size: var(--font-size-metadata);
+    font-weight: var(--font-weight-action);
+    color: var(--color-text-muted);
+    text-transform: var(--text-transform-group);
+    letter-spacing: var(--letter-spacing-group);
+}
+
+.kpi-value {
+    font-size: var(--font-size-kpi);
+    font-weight: var(--font-weight-title);
+    line-height: var(--line-height-heading);
+    color: var(--color-text);
+}
+
+.kpi-subtext {
+    font-size: var(--font-size-metadata);
+    color: var(--color-text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.source-evidence {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-compact);
+}
+
+.record-workspace .screen-header,
+.record-workspace .filter-toolbar,
+.record-workspace .filter-actions,
+.record-workspace .filter-context,
+.wide-workspace .filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-actions);
+}
+
+.record-workspace.fill-height {
+    gap: var(--space-table-screen-gap);
+}
+
+.record-workspace .filter-toolbar {
+    justify-content: space-between;
+}
+
+.record-workspace .filter-context {
+    margin: var(--space-none);
+    gap: var(--space-section);
+}
+
+.record-workspace .filter-context > div,
+.record-workspace .record-stack {
+    display: grid;
+    justify-items: start;
+    gap: var(--space-compact);
+}
+
+.record-workspace dt,
+.record-workspace .metadata {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-metadata);
+}
+
+.record-workspace .metadata {
+    display: inline-flex;
+    align-items: baseline;
+    gap: var(--space-compact);
+    white-space: nowrap;
+}
+
+.record-workspace .metadata code {
+    font-size: inherit;
+    line-height: inherit;
+}
+
+.record-workspace dt {
+    font-weight: var(--font-weight-action);
+}
+
+.record-workspace dd {
+    margin: var(--space-none);
+    font-variant-numeric: tabular-nums;
+}
+
+.record-workspace .numeric-value {
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.record-workspace .record-type {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-actions);
+    padding-block: var(--space-compact);
+    padding-inline: var(--space-actions);
+    background: var(--color-surface-subtle);
+    border: var(--border-control);
+    border-radius: var(--radius-control);
+    font-size: var(--font-size-metadata);
+    font-weight: var(--font-weight-action);
+    white-space: nowrap;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-compact);
+    padding-block: var(--space-compact);
+    padding-inline: var(--space-actions);
+    border: var(--border-region);
+    border-radius: var(--radius-chip);
+    font-size: var(--font-size-metadata);
+    font-weight: var(--font-weight-action);
+    white-space: nowrap;
+}
+
+.badge-kind,
+.badge-accent {
+    background: var(--color-accent-soft);
+    border-color: var(--color-transparent);
+    color: var(--color-accent);
+}
+
+.badge-generation {
+    background: var(--color-surface-subtle);
+    color: var(--color-text);
+}
+
+.badge-integrity {
+    background: var(--color-surface-subtle);
+    color: var(--color-text-muted);
+}
+
+.badge-integrity[data-status='valid'] {
+    color: var(--color-success);
+}
+
+.badge-integrity[data-status='partiallyValid'],
+.badge-warning {
+    color: var(--color-warning);
+}
+
+.badge-integrity[data-status='failed'],
+.badge-integrity[data-status='invalid'] {
+    color: var(--color-danger);
+}
+
+.badge-integrity[data-status='notChecked'],
+.badge-integrity[data-status='unsupported'] {
+    color: var(--color-text-muted);
+}

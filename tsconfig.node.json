@@ -1,0 +1,18 @@
+{
+    "extends": "./tsconfig.base.json",
+    "compilerOptions": {
+        "lib": ["ES2024", "ES2025.Intl", "DOM"],
+        "types": ["node"]
+    },
+    "include": [
+        "apps/viewer/vite.config.ts",
+        "src/contracts/**/*.ts",
+        "src/error-reporting/**/*.ts",
+        "src/localization/application-catalogue.ts",
+        "src/types/**/*.d.ts",
+        "src/time/**/*.ts",
+        "src/viewer/application/**/*.ts",
+        "src/viewer/domain/**/*.ts",
+        "tools/**/*.ts"
+    ]
+}

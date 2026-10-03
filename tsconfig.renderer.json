@@ -1,0 +1,24 @@
+{
+    "extends": "./tsconfig.base.json",
+    "compilerOptions": {
+        "lib": ["ES2024", "ES2025.Intl", "DOM", "DOM.Iterable"],
+        "types": ["svelte", "vite/client"]
+    },
+    "include": [
+        "apps/viewer/**/*.ts",
+        "src/contracts/**/*.ts",
+        "src/error-reporting/**/*.ts",
+        "src/localization/**/*.ts",
+        "src/platform/tauri/**/*.ts",
+        "src/types/**/*.d.ts",
+        "src/time/**/*.ts",
+        "src/ui/**/*.ts",
+        "src/shell/**/*.ts",
+        "src/viewer/application/**/*.ts",
+        "src/viewer/domain/**/*.ts",
+        "src/viewer/feature/**/*.ts",
+        "src/viewer/parser/**/*.ts",
+        "src/viewer/presentation/**/*.ts"
+    ],
+    "exclude": ["**/__tests__/**"]
+}

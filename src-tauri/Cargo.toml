@@ -1,0 +1,47 @@
+[package]
+name = "esm-viewer"
+version = "0.1.0"
+description = "A local-first desktop viewer for digital tachograph files."
+authors = ["Milan Bolaric"]
+edition = "2024"
+
+[lib]
+name = "esm_viewer_desktop_lib"
+path = "src/lib.rs"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[[bin]]
+name = "esm-viewer"
+path = "src/main.rs"
+required-features = ["standalone"]
+
+[build-dependencies]
+tauri-build = { version = "2.1", features = [] }
+
+[features]
+default = ["standalone"]
+standalone = []
+devtools = ["tauri/devtools"]
+test-support = ["tauri/test"]
+
+[dependencies]
+tauri = { version = "2.2", features = [] }
+tauri-plugin-dialog = "2.2"
+tauri-plugin-fs = "2.2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+esm-parser = { path = "../vendor/esm-parser" }
+sha2 = "0.11"
+hex = "0.4"
+time = { version = "0.3", features = ["formatting"] }
+genpdfi = { version = "0.2", features = ["hyphenation"] }
+hyphenation = { version = "0.8", features = ["embed_all"] }
+
+[dev-dependencies]
+tauri = { version = "2.2", features = ["test"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-app-kit = { version = "0.3", features = ["NSApplication", "NSImage", "NSPrintInfo", "NSPrintOperation", "NSView", "NSWindow"] }
+objc2-foundation = { version = "0.3", features = ["NSData", "NSDate", "NSDictionary", "NSError", "NSRunLoop", "NSString", "NSURL"] }
+objc2-web-kit = { version = "0.3", features = ["WKWebView", "WKWebViewConfiguration"] }

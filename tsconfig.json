@@ -1,0 +1,8 @@
+{
+    "extends": "./tsconfig.base.json",
+    "compilerOptions": {
+        "lib": ["ES2024", "ES2025.Intl", "DOM", "DOM.Iterable", "WebWorker"],
+        "types": ["node", "svelte", "vite/client"]
+    },
+    "include": ["apps/**/*.svelte", "apps/**/*.ts", "src/**/*.svelte", "src/**/*.ts", "tools/**/*.ts", "*.config.ts"]
+}
