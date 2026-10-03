@@ -56,8 +56,43 @@ describe('TauriPreferencesTarget', () => {
             expect(setNativeTheme).toHaveBeenLastCalledWith('light');
         });
         expect(report).not.toHaveBeenCalled();
+        expect(onLocaleChange).not.toHaveBeenCalled();
 
         target.dispose();
+    });
+
+    it('notifies only subsequent language changes, including restoring a previous language', () => {
+        const onLocaleChange = vi.fn<(locale: string) => void>();
+        const report = vi.fn<(event: IErrorEvent, detail?: unknown) => Promise<void>>().mockResolvedValue(undefined);
+        const setNativeTheme = vi.fn<(theme: 'dark' | 'light' | null) => Promise<void>>().mockResolvedValue(undefined);
+        const target = new TauriPreferencesTarget({ errorService: { report }, onLocaleChange, setNativeTheme });
+        const initialPreferences: IViewerPreferences = {
+            ...DEFAULT_VIEWER_PREFERENCES,
+            locale: 'de',
+            theme: 'dark',
+        };
+
+        try {
+            expect(target.apply(initialPreferences)).toBe(true);
+            expect(onLocaleChange).not.toHaveBeenCalled();
+
+            expect(target.apply({ ...initialPreferences, density: 'comfortable', theme: 'light' })).toBe(true);
+            expect(onLocaleChange).not.toHaveBeenCalled();
+
+            const changedPreferences: IViewerPreferences = { ...initialPreferences, locale: 'fr' };
+            expect(target.apply(changedPreferences)).toBe(true);
+            expect(onLocaleChange).toHaveBeenCalledExactlyOnceWith('fr');
+            expect(document.documentElement.getAttribute('lang')).toBe('fr');
+
+            expect(target.apply(changedPreferences)).toBe(true);
+            expect(onLocaleChange).toHaveBeenCalledOnce();
+
+            expect(target.apply(initialPreferences)).toBe(true);
+            expect(onLocaleChange.mock.calls).toEqual([['fr'], ['de']]);
+            expect(document.documentElement.getAttribute('lang')).toBe('de');
+        } finally {
+            target.dispose();
+        }
     });
 
     it('restores the native system theme for the system preference', async () => {

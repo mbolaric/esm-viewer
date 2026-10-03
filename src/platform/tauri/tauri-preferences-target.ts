@@ -16,6 +16,7 @@ function setCurrentWindowTheme(theme: NativeTheme): Promise<void> {
 }
 
 export class TauriPreferencesTarget implements IViewerPreferencesTarget {
+    private _appliedLocale: string | null = null;
     private readonly _errorService: IErrorService;
     private _removeColorSchemeListener: (() => void) | null = null;
     private readonly _onLocaleChange: ((locale: string) => void) | undefined;
@@ -50,7 +51,11 @@ export class TauriPreferencesTarget implements IViewerPreferencesTarget {
                 };
             }
 
-            this._onLocaleChange?.(preferences.locale);
+            // Composition installs the initial menu; preferences only update its labels for later language changes.
+            if (this._appliedLocale !== null && this._appliedLocale !== preferences.locale) {
+                this._onLocaleChange?.(preferences.locale);
+            }
+            this._appliedLocale = preferences.locale;
             return true;
         } catch {
             this._removeColorSchemeListener = null;

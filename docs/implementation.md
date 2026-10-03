@@ -1067,8 +1067,13 @@ composition can override it once at its root without forking shared components.
 the same command catalogue used by toolbar actions and are included in the
 palette only when enabled. Native menu items consume typed command descriptors
 through `createNativeMenuItems`; platform-specific menu
-structure remains in the Tauri adapter. Existing File/Edit/View/Help ordering is
-unchanged. `ViewerRoot` accepts additional Welcome and no-document failure actions.
+structure remains in the Tauri adapter. When the locale changes at runtime,
+`createApplicationMenu` reconstructs the native window or application menu
+with freshly localized submenus and predefined items, re-attaches it via
+Tauri's `setAsWindowMenu` (Windows/Linux) or `setAsAppMenu` (macOS), closes the
+previous menu resource, and synchronizes active command states. Existing
+File/Edit/View/Help ordering is unchanged. `ViewerRoot` accepts additional
+Welcome and no-document failure actions.
 The foundation stylesheet provides the shared handbook card layout so contributed
 guide content retains the same appearance without copying dialog styles.
 Guide contributions can specify a typed `beforeTab` position. Preference

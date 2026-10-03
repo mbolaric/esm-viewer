@@ -80,7 +80,9 @@ pub fn setup_desktop_window(app: &mut tauri::App) -> tauri::Result<tauri::Webvie
         .iter()
         .find(|config| config.label == "main")
         .ok_or_else(|| std::io::Error::other("main window configuration is missing"))?;
-    let menu = tauri::menu::Menu::default(app.handle())?;
+    // Avoid tearing down default GTK shortcuts when the renderer installs its localized menu.
+    let menu =
+        if cfg!(target_os = "linux") { tauri::menu::Menu::new(app.handle())? } else { tauri::menu::Menu::default(app.handle())? };
     let window_builder = tauri::WebviewWindowBuilder::from_config(app, window_config)?
         .menu(menu)
         .devtools(cfg!(all(debug_assertions, feature = "devtools")))

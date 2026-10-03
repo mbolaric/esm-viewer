@@ -11,6 +11,10 @@ import { createNativeCommandMenuItem, createNativeMenuItems } from './applicatio
 
 type NativeMenuItem = MenuItem | PredefinedMenuItem;
 
+export interface IApplicationMenu {
+    updateLocale(locale: string): Promise<void>;
+}
+
 export interface IApplicationMenuOptions {
     readonly applicationName?: string;
     readonly additionalMenus?: readonly Submenu[];
@@ -89,95 +93,129 @@ export async function createApplicationMenu(
     commandItems: Map<ApplicationCommand, MenuItem>,
     locale: string,
     options: IApplicationMenuOptions = {},
-): Promise<void> {
-    const catalogue = resolveApplicationCatalogue(locale);
-    const fileItems = await createViewerMenuItems(menuItems('file'), execute, commandItems, locale, options.commandLabels);
-    if (!isMacOS()) {
-        fileItems.push(await PredefinedMenuItem.new({ item: 'Separator' }), await PredefinedMenuItem.new({ item: 'Quit' }));
-    }
-    const fileMenu = await Submenu.new({
-        items: fileItems,
-        text: catalogue['menu.file'],
-    });
-    const editMenu = await Submenu.new({
-        items: [
-            await PredefinedMenuItem.new({ item: 'Undo', text: catalogue['command.edit.undo'] }),
-            await PredefinedMenuItem.new({ item: 'Redo', text: catalogue['command.edit.redo'] }),
-            await PredefinedMenuItem.new({ item: 'Separator' }),
-            await PredefinedMenuItem.new({ item: 'Cut', text: catalogue['command.edit.cut'] }),
-            await PredefinedMenuItem.new({ item: 'Copy', text: catalogue['command.edit.copy'] }),
-            await PredefinedMenuItem.new({ item: 'Paste', text: catalogue['command.edit.paste'] }),
-            await PredefinedMenuItem.new({ item: 'SelectAll', text: catalogue['command.edit.selectAll'] }),
-        ],
-        text: catalogue['menu.edit'],
-    });
-    const viewItems = await createViewerMenuItems(menuItems('view'), execute, commandItems, locale, options.commandLabels);
-    viewItems.push(await PredefinedMenuItem.new({ item: 'Separator' }), await PredefinedMenuItem.new({ item: 'Fullscreen' }));
-    if (import.meta.env.DEV) {
-        viewItems.push(
-            await PredefinedMenuItem.new({ item: 'Separator' }),
-            await MenuItem.new({
-                accelerator: isMacOS() ? 'Option+Cmd+I' : 'Control+Shift+I',
-                action: () => {
-                    void invoke('open_devtools');
-                },
-                id: 'view.devtools',
-                text: 'Toggle Developer Tools',
-            }),
+): Promise<IApplicationMenu> {
+    let currentMenu: Menu | null = null;
+
+    const buildAndInstallMenu = async (targetLocale: string): Promise<void> => {
+        commandItems.clear();
+        const catalogue = resolveApplicationCatalogue(targetLocale);
+        const fileItems = await createViewerMenuItems(
+            menuItems('file'),
+            execute,
+            commandItems,
+            targetLocale,
+            options.commandLabels,
         );
-    }
-    const viewMenu = await Submenu.new({
-        items: viewItems,
-        text: catalogue['menu.view'],
-    });
-    // Predefined window items are unsupported by GTK menu crate on Linux; omitted on Linux.
-    const windowMenu = isLinux()
-        ? undefined
-        : await Submenu.new({
-              items: [
-                  await PredefinedMenuItem.new({ item: 'Minimize' }),
-                  await PredefinedMenuItem.new({ item: 'Maximize' }),
-                  await PredefinedMenuItem.new({ item: 'CloseWindow' }),
-              ],
-              text: catalogue['menu.window'],
-          });
-    const helpMenu = await Submenu.new({
-        items: await createViewerMenuItems(menuItems('help'), execute, commandItems, locale, options.commandLabels),
-        text: catalogue['menu.help'],
-    });
+        if (!isMacOS()) {
+            fileItems.push(await PredefinedMenuItem.new({ item: 'Separator' }), await PredefinedMenuItem.new({ item: 'Quit' }));
+        }
+        const fileMenu = await Submenu.new({ items: fileItems, text: catalogue['menu.file'] });
 
-    const commonMenus = [fileMenu, editMenu, viewMenu, ...(options.additionalMenus ?? []), windowMenu, helpMenu].filter(
-        (menu) => menu !== undefined,
-    );
-    const menu = isMacOS()
-        ? await Menu.new({
-              items: [
-                  await Submenu.new({
-                      items: [
-                          await createCommandMenuItem(
-                              'application.about',
-                              execute,
-                              commandItems,
-                              locale,
-                              options.commandLabels?.['application.about'],
-                          ),
-                          await PredefinedMenuItem.new({ item: 'Separator' }),
-                          await createCommandMenuItem('application.preferences', execute, commandItems, locale),
-                          await PredefinedMenuItem.new({ item: 'Separator' }),
-                          await PredefinedMenuItem.new({ item: 'Quit' }),
-                      ],
-                      text: options.applicationName ?? catalogue['application.name'],
-                  }),
-                  ...commonMenus,
-              ],
-          })
-        : await Menu.new({
-              items: commonMenus,
-          });
+        const editItems: NativeMenuItem[] = [];
+        const editDefinitions = [
+            ['Undo', 'command.edit.undo'],
+            ['Redo', 'command.edit.redo'],
+            ['Separator', undefined],
+            ['Cut', 'command.edit.cut'],
+            ['Copy', 'command.edit.copy'],
+            ['Paste', 'command.edit.paste'],
+            ['SelectAll', 'command.edit.selectAll'],
+        ] as const;
+        for (const [item, key] of editDefinitions) {
+            editItems.push(await PredefinedMenuItem.new({ item, ...(key === undefined ? {} : { text: catalogue[key] }) }));
+        }
+        const editMenu = await Submenu.new({ items: editItems, text: catalogue['menu.edit'] });
 
-    if (isMacOS()) {
-        await menu.setAsAppMenu();
-    } else {
-        await menu.setAsWindowMenu(getCurrentWindow());
-    }
+        const viewItems = await createViewerMenuItems(
+            menuItems('view'),
+            execute,
+            commandItems,
+            targetLocale,
+            options.commandLabels,
+        );
+        viewItems.push(await PredefinedMenuItem.new({ item: 'Separator' }), await PredefinedMenuItem.new({ item: 'Fullscreen' }));
+        if (import.meta.env.DEV) {
+            viewItems.push(
+                await PredefinedMenuItem.new({ item: 'Separator' }),
+                await MenuItem.new({
+                    accelerator: isMacOS() ? 'Option+Cmd+I' : 'Control+Shift+I',
+                    action: () => {
+                        void invoke('open_devtools');
+                    },
+                    text: 'Toggle Developer Tools',
+                }),
+            );
+        }
+        const viewMenu = await Submenu.new({ items: viewItems, text: catalogue['menu.view'] });
+
+        // Predefined window items are unsupported by GTK menu crate on Linux; omitted on Linux.
+        const windowMenu = isLinux()
+            ? undefined
+            : await Submenu.new({
+                  items: [
+                      await PredefinedMenuItem.new({ item: 'Minimize' }),
+                      await PredefinedMenuItem.new({ item: 'Maximize' }),
+                      await PredefinedMenuItem.new({ item: 'CloseWindow' }),
+                  ],
+                  text: catalogue['menu.window'],
+              });
+        const helpMenu = await Submenu.new({
+            items: await createViewerMenuItems(menuItems('help'), execute, commandItems, targetLocale, options.commandLabels),
+            text: catalogue['menu.help'],
+        });
+
+        const commonMenus = [fileMenu, editMenu, viewMenu, ...(options.additionalMenus ?? []), windowMenu, helpMenu].filter(
+            (menu) => menu !== undefined,
+        );
+
+        const menu = isMacOS()
+            ? await Menu.new({
+                  items: [
+                      await Submenu.new({
+                          items: [
+                              await createCommandMenuItem(
+                                  'application.about',
+                                  execute,
+                                  commandItems,
+                                  targetLocale,
+                                  options.commandLabels?.['application.about'],
+                              ),
+                              await PredefinedMenuItem.new({ item: 'Separator' }),
+                              await createCommandMenuItem(
+                                  'application.preferences',
+                                  execute,
+                                  commandItems,
+                                  targetLocale,
+                                  options.commandLabels?.['application.preferences'],
+                              ),
+                              await PredefinedMenuItem.new({ item: 'Separator' }),
+                              await PredefinedMenuItem.new({ item: 'Quit' }),
+                          ],
+                          text: options.applicationName ?? catalogue['application.name'],
+                      }),
+                      ...commonMenus,
+                  ],
+              })
+            : await Menu.new({
+                  items: commonMenus,
+              });
+
+        const previousMenu = currentMenu;
+        currentMenu = menu;
+        if (isMacOS()) {
+            const detached = await menu.setAsAppMenu();
+            await (previousMenu ?? detached)?.close();
+        } else {
+            const detached = await menu.setAsWindowMenu(getCurrentWindow());
+            await (previousMenu ?? detached)?.close();
+        }
+    };
+
+    await buildAndInstallMenu(locale);
+
+    return {
+        async updateLocale(nextLocale) {
+            await buildAndInstallMenu(nextLocale);
+        },
+    };
 }

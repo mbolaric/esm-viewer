@@ -22,6 +22,13 @@ export { TauriPreferencesTarget, type ITauriPreferencesTargetOptions } from './t
 export { TauriTachographParser } from './tauri-tachograph-parser.js';
 export { createTauriViewerContext, type ITauriViewerCompositionOptions } from './tauri-viewer-composition.js';
 export { createRandomReopenToken, createRandomSourceToken } from './token.js';
-export { createApplicationMenu, createCommandMenuItem, isLinux, isMacOS, type IApplicationMenuOptions } from './viewer-menu.js';
+export {
+    createApplicationMenu,
+    createCommandMenuItem,
+    isLinux,
+    isMacOS,
+    type IApplicationMenu,
+    type IApplicationMenuOptions,
+} from './viewer-menu.js';
 export { createNativeCommandMenuItem, createNativeMenuItems } from './application-menu-items.js';
 export { createBrowserKeyValueStore } from './browser-key-value-store.js';

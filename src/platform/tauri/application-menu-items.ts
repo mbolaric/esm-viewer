@@ -9,7 +9,6 @@ export async function createNativeCommandMenuItem<TCommandId extends string>(
         ...(command.accelerator === undefined ? {} : { accelerator: command.accelerator }),
         action: command.onexecute,
         enabled: command.enabled,
-        id: command.id,
         text: command.label,
     });
     commandItems.set(command.id, item);

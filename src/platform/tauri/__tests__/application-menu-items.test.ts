@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { createNativeMenuItems } from '../application-menu-items.js';
 
 interface IMenuOptions {
-    readonly id: string;
+    readonly id?: string;
     readonly text: string;
     readonly accelerator?: string;
     readonly enabled: boolean;
@@ -33,7 +33,6 @@ describe('native command contribution rendering', () => {
         expect(items.has('archive.import')).toBe(true);
         const options = native.command.mock.lastCall?.[0];
         expect(options).toMatchObject({
-            id: 'archive.import',
             text: 'Import archive',
             enabled: false,
             accelerator: 'CmdOrCtrl+I',

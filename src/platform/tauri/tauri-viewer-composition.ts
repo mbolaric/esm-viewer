@@ -38,7 +38,7 @@ import { LogFileErrorProvider } from './log-file-error-provider.js';
 import { NativeDebugLogErrorProvider } from './native-debug-log-error-provider.js';
 import { type TauriPlatformService } from './tauri-platform-service.js';
 import { TauriTachographParser } from './tauri-tachograph-parser.js';
-import { createApplicationMenu } from './viewer-menu.js';
+import { createApplicationMenu, type IApplicationMenu } from './viewer-menu.js';
 import { TauriPreferencesTarget } from './tauri-preferences-target.js';
 
 import {
@@ -71,15 +71,25 @@ export async function createTauriViewerContext(
         options?.errorService ??
         new ErrorService([new ConsoleErrorProvider(), new LogFileErrorProvider(), new NativeDebugLogErrorProvider()]);
     const installMenu = options?.installMenu ?? createApplicationMenu;
+    let applicationMenu: IApplicationMenu | null = null;
+    let menuUpdate: Promise<void> = Promise.resolve();
     const handleApplicationCommand = (command: ApplicationCommand): void => {
         commandController?.execute(command);
     };
-    const updateMenu = async (locale: string): Promise<void> => {
-        try {
-            await installMenu(handleApplicationCommand, commandMenuItems, locale);
-        } catch (error) {
-            void errorService.report({ code: ERROR_CODES.menuBuildFailed, severity: 'error', source: 'desktop' }, error);
-        }
+    const updateMenu = (locale: string): Promise<void> => {
+        menuUpdate = menuUpdate
+            .then(async () => {
+                if (applicationMenu === null) {
+                    applicationMenu = await installMenu(handleApplicationCommand, commandMenuItems, locale);
+                } else {
+                    await applicationMenu.updateLocale(locale);
+                }
+                commandController?.synchronize();
+            })
+            .catch((error: unknown) => {
+                void errorService.report({ code: ERROR_CODES.menuBuildFailed, severity: 'error', source: 'desktop' }, error);
+            });
+        return menuUpdate;
     };
     const preferencesController = new ViewerPreferencesController({
         initialPreferences: loadedPreferences.ok ? loadedPreferences.value : null,
@@ -175,12 +185,7 @@ export async function createTauriViewerContext(
         },
         translationService,
     });
-    try {
-        await installMenu(handleApplicationCommand, commandMenuItems, preferencesController.locale);
-    } catch (error) {
-        // Native menu failure is non-fatal; command bar and shortcuts remain available.
-        void errorService.report({ code: ERROR_CODES.menuBuildFailed, severity: 'error', source: 'desktop' }, error);
-    }
+    await updateMenu(preferencesController.locale);
     commandController.synchronize();
 
     return {
