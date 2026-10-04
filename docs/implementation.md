@@ -75,8 +75,8 @@ Reusable adapters live in `src/platform/tauri`.
 
 `pnpm tauri:dev` starts the Viewer host with hot reload; `pnpm tauri:build`
 packages it. `pnpm build` emits assets in `apps/viewer/dist`. Bounded chunks
-separate catalogues, charts, parser/presentation, and initial vendor code.
-The chart runtime loads on demand.
+separate catalogues, charts, parser/presentation, initial vendor code, and shared
+UI/shell components. The chart runtime loads on demand.
 
 
 The main window is configured via `setup_desktop_window` (`src-tauri/tauri.conf.json`), opening at 1440×900, resizable
@@ -927,7 +927,13 @@ contributes the chart-runtime rule.
 
 The preset retains the existing `es2022` renderer target, external binary assets,
 disabled source maps, startup placeholder, `App.svelte` warmup, and locale/chart/
-Viewer/initial-vendor chunk groups and budgets. Startup HTML must contain exactly
+Viewer/initial-vendor chunk groups and budgets. A separate `shared-ui` group
+captures only initially imported UI/shell modules, using the same 32 KiB minimum
+and a 480 KiB pre-minification budget to keep reusable UI out of the application
+entry chunk. The pure ordering helpers used by both initial chart hosts and the
+lazy runtime remain in a separate `chart-shared` chunk, preventing a chunk cycle
+through `shared-ui`. Chart runtime modules remain dynamically reachable. The
+default 500 kB chunk warning threshold stays unchanged. Startup HTML must contain exactly
 one placeholder and replacement content is inserted literally. Startup branding
 is supplied as rendered HTML, not imported by generic tooling.
 

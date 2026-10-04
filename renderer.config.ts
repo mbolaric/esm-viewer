@@ -9,12 +9,12 @@ export interface IViewerRendererConfigOptions extends IRendererConfigOptions {
 }
 
 const minimumJavaScriptGroupSize = 32 * 1024;
-const maximumLocaleGroupSize = 480 * 1024;
+const maximumJavaScriptGroupSize = 480 * 1024;
 const maximumChartVendorGroupSize = 1_750 * 1024;
 
 export const viewerCodeSplittingGroups = [
     {
-        maxSize: maximumLocaleGroupSize,
+        maxSize: maximumJavaScriptGroupSize,
         minSize: minimumJavaScriptGroupSize,
         name: 'locales',
         test: /src[\\/]localization[\\/]catalogues[\\/]/,
@@ -33,6 +33,18 @@ export const viewerCodeSplittingGroups = [
         name: 'initial-vendor',
         tags: ['$initial' as const],
         test: /node_modules[\\/]/,
+    },
+    // Separating helpers shared with the lazy runtime prevents a cycle through the initial UI chunk.
+    {
+        name: 'chart-shared',
+        test: /src[\\/]ui[\\/]charts[\\/]chart-ordering\.ts$/,
+    },
+    {
+        maxSize: maximumJavaScriptGroupSize,
+        minSize: minimumJavaScriptGroupSize,
+        name: 'shared-ui',
+        tags: ['$initial' as const],
+        test: /src[\\/](?:ui|shell)[\\/]/,
     },
 ];
 

@@ -37,12 +37,14 @@ describe('standalone build policy', () => {
         ]);
     });
 
-    it('preserves the renderer chunk groups and their existing budgets', () => {
+    it('keeps runtime chunk budgets while separating initial shared UI', () => {
         expect(viewerCodeSplittingGroups.map((group) => group.name)).toEqual([
             'locales',
             'chart-vendor',
             'viewer-core',
             'initial-vendor',
+            'chart-shared',
+            'shared-ui',
         ]);
         expect(viewerCodeSplittingGroups.find((group) => group.name === 'locales')?.maxSize).toBe(480 * 1024);
         expect(viewerCodeSplittingGroups.find((group) => group.name === 'chart-vendor')?.maxSize).toBe(1_750 * 1024);
