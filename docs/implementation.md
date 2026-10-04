@@ -128,9 +128,20 @@ packaging compiles without Tauri devtools.
 Releases are built by `.github/workflows/release.yml` on a version tag (or
 manual dispatch): native jobs on `ubuntu-24.04` (Linux x64),
 `windows-latest` (Windows x64), and `macos-26` (macOS arm64 only; no Intel
-build) each run `tauri-action` and publish a draft GitHub Release. The macOS
+build) each run `tauri-action` and publish a draft GitHub Release. Each platform
+has separate release and debug matrix entries.
+`includeRelease` and `includeDebug` select exactly one profile per job, aligning
+the build and artifact lookup under `target/release` or `target/debug`. The action
+adds `--debug` for debug jobs; only those jobs receive `--features devtools`.
+Debug uploads use the action's `-debug` asset suffix, keeping them distinct from
+release installers. The macOS
 job fails before packaging unless `actool` is from Xcode 26 or newer, so a
 release cannot silently ship without the Liquid Glass `Assets.car` icon.
+Before packaging, macOS jobs install `.github/scripts/actool.sh` as an `actool`
+wrapper on the runner's path. It invokes `xcrun actool` with stdin opened on
+`/dev/null`, avoiding the Node-based Tauri CLI's closed-stdin icon compiler
+failure while preserving the layered icon. Compiler arguments and failures
+pass through unchanged.
 No code-signing or notarization credentials are currently configured for
 Windows or macOS, so distributed installers are unsigned.
 

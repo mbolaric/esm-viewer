@@ -9,6 +9,13 @@ import { decodePackageManifest } from '../../../tools/dependencies/package-manif
 import { decodeTauriConfiguration } from '../../../tools/quality/tauri-configuration.js';
 
 describe('standalone build policy', () => {
+    it('keeps release packaging build profiles aligned with artifact discovery', () => {
+        const workflow = readFileSync(new URL('../../../.github/workflows/release.yml', import.meta.url), 'utf8');
+        expect(workflow).toContain("includeDebug: ${{ matrix.build_type == 'debug' }}");
+        expect(workflow).toContain("includeRelease: ${{ matrix.build_type == 'release' }}");
+        expect(workflow).toContain("args: ${{ matrix.build_type == 'debug' && '--features devtools' || '' }}");
+    });
+
     it('consumes the public renderer preset with independently owned paths and singleton runtimes', () => {
         const config = createViewerRendererConfig({
             root: '/standalone/renderer',

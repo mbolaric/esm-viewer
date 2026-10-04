@@ -53,6 +53,14 @@ jobs:
             - name: Install frozen dependency graph
               run: pnpm install --frozen-lockfile
 
+            - name: Prepare macOS icon compiler
+              if: startsWith(matrix.platform, 'macos')
+              run: |
+                  tool_dir="$RUNNER_TEMP/tauri-actool"
+                  mkdir -p "$tool_dir"
+                  install -m 755 .github/scripts/actool.sh "$tool_dir/actool"
+                  printf '%s\n' "$tool_dir" >> "$GITHUB_PATH"
+
             # Tauri skips the tinted-capable Assets.car with only a warning when
             # actool is older than 26, which would ship a flat legacy icon.
             - name: Require Xcode 26+ for the macOS app icon
@@ -75,4 +83,6 @@ jobs:
                   releaseBody: 'Release ${{ github.ref_name }} of ESM Viewer digital tachograph desktop application.'
                   releaseDraft: true
                   prerelease: ${{ matrix.build_type == 'debug' }}
-                  args: ${{ matrix.build_type == 'debug' && '--debug --features devtools' || '' }}
+                  includeDebug: ${{ matrix.build_type == 'debug' }}
+                  includeRelease: ${{ matrix.build_type == 'release' }}
+                  args: ${{ matrix.build_type == 'debug' && '--features devtools' || '' }}
