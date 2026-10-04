@@ -301,6 +301,21 @@ fn devtools_command_remains_callable_with_packaged_devtools_disabled() {
 }
 
 #[test]
+fn window_command_dispatch_accepts_fullscreen_and_rejects_unknown_actions() {
+    let fixture = NativeFixture::new(false);
+    assert_eq!(fixture.json("execute_window_command", json!({"command": "view.fullscreen"})).unwrap(), Value::Null);
+    // MockRuntime accepts window operations but does not emulate fullscreen state or application exit.
+    for arguments in [json!({}), json!({"command": "file.open"}), json!({"command": 1})] {
+        let failure = fixture.json("execute_window_command", arguments).unwrap_err();
+        assert!(failure.as_str().unwrap().contains("command"));
+    }
+    assert!(matches!(
+        serde_json::from_value::<crate::viewer_commands::NativeWindowCommand>(json!("application.quit")),
+        Ok(crate::viewer_commands::NativeWindowCommand::Quit)
+    ));
+}
+
+#[test]
 fn print_dispatch_validates_arguments_without_opening_native_ui() {
     let fixture = NativeFixture::new(false);
     assert!(fixture.json("print_html_document", json!({})).unwrap_err().as_str().unwrap().contains("missing required key html"));

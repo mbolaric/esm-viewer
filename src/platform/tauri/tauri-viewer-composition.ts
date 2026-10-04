@@ -2,7 +2,7 @@ import type { MenuItem } from '@tauri-apps/api/menu';
 import { ERROR_CODES, type ApplicationCommand, type ApplicationCommandState, type IViewerPreferences } from '#contracts';
 import { ComplianceProfileController } from '#compliance-feature';
 import { ComplianceExportController } from '#compliance-export-controller';
-import { ErrorService, type IErrorService } from '#error-reporting';
+import type { IErrorService } from '#error-reporting';
 import { createLocalisationService, createTranslationService } from '#localization';
 import { ToastController } from '#ui';
 import {
@@ -32,14 +32,12 @@ import {
     TauriReopenTachographFilePicker,
     TauriTachographFilePicker,
 } from './tauri-file-pickers.js';
-import { ConsoleErrorProvider } from './console-error-provider.js';
 import { createBrowserKeyValueStore } from './browser-key-value-store.js';
-import { LogFileErrorProvider } from './log-file-error-provider.js';
-import { NativeDebugLogErrorProvider } from './native-debug-log-error-provider.js';
 import { type TauriPlatformService } from './tauri-platform-service.js';
 import { TauriTachographParser } from './tauri-tachograph-parser.js';
 import { createApplicationMenu, type IApplicationMenu } from './viewer-menu.js';
 import { TauriPreferencesTarget } from './tauri-preferences-target.js';
+import { createTauriErrorService } from './tauri-error-service.js';
 
 import {
     createExportPort,
@@ -67,9 +65,7 @@ export async function createTauriViewerContext(
     const commandMenuItems = new Map<ApplicationCommand, MenuItem>();
     let commandController: ViewerCommandController | null = null;
 
-    const errorService: IErrorService =
-        options?.errorService ??
-        new ErrorService([new ConsoleErrorProvider(), new LogFileErrorProvider(), new NativeDebugLogErrorProvider()]);
+    const errorService: IErrorService = options?.errorService ?? createTauriErrorService();
     const installMenu = options?.installMenu ?? createApplicationMenu;
     let applicationMenu: IApplicationMenu | null = null;
     let menuUpdate: Promise<void> = Promise.resolve();
@@ -80,7 +76,7 @@ export async function createTauriViewerContext(
         menuUpdate = menuUpdate
             .then(async () => {
                 if (applicationMenu === null) {
-                    applicationMenu = await installMenu(handleApplicationCommand, commandMenuItems, locale);
+                    applicationMenu = await installMenu(handleApplicationCommand, commandMenuItems, locale, { errorService });
                 } else {
                     await applicationMenu.updateLocale(locale);
                 }

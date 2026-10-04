@@ -3,7 +3,7 @@ import type { ApplicationMenuItem, IApplicationCommand } from '#shell';
 
 export async function createNativeCommandMenuItem<TCommandId extends string>(
     command: IApplicationCommand<TCommandId>,
-    commandItems: Map<TCommandId, MenuItem>,
+    commandItems?: Map<TCommandId, MenuItem>,
 ): Promise<MenuItem> {
     const item = await MenuItem.new({
         ...(command.accelerator === undefined ? {} : { accelerator: command.accelerator }),
@@ -11,7 +11,7 @@ export async function createNativeCommandMenuItem<TCommandId extends string>(
         enabled: command.enabled,
         text: command.label,
     });
-    commandItems.set(command.id, item);
+    commandItems?.set(command.id, item);
     return item;
 }
 

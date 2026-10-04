@@ -25,6 +25,7 @@ export {
     type ConvertHtmlToPdfResult,
     type GeneratedBinaryDocumentResult,
     type NativeCommandInvoker,
+    type NativeWindowCommand,
     type IOpenedTachographFile,
     type IOpenTachographPathRequest,
     type IRecentFileEntry,

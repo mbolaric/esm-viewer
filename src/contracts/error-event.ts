@@ -8,6 +8,7 @@ export const ERROR_CODES = {
     invalidErrorReport: 'desktop.invalid-error-report',
     menuBuildFailed: 'desktop.menu-build-failed',
     nativeThemeSyncFailed: 'desktop.native-theme-sync-failed',
+    nativeWindowCommandFailed: 'desktop.native-window-command-failed',
     pdfGenerationFailed: 'desktop.pdf-generation-failed',
     signatureVerificationFailed: 'viewer.signature-verification-failed',
     translationMissingKey: 'translation.missing-key',
@@ -32,6 +33,11 @@ const SIMPLE_EVENTS = {
     [ERROR_CODES.invalidErrorReport]: { code: ERROR_CODES.invalidErrorReport, severity: 'warning', source: 'desktop' },
     [ERROR_CODES.menuBuildFailed]: { code: ERROR_CODES.menuBuildFailed, severity: 'error', source: 'desktop' },
     [ERROR_CODES.nativeThemeSyncFailed]: { code: ERROR_CODES.nativeThemeSyncFailed, severity: 'warning', source: 'desktop' },
+    [ERROR_CODES.nativeWindowCommandFailed]: {
+        code: ERROR_CODES.nativeWindowCommandFailed,
+        severity: 'error',
+        source: 'desktop',
+    },
     [ERROR_CODES.pdfGenerationFailed]: { code: ERROR_CODES.pdfGenerationFailed, severity: 'error', source: 'desktop' },
     [ERROR_CODES.signatureVerificationFailed]: {
         code: ERROR_CODES.signatureVerificationFailed,

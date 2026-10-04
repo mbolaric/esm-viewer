@@ -3,11 +3,13 @@ import { Menu, MenuItem, PredefinedMenuItem, Submenu } from '@tauri-apps/api/men
 import { getCurrentWindow } from '@tauri-apps/api/window';
 
 import { resolveApplicationCatalogue, resolveApplicationCommandDefinition } from '#application-i18n';
-import type { ApplicationCommand } from '#contracts';
+import { ERROR_CODES, type ApplicationCommand, type NativeWindowCommand } from '#contracts';
+import type { IErrorService } from '#error-reporting';
 import { VIEWER_DESKTOP_CONTRIBUTION, type ViewerMenuItem } from '#viewer';
 
 import type { IApplicationCommand } from '#shell';
 import { createNativeCommandMenuItem, createNativeMenuItems } from './application-menu-items.js';
+import { createTauriErrorService } from './tauri-error-service.js';
 
 type NativeMenuItem = MenuItem | PredefinedMenuItem;
 
@@ -17,6 +19,7 @@ export interface IApplicationMenu {
 
 export interface IApplicationMenuOptions {
     readonly applicationName?: string;
+    readonly errorService?: IErrorService;
     readonly additionalMenus?: readonly Submenu[];
     readonly commandLabels?: Readonly<Partial<Record<ApplicationCommand, string>>>;
 }
@@ -88,12 +91,41 @@ async function createViewerMenuItems(
     return createNativeMenuItems(items, commands, commandItems);
 }
 
+async function createWindowCommandMenuItem(
+    command: NativeWindowCommand,
+    locale: string,
+    errorService: IErrorService,
+): Promise<MenuItem> {
+    const catalogue = resolveApplicationCatalogue(locale);
+    const definition = resolveApplicationCommandDefinition(command, { translate: (key) => catalogue[key] });
+    return createNativeCommandMenuItem({
+        ...definition,
+        id: command,
+        enabled: true,
+        onexecute: () => {
+            void invoke<unknown>('execute_window_command', { command })
+                .then((response: unknown) => {
+                    if (response !== null) {
+                        throw new TypeError('Invalid native window command response.');
+                    }
+                })
+                .catch((error: unknown) => {
+                    void errorService.report(
+                        { code: ERROR_CODES.nativeWindowCommandFailed, severity: 'error', source: 'desktop' },
+                        error,
+                    );
+                });
+        },
+    });
+}
+
 export async function createApplicationMenu(
     execute: (command: ApplicationCommand) => void,
     commandItems: Map<ApplicationCommand, MenuItem>,
     locale: string,
     options: IApplicationMenuOptions = {},
 ): Promise<IApplicationMenu> {
+    const errorService = options.errorService ?? createTauriErrorService();
     let currentMenu: Menu | null = null;
 
     const buildAndInstallMenu = async (targetLocale: string): Promise<void> => {
@@ -107,7 +139,12 @@ export async function createApplicationMenu(
             options.commandLabels,
         );
         if (!isMacOS()) {
-            fileItems.push(await PredefinedMenuItem.new({ item: 'Separator' }), await PredefinedMenuItem.new({ item: 'Quit' }));
+            fileItems.push(
+                await PredefinedMenuItem.new({ item: 'Separator' }),
+                isLinux()
+                    ? await createWindowCommandMenuItem('application.quit', targetLocale, errorService)
+                    : await PredefinedMenuItem.new({ item: 'Quit' }),
+            );
         }
         const fileMenu = await Submenu.new({ items: fileItems, text: catalogue['menu.file'] });
 
@@ -133,7 +170,12 @@ export async function createApplicationMenu(
             targetLocale,
             options.commandLabels,
         );
-        viewItems.push(await PredefinedMenuItem.new({ item: 'Separator' }), await PredefinedMenuItem.new({ item: 'Fullscreen' }));
+        viewItems.push(
+            await PredefinedMenuItem.new({ item: 'Separator' }),
+            isMacOS()
+                ? await PredefinedMenuItem.new({ item: 'Fullscreen' })
+                : await createWindowCommandMenuItem('view.fullscreen', targetLocale, errorService),
+        );
         if (import.meta.env.DEV) {
             viewItems.push(
                 await PredefinedMenuItem.new({ item: 'Separator' }),

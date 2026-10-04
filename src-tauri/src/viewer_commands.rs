@@ -9,6 +9,7 @@ use esm_parser::{
     verify_card, verify_vu_certificate_chain, verify_vu_full, SerializedTachographData,
 };
 use serde::{Deserialize, Serialize};
+use tauri::Manager;
 
 use crate::blocking::{run_blocking, run_blocking_string};
 use crate::runtime_versions;
@@ -173,6 +174,29 @@ pub async fn verify_vu_document(
         Ok(into_response(verify_vu_files(&generation, &member_state_certificate_raw, &vu_certificate_raw, data_files, &erca_pk)))
     })
     .await
+}
+
+#[derive(Debug, Deserialize)]
+pub enum NativeWindowCommand {
+    #[serde(rename = "application.quit")]
+    Quit,
+    #[serde(rename = "view.fullscreen")]
+    Fullscreen,
+}
+
+#[tauri::command]
+pub fn execute_window_command<R: tauri::Runtime>(
+    window: tauri::WebviewWindow<R>,
+    command: NativeWindowCommand,
+) -> Result<(), String> {
+    match command {
+        NativeWindowCommand::Quit => window.app_handle().exit(0),
+        NativeWindowCommand::Fullscreen => {
+            let fullscreen = window.is_fullscreen().map_err(|_| "Could not read fullscreen state".to_string())?;
+            window.set_fullscreen(!fullscreen).map_err(|_| "Could not change fullscreen state".to_string())?;
+        }
+    }
+    Ok(())
 }
 
 #[tauri::command]

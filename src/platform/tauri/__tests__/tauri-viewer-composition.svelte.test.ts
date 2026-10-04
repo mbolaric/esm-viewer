@@ -26,6 +26,7 @@ describe('native menu initialization', () => {
             expect(installMenu).toHaveBeenCalledOnce();
             expect(updateLocale).not.toHaveBeenCalled();
             expect(installMenu.mock.lastCall?.[2]).toBe('de');
+            expect(installMenu.mock.lastCall?.[3]?.errorService).toEqual({ report });
 
             const changedAppearance: IViewerPreferences = {
                 ...initialPreferences,

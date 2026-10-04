@@ -459,6 +459,14 @@ between the Command Palette and the User Guide dialog:
 open, and disables everything while the document is busy loading or another
 modal (Preferences, About, Export) is already open.
 
+Native window actions use the same typed label and accelerator catalogue but
+remain independent of document-command availability. Linux Quit uses `Ctrl+Q`;
+Linux and Windows Full Screen use `F11`. These are enabled native menu commands
+that dispatch `execute_window_command` to request application exit or toggle
+the invoking window's fullscreen state. macOS retains its predefined native
+Quit and Fullscreen items; Windows retains its predefined Quit item. Labels are
+translated in all seven catalogues and rebuilt when the selected language changes.
+
 - **Command Palette** (`CommandPaletteDialog.svelte`): keyboard-driven
   command launcher over the table above.
 - **Export file names** follow the display language: every suggested name
@@ -969,8 +977,16 @@ paths, with an optional trailing comma. The launcher registers it without additi
 There is one invoke handler; chaining multiple `invoke_handler` calls would
 replace the earlier handler. The inventory includes parsing,
 nation/extension catalogues, runtime metadata, card/VU verification, guarded file
-reads, devtools, PDF, printing, and error/debug logging. Command names, camelCase
-arguments, response DTOs, and raw binary IPC bodies are unchanged. Shared command
+reads, devtools, native window actions, PDF, printing, and error/debug logging.
+`execute_window_command` accepts only `application.quit` and `view.fullscreen`,
+returns JSON `null` on success, and rejects unknown actions or window-operation
+failures. Quit requests the host application's normal exit lifecycle; fullscreen
+targets only the invoking window. Renderer responses are validated from `unknown`
+and failures are reported through `IErrorService` as
+`desktop.native-window-command-failed`. Embedded hosts inherit the command through
+the shared inventory without adding renderer permissions or runtime dependencies.
+Existing command names, camelCase arguments, response DTOs, and raw binary IPC
+bodies are unchanged. Shared command
 functions and their immediate AppHandle/WebviewWindow helpers are generic over
 `R: tauri::Runtime`; production Wry callers infer the runtime as before.
 

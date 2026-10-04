@@ -4,7 +4,7 @@ import { clearMocks, mockIPC, mockWindows } from '@tauri-apps/api/mocks';
 import { afterEach, describe, expect, it, vi, type Mock } from 'vitest';
 
 import { resolveApplicationCatalogue } from '#application-i18n';
-import { isUnknownRecord, type ApplicationCommand } from '#contracts';
+import { ERROR_CODES, isUnknownRecord, type ApplicationCommand, type IErrorEvent } from '#contracts';
 import { createApplicationMenu } from '#tauri-platform';
 
 interface IMenuResource {
@@ -19,14 +19,23 @@ interface IMenuResource {
 interface IMenuFixture {
     readonly ipc: Mock<(command: string, payload?: InvokeArgs) => unknown>;
     readonly resources: ReadonlyMap<number, IMenuResource>;
+    readonly windowCommand: Mock<(command: string) => unknown>;
 }
 
 function nativeMenuFixture(): IMenuFixture {
     const resources = new Map<number, IMenuResource>();
     let nextRid = 1;
+    const windowCommand = vi.fn<(command: string) => unknown>().mockReturnValue(null);
     const ipc = vi.fn((command: string, payload?: InvokeArgs): unknown => {
         if (!isUnknownRecord(payload)) {
             throw new TypeError('Invalid menu payload.');
+        }
+        if (command === 'execute_window_command') {
+            const action = payload['command'];
+            if (typeof action !== 'string') {
+                throw new TypeError('Invalid native window command.');
+            }
+            return windowCommand(action);
         }
         if (command === 'plugin:menu|new') {
             const options = payload['options'];
@@ -42,7 +51,13 @@ function nativeMenuFixture(): IMenuFixture {
                 options: { ...options },
                 handler: payload['handler'],
                 text: typeof options['text'] === 'string' ? options['text'] : '',
-                enabled: options['enabled'] !== false,
+                enabled:
+                    options['enabled'] !== false &&
+                    !(
+                        navigator.userAgent.includes('Linux') &&
+                        (options['item'] === 'Quit' || options['item'] === 'Fullscreen')
+                    ) &&
+                    !(navigator.userAgent.includes('Windows') && options['item'] === 'Fullscreen'),
             });
             return [rid, id];
         }
@@ -91,6 +106,7 @@ function nativeMenuFixture(): IMenuFixture {
     return {
         ipc,
         resources,
+        windowCommand,
     };
 }
 
@@ -163,4 +179,95 @@ describe('native menu language changes', () => {
             expect(ipc.mock.calls.filter(([command]) => command === 'plugin:resources|close')).toHaveLength(3);
         },
     );
+});
+
+function activateMenuItem(resource: IMenuResource | undefined): void {
+    if (resource === undefined || !(resource.handler instanceof Channel)) {
+        throw new TypeError('Missing native menu action channel.');
+    }
+    resource.handler.onmessage(resource.id);
+}
+
+describe('native window menu commands', () => {
+    it.each(['Linux', 'Windows'])(
+        'provides enabled localized fullscreen and platform-appropriate quit actions on %s',
+        async (platform) => {
+            vi.stubGlobal('navigator', { userAgent: platform });
+            const { resources, windowCommand } = nativeMenuFixture();
+            const report = vi.fn<(event: IErrorEvent, detail?: unknown) => Promise<void>>().mockResolvedValue(undefined);
+            const menu = await createApplicationMenu(
+                vi.fn<(command: ApplicationCommand) => void>(),
+                new Map<ApplicationCommand, MenuItem>(),
+                'en',
+                { errorService: { report } },
+            );
+            for (const locale of ['en', 'de', 'fr']) {
+                await menu.updateLocale(locale);
+                const catalogue = resolveApplicationCatalogue(locale);
+                const fullscreen = [...resources.values()].findLast(
+                    (resource) => resource.kind === 'MenuItem' && resource.text === catalogue['command.view.fullscreen'],
+                );
+                expect(fullscreen?.enabled).toBe(true);
+                expect(fullscreen?.options['accelerator']).toBe('F11');
+                activateMenuItem(fullscreen);
+                expect(windowCommand).toHaveBeenLastCalledWith('view.fullscreen');
+                if (platform === 'Linux') {
+                    const quit = [...resources.values()].findLast(
+                        (resource) => resource.kind === 'MenuItem' && resource.text === catalogue['command.application.quit'],
+                    );
+                    expect(quit?.enabled).toBe(true);
+                    expect(quit?.options['accelerator']).toBe('CommandOrControl+Q');
+                    activateMenuItem(quit);
+                    expect(windowCommand).toHaveBeenLastCalledWith('application.quit');
+                    expect([...resources.values()].some((resource) => resource.options['item'] === 'Quit')).toBe(false);
+                } else {
+                    expect([...resources.values()].some((resource) => resource.options['item'] === 'Quit')).toBe(true);
+                }
+                expect([...resources.values()].some((resource) => resource.options['item'] === 'Fullscreen')).toBe(false);
+            }
+            expect(report).not.toHaveBeenCalled();
+        },
+    );
+
+    it('retains macOS native quit and fullscreen items', async () => {
+        vi.stubGlobal('navigator', { userAgent: 'Macintosh' });
+        const { resources, windowCommand } = nativeMenuFixture();
+        await createApplicationMenu(
+            vi.fn<(command: ApplicationCommand) => void>(),
+            new Map<ApplicationCommand, MenuItem>(),
+            'en',
+        );
+        for (const item of ['Quit', 'Fullscreen']) {
+            expect([...resources.values()].find((resource) => resource.options['item'] === item)?.enabled).toBe(true);
+        }
+        expect(windowCommand).not.toHaveBeenCalled();
+    });
+
+    it('reports native rejection and malformed responses through the supplied error service', async () => {
+        vi.stubGlobal('navigator', { userAgent: 'Linux' });
+        const { resources, windowCommand } = nativeMenuFixture();
+        const report = vi.fn<(event: IErrorEvent, detail?: unknown) => Promise<void>>().mockResolvedValue(undefined);
+        await createApplicationMenu(
+            vi.fn<(command: ApplicationCommand) => void>(),
+            new Map<ApplicationCommand, MenuItem>(),
+            'en',
+            { errorService: { report } },
+        );
+        const fullscreen = [...resources.values()].find(
+            (resource) => resource.text === resolveApplicationCatalogue('en')['command.view.fullscreen'],
+        );
+        const failure = new Error('Synthetic window command failure');
+        windowCommand.mockReturnValueOnce(Promise.reject(failure));
+        activateMenuItem(fullscreen);
+        const event: IErrorEvent = { code: ERROR_CODES.nativeWindowCommandFailed, severity: 'error', source: 'desktop' };
+        await vi.waitFor(() => {
+            expect(report).toHaveBeenCalledExactlyOnceWith(event, failure);
+        });
+        windowCommand.mockReturnValueOnce({ unexpected: true });
+        activateMenuItem(fullscreen);
+        await vi.waitFor(() => {
+            expect(report).toHaveBeenCalledTimes(2);
+            expect(report).toHaveBeenLastCalledWith(event, expect.objectContaining({ name: 'TypeError' }));
+        });
+    });
 });

@@ -174,6 +174,8 @@ export const APPLICATION_COMMANDS = [
     'view.commandPalette',
 ] as const;
 
+export type NativeWindowCommand = 'application.quit' | 'view.fullscreen';
+
 export type ApplicationCommand = (typeof APPLICATION_COMMANDS)[number];
 export type ApplicationCommandState = Readonly<Record<ApplicationCommand, boolean>>;
 

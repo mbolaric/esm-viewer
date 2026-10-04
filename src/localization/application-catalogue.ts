@@ -1,10 +1,11 @@
-import type { ApplicationCommand } from '#contracts';
+import type { ApplicationCommand, NativeWindowCommand } from '#contracts';
 
 export const applicationEn = {
     'application.name': 'ESM Viewer',
     'command.application.about': 'About ESM Viewer',
     'command.application.exportLogs': 'Export error log…',
     'command.application.preferences': 'Preferences…',
+    'command.application.quit': 'Quit',
     'command.application.userGuide': 'User guide…',
     'command.edit.copy': 'Copy',
     'command.edit.cut': 'Cut',
@@ -16,6 +17,7 @@ export const applicationEn = {
     'command.file.export': 'Export…',
     'command.file.open': 'Open file…',
     'command.view.commandPalette': 'Command palette…',
+    'command.view.fullscreen': 'Full Screen',
     'dialog.tachographFiles': 'Tachograph files',
     'menu.edit': 'Edit',
     'menu.file': 'File',
@@ -31,6 +33,7 @@ export const applicationDe = {
     'command.application.about': 'Über ESM Viewer',
     'command.application.exportLogs': 'Fehlerprotokoll exportieren…',
     'command.application.preferences': 'Einstellungen…',
+    'command.application.quit': 'Beenden',
     'command.application.userGuide': 'Benutzerhandbuch…',
     'command.edit.copy': 'Kopieren',
     'command.edit.cut': 'Ausschneiden',
@@ -42,6 +45,7 @@ export const applicationDe = {
     'command.file.export': 'Exportieren…',
     'command.file.open': 'Datei öffnen…',
     'command.view.commandPalette': 'Befehlspalette…',
+    'command.view.fullscreen': 'Vollbild',
     'dialog.tachographFiles': 'Tachographendateien',
     'menu.edit': 'Bearbeiten',
     'menu.file': 'Datei',
@@ -55,6 +59,7 @@ export const applicationFr = {
     'command.application.about': 'À propos d’ESM Viewer',
     'command.application.exportLogs': 'Exporter le journal d’erreurs…',
     'command.application.preferences': 'Préférences…',
+    'command.application.quit': 'Quitter',
     'command.application.userGuide': 'Guide de l’utilisateur…',
     'command.edit.copy': 'Copier',
     'command.edit.cut': 'Couper',
@@ -66,6 +71,7 @@ export const applicationFr = {
     'command.file.export': 'Exporter…',
     'command.file.open': 'Ouvrir un fichier…',
     'command.view.commandPalette': 'Palette de commandes',
+    'command.view.fullscreen': 'Plein écran',
     'dialog.tachographFiles': 'Fichiers de tachygraphe',
     'menu.edit': 'Édition',
     'menu.file': 'Fichier',
@@ -79,6 +85,7 @@ export const applicationIt = {
     'command.application.about': 'Informazioni su ESM Viewer',
     'command.application.exportLogs': 'Esporta registro errori…',
     'command.application.preferences': 'Preferenze…',
+    'command.application.quit': 'Esci',
     'command.application.userGuide': 'Guida utente…',
     'command.edit.copy': 'Copia',
     'command.edit.cut': 'Taglia',
@@ -90,6 +97,7 @@ export const applicationIt = {
     'command.file.export': 'Esporta…',
     'command.file.open': 'Apri file…',
     'command.view.commandPalette': 'Tavolozza comandi',
+    'command.view.fullscreen': 'Schermo intero',
     'dialog.tachographFiles': 'File del tachigrafo',
     'menu.edit': 'Modifica',
     'menu.file': 'File',
@@ -103,6 +111,7 @@ export const applicationPl = {
     'command.application.about': 'O ESM Viewer',
     'command.application.exportLogs': 'Eksportuj dziennik błędów…',
     'command.application.preferences': 'Preferencje…',
+    'command.application.quit': 'Zakończ',
     'command.application.userGuide': 'Przewodnik użytkownika…',
     'command.edit.copy': 'Kopiuj',
     'command.edit.cut': 'Wycinaj',
@@ -114,6 +123,7 @@ export const applicationPl = {
     'command.file.export': 'Eksportuj…',
     'command.file.open': 'Otwórz plik…',
     'command.view.commandPalette': 'Paleta poleceń',
+    'command.view.fullscreen': 'Pełny ekran',
     'dialog.tachographFiles': 'Pliki tachografu',
     'menu.edit': 'Edycja',
     'menu.file': 'Plik',
@@ -127,6 +137,7 @@ export const applicationEs = {
     'command.application.about': 'Acerca de ESM Viewer',
     'command.application.exportLogs': 'Exportar registro de errores…',
     'command.application.preferences': 'Preferencias…',
+    'command.application.quit': 'Salir',
     'command.application.userGuide': 'Guía del usuario…',
     'command.edit.copy': 'Copiar',
     'command.edit.cut': 'Cortar',
@@ -138,6 +149,7 @@ export const applicationEs = {
     'command.file.export': 'Exportar…',
     'command.file.open': 'Abrir archivo…',
     'command.view.commandPalette': 'Paleta de comandos',
+    'command.view.fullscreen': 'Pantalla completa',
     'dialog.tachographFiles': 'Archivos de tacógrafo',
     'menu.edit': 'Editar',
     'menu.file': 'Archivo',
@@ -151,6 +163,7 @@ export const applicationHr = {
     'command.application.about': 'O aplikaciji ESM Viewer',
     'command.application.exportLogs': 'Izvezi zapisnik pogrešaka…',
     'command.application.preferences': 'Postavke…',
+    'command.application.quit': 'Zatvori aplikaciju',
     'command.application.userGuide': 'Korisnički vodič…',
     'command.edit.copy': 'Kopiraj',
     'command.edit.cut': 'Izreži',
@@ -162,6 +175,7 @@ export const applicationHr = {
     'command.file.export': 'Izvezi…',
     'command.file.open': 'Otvori datoteku…',
     'command.view.commandPalette': 'Paleta naredbi',
+    'command.view.fullscreen': 'Cijeli zaslon',
     'dialog.tachographFiles': 'Datoteke tahografa',
     'menu.edit': 'Uređivanje',
     'menu.file': 'Datoteka',
@@ -199,7 +213,7 @@ export interface IApplicationCommandTranslation {
 }
 
 export function resolveApplicationCommandDefinition(
-    command: ApplicationCommand,
+    command: ApplicationCommand | NativeWindowCommand,
     translation: IApplicationCommandTranslation,
 ): IApplicationCommandDefinition {
     switch (command) {
@@ -215,6 +229,11 @@ export function resolveApplicationCommandDefinition(
             return {
                 accelerator: 'CommandOrControl+,',
                 label: translation.translate('command.application.preferences'),
+            };
+        case 'application.quit':
+            return {
+                accelerator: 'CommandOrControl+Q',
+                label: translation.translate('command.application.quit'),
             };
         case 'application.userGuide':
             return {
@@ -235,6 +254,11 @@ export function resolveApplicationCommandDefinition(
             return {
                 accelerator: 'CommandOrControl+O',
                 label: translation.translate('command.file.open'),
+            };
+        case 'view.fullscreen':
+            return {
+                accelerator: 'F11',
+                label: translation.translate('command.view.fullscreen'),
             };
         case 'view.commandPalette':
             return {
