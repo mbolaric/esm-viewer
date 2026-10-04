@@ -68,7 +68,7 @@ pub fn setup_macos_dock_icon() {
 // Restricts webview navigation to packaged content or local dev server.
 pub fn is_allowed_navigation_url(url: &tauri::Url) -> bool {
     url.scheme() == "tauri"
-        || (url.scheme() == "https" && url.domain() == Some("tauri.localhost"))
+        || ((url.scheme() == "http" || url.scheme() == "https") && url.domain() == Some("tauri.localhost"))
         || (cfg!(dev) && url.scheme() == "http" && url.host_str() == Some("localhost"))
 }
 
