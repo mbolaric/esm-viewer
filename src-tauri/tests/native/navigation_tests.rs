@@ -11,7 +11,8 @@ fn accepts_the_packaged_app_custom_scheme_used_on_macos_and_linux() {
 }
 
 #[test]
-fn accepts_the_packaged_app_https_host_used_on_windows_and_android() {
+fn accepts_the_packaged_app_windows_and_android_hosts() {
+    assert!(is_allowed_navigation_url(&url("http://tauri.localhost/index.html")));
     assert!(is_allowed_navigation_url(&url("https://tauri.localhost/index.html")));
 }
 

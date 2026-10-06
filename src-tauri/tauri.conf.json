@@ -21,11 +21,12 @@
                 "resizable": true,
                 "fullscreen": false,
                 "devtools": false,
-                "create": false
+                "create": false,
+                "useHttpsScheme": true
             }
         ],
         "security": {
-            "csp": "default-src 'self'; connect-src 'self' ipc://localhost http://ipc.localhost; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
+            "csp": "default-src 'self'; connect-src 'self' ipc://localhost http://ipc.localhost https://ipc.localhost; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"
         }
     },
     "bundle": {
