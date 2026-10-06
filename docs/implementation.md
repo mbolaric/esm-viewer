@@ -142,8 +142,16 @@ wrapper on the runner's path. It invokes `xcrun actool` with stdin opened on
 `/dev/null`, avoiding the Node-based Tauri CLI's closed-stdin icon compiler
 failure while preserving the layered icon. Compiler arguments and failures
 pass through unchanged.
-No code-signing or notarization credentials are currently configured for
-Windows or macOS, so distributed installers are unsigned.
+
+No paid Apple Developer or Microsoft code-signing credentials are
+configured, so distributed installers are not notarized. macOS application
+bundles are explicitly signed ad-hoc (`bundle.macOS.signingIdentity = "-"`
+and `APPLE_SIGNING_IDENTITY = "-"`) so bundle resources are sealed in
+`_CodeSignature`, avoiding macOS Gatekeeper classifying the bundle structure
+as corrupted or damaged (`code has no resources but signature indicates they
+must be present`). Users running downloaded releases must still clear the
+quarantine attribute (`xattr -cr`) or allow the application in macOS Privacy
+& Security settings.
 
 ## 4. Parser engine
 

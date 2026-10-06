@@ -39,6 +39,9 @@
             "icons/AppIcon.icon",
             "icons/icon.ico",
             "icons/icon.png"
-        ]
+        ],
+        "macOS": {
+            "signingIdentity": "-"
+        }
     }
 }
