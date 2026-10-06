@@ -554,9 +554,9 @@ export const en = {
         'Directive 2002/15/EC: the working time rules above, together with the EU driving and rest limits.',
     'guide.regulations.profilesTitle': 'Rule profiles',
     'guide.regulations.severityBands':
-        'EU rules: For the EU driving, break and rest rules the viewer ranks a finding as Serious, Very Serious or Most Serious using the margins in Annex I of Commission Regulation (EU) 2016/403. Anything below those margins is shown as Minor.',
+        'EU rules: For the EU driving, break, rest and working-time rules the viewer ranks a finding as Serious, Very Serious or Most Serious using the bands and margins in Annex I of Commission Regulation (EU) 2016/403. Anything below those margins is shown as Minor.',
     'guide.regulations.severityOther':
-        'Other rules: Working time findings and the AETR and UK profiles use a simple margin over the limit instead. Anomalies are always Most Serious. Severity is the viewer’s own calculation, not an official classification.',
+        'Other rules: Working time findings under the Directive 2002/15/EC profile use the bands in section 3 of that same Annex I (weekly working time, the break taken, and night work), while the 48-hour average keeps a simple margin over the limit. The AETR and UK profiles use simple margins throughout. Anomalies are always Most Serious. Severity is the viewer’s own calculation, not an official classification.',
     'guide.regulations.severityTitle': 'Severity of findings',
     'guide.regulations.vehicleUnitDeadline': 'Vehicle units (VU): Must be downloaded and archived at least once every 90 days.',
     'guide.regulations.weekBoundary':
@@ -613,6 +613,8 @@ export const en = {
     'export.error.generic': 'The export could not be completed.',
     'export.error.io': 'The file could not be written.',
     'export.error.sourceConflict': 'The export destination must not replace the opened source file.',
+    'export.error.guardUnavailable':
+        'The destination could not be checked against the opened source file, so nothing was written. Try again or choose another destination.',
     'export.export': 'Export',
     'export.exporting': 'Exporting…',
     'export.printing': 'Printing…',

@@ -3,9 +3,13 @@ import { rawDataChildPageSize } from '#viewer-application';
 import { isJsonPointer, type JsonPointer } from '#viewer-domain';
 import { describe, expect, it } from 'vitest';
 
-import { RawDataController } from '../controllers/raw-data-controller.svelte.js';
+import { RawDataController, type IRawDataRevealRequest } from '../controllers/raw-data-controller.svelte.js';
 
 const maximumRawDataFindMatches = 500;
+
+function reveal(path: JsonPointer, sequence: number): IRawDataRevealRequest {
+    return { path, sequence };
+}
 
 function pointer(value: string): JsonPointer {
     if (!isJsonPointer(value)) {
@@ -143,19 +147,31 @@ describe('RawDataController', () => {
         });
     });
 
-    it('ignores a repeated reveal request for the path it already revealed', () => {
+    it('re-reveals a pointer the user asked for again after navigating away', () => {
         const controller = new RawDataController(explorerWithMatches(3), pointer('/2'));
         expect(controller.snapshot.selectedNode.path).toBe('/2');
 
+        // A new request for the same pointer returns the tree to it, even after the reader folded it away.
         controller.collapseAll();
         expect(controller.snapshot.visibleItems).toHaveLength(1);
+        expect(controller.revealRequest(reveal(pointer('/2'), 1)).selectedNode.path).toBe('/2');
 
-        // The same request must not re-expand the tree the user folded away.
-        controller.revealRequest(pointer('/2'));
-        expect(controller.snapshot.visibleItems).toHaveLength(1);
+        controller.revealRequest(reveal(pointer('/1'), 2));
+        controller.collapseAll();
+        expect(controller.snapshot.selectedNode.path).toBe('/1');
 
-        // A different request still re-points the tree.
-        expect(controller.revealRequest(pointer('/1')).selectedNode.path).toBe('/1');
+        // Navigating elsewhere and clicking the first source link again must still work.
+        expect(controller.revealRequest(reveal(pointer('/2'), 3)).selectedNode.path).toBe('/2');
+    });
+
+    it('ignores a request the controller has already applied', () => {
+        const controller = new RawDataController(explorerWithMatches(3), pointer('/1'));
+        controller.revealRequest(reveal(pointer('/2'), 7));
+        expect(controller.snapshot.selectedNode.path).toBe('/2');
+
+        // Same request value: the sequence is unchanged, so nothing moves.
+        controller.revealRequest(reveal(pointer('/1'), 7));
+        expect(controller.snapshot.selectedNode.path).toBe('/2');
     });
 
     it('reports a missing requested source instead of guessing a path', () => {

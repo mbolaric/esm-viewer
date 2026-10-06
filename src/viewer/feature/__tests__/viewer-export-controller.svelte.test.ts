@@ -141,7 +141,7 @@ describe('ViewerExportController', () => {
 
         expect(save).toHaveBeenCalledWith({
             bytes: new TextEncoder().encode('{}'),
-            sourceToken: null,
+            source: null,
             suggestedName: 'raw.json',
         });
         expect(controller.snapshot).toMatchObject({
@@ -194,11 +194,12 @@ describe('ViewerExportController', () => {
         const sourceToken: SourceToken = sourceTokenCandidate;
 
         controller.open();
-        await controller.export(new TextEncoder().encode('{}'), 'report.html', sourceToken);
+        const source = { sha256: 'a'.repeat(64), sourceToken };
+        await controller.export(new TextEncoder().encode('{}'), 'report.html', source);
 
         expect(save).toHaveBeenCalledWith({
             bytes: new TextEncoder().encode('{}'),
-            sourceToken,
+            source,
             suggestedName: 'report.html',
         });
     });
@@ -219,7 +220,7 @@ describe('ViewerExportController', () => {
         expect(generatePdf).toHaveBeenCalledWith(req);
         expect(save).toHaveBeenCalledWith({
             bytes: new TextEncoder().encode('%PDF'),
-            sourceToken: null,
+            source: null,
             suggestedName: 'report.pdf',
         });
         expect(controller.snapshot).toMatchObject({

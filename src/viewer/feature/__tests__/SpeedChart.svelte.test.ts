@@ -57,6 +57,8 @@ function viewModel(): ISpeedSectionViewModel {
     const first = chartSample(start, 72, 0);
     const second = chartSample(end, 73, 1);
     return {
+        allRecords: [],
+        pageSize: 500,
         chartRecords: [first, second],
         chartReduced: true,
         chartTicks: [

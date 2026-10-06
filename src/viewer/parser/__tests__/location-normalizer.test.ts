@@ -76,6 +76,57 @@ describe('location normalization', () => {
         });
     });
 
+    it('keeps a record whose position the equipment marked as not available', () => {
+        // 0x7FFFFF over the coordinate scale is the specification's "not available" marker.
+        const unknown = 0x7f_ff_ff / 600_000;
+        const application = gen2DriverCard({
+            gnssPlaces: {
+                gnssADPointerNewestRecord: 0,
+                gnssAccumulatedDrivingRecords: [
+                    {
+                        gnssPlaceRecord: gnssPlaceRecord('2026-06-18 11:38:57 UTC', unknown, unknown),
+                        timeStamp: '2026-06-18 11:39:00 UTC',
+                        vehicleOdometerValue: 12_470,
+                    },
+                ],
+            },
+        });
+
+        const result = normalizeCardLocations(application, 'g2', ['cardDataResponses', 'Gen2'], nationAlphaCodes());
+
+        // The timestamp and odometer are evidence even when no position was determined, so the record stays.
+        expect(result.warnings).toEqual([]);
+        expect(result.locations).toHaveLength(1);
+        expect(result.locations[0]).toMatchObject({
+            kind: 'accumulatedDrivingPosition',
+            odometer: 12_470,
+            position: null,
+            recordedAt: Date.UTC(2026, 5, 18, 11, 39),
+        });
+    });
+
+    it('keeps a record with unusable coordinates and reports the invalid values', () => {
+        const application = gen2DriverCard({
+            gnssPlaces: {
+                gnssADPointerNewestRecord: 0,
+                gnssAccumulatedDrivingRecords: [
+                    {
+                        gnssPlaceRecord: gnssPlaceRecord('2026-06-18 11:38:57 UTC', 991, 0),
+                        timeStamp: '2026-06-18 11:39:00 UTC',
+                        vehicleOdometerValue: 12_470,
+                    },
+                ],
+            },
+        });
+
+        const result = normalizeCardLocations(application, 'g2', ['cardDataResponses', 'Gen2'], nationAlphaCodes());
+
+        const record = result.locations[0];
+        expect(record?.kind === 'accumulatedDrivingPosition' ? record.position : null).toBeNull();
+        expect(result.warnings).toHaveLength(1);
+        expect(result.warnings[0]).toMatchObject({ code: 'invalidValue' });
+    });
+
     it('preserves Unknown and reports a typed RFU entry variant', () => {
         const application = gen1DriverCard({
             places: {

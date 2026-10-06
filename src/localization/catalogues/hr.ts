@@ -561,9 +561,9 @@ export const hr = {
         'Direktiva 2002/15/EZ: gore navedena pravila o radnom vremenu zajedno s EU ograničenjima vožnje i odmora.',
     'guide.regulations.profilesTitle': 'Profili pravila',
     'guide.regulations.severityBands':
-        'EU pravila: za EU pravila o vožnji, stankama i odmoru viewer nalaz svrstava kao tešku, vrlo tešku ili najtežu povredu prema graničnim vrijednostima iz Priloga I. Uredbe Komisije (EU) 2016/403. Sve ispod tih vrijednosti prikazuje se kao manja povreda.',
+        'EU pravila: za EU pravila o vožnji, stankama, odmoru i radnom vremenu viewer nalaz svrstava kao tešku, vrlo tešku ili najtežu povredu prema graničnim vrijednostima iz Priloga I. Uredbe Komisije (EU) 2016/403. Sve ispod tih vrijednosti prikazuje se kao manja povreda.',
     'guide.regulations.severityOther':
-        'Ostala pravila: nalazi o radnom vremenu te profili AETR i UK umjesto toga koriste jednostavnu razliku u odnosu na ograničenje. Anomalije su uvijek najteža povreda. Težina je izračun viewera, a ne službena klasifikacija.',
+        'Ostala pravila: nalazi o radnom vremenu u profilu Direktive 2002/15/EZ koriste raspone iz odjeljka 3 istog Priloga I. (tjedno radno vrijeme, uzeta pauza i noćni rad), dok prosjek od 48 sati zadržava jednostavnu razliku u odnosu na ograničenje. Profili AETR i UK koriste jednostavne razlike u svim slučajevima. Anomalije su uvijek najteža povreda. Težina je izračun viewera, a ne službena klasifikacija.',
     'guide.regulations.severityTitle': 'Težina nalaza',
     'guide.regulations.vehicleUnitDeadline':
         'Vozilne jedinice (VJ): moraju se preuzimati i arhivirati najmanje jednom svakih 90 dana.',
@@ -621,6 +621,8 @@ export const hr = {
     'export.error.generic': 'Izvoz nije bilo moguće dovršiti.',
     'export.error.io': 'Datoteku nije bilo moguće zapisati.',
     'export.error.sourceConflict': 'Odredište izvoza ne smije zamijeniti otvorenu izvornu datoteku.',
+    'export.error.guardUnavailable':
+        'Odredište nije bilo moguće usporediti s otvorenom izvornom datotekom pa ništa nije zapisano. Pokušajte ponovno ili odaberite drugo odredište.',
     'export.export': 'Izvezi',
     'export.exporting': 'Izvoz u tijeku…',
     'export.printing': 'Ispis u tijeku…',

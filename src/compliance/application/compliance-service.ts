@@ -1,10 +1,10 @@
 import {
-    projectDocumentActivityDays,
-    projectDocumentEventFaultRecords,
-    type IDocumentActivityDayProjection,
+    projectDocumentCanonicalActivityDays,
+    projectDocumentCanonicalEventFaultRecords,
     type OpenedTachographDocument,
 } from '#viewer-application';
-import type { ActivityInterval, TachographEventFault, TachographGeneration } from '#tachograph-domain';
+import type { ActivityInterval } from '#tachograph-domain';
+import type { EvaluationInterval } from '../domain/unrecorded-time.js';
 
 import { evaluateAnomalyInfringements } from '../domain/evaluators/anomaly-evaluator.js';
 import { evaluateBreakInfringements } from '../domain/evaluators/break-evaluator.js';
@@ -30,47 +30,14 @@ export interface IComplianceEvaluationResult {
     readonly assessments: readonly IComplianceAssessment[];
     readonly creditedAvailabilityBreaks: readonly ICreditedAvailabilityBreak[];
     readonly crewDutyPeriods: readonly ICrewDutyPeriod[];
+    // The merged intervals the evaluators saw, with unrecorded time already read as rest. Anything that presents a
+    // rule's progress (the continuous-driving notice, for example) must use these rather than the raw day records,
+    // so a screen cannot disagree with the findings beside it.
+    readonly evaluationIntervals: readonly EvaluationInterval[];
     readonly infringements: readonly IInfringement[];
     readonly profile: IRuleProfile;
     readonly totalCount: number;
     readonly verySeriousCount: number;
-}
-
-const complianceGenerationRank: Readonly<Record<TachographGeneration, number>> = {
-    g1: 0,
-    g2: 1,
-    g2v2: 2,
-};
-
-// Canonicalizes mirrored dual-generation card evidence to the highest generation (Gen2v2 > Gen2 > Gen1).
-function canonicalizeActivityDays(days: readonly IDocumentActivityDayProjection[]): readonly IDocumentActivityDayProjection[] {
-    const canonicalByMidnight = new Map<number, IDocumentActivityDayProjection>();
-    for (const day of days) {
-        const current = canonicalByMidnight.get(day.day.midnightUtc);
-        if (current === undefined || complianceGenerationRank[day.generation] > complianceGenerationRank[current.generation]) {
-            canonicalByMidnight.set(day.day.midnightUtc, day);
-        }
-    }
-
-    return days.filter((day) => canonicalByMidnight.get(day.day.midnightUtc) === day);
-}
-
-function canonicalizeEventFaults(records: readonly TachographEventFault[]): readonly TachographEventFault[] {
-    const canonicalByKey = new Map<string, TachographEventFault>();
-    for (const record of records) {
-        const key = `${record.recordKind}:${record.code}:${String(record.start)}`;
-        const current = canonicalByKey.get(key);
-        if (
-            current === undefined ||
-            complianceGenerationRank[record.source.generation] > complianceGenerationRank[current.source.generation]
-        ) {
-            canonicalByKey.set(key, record);
-        }
-    }
-
-    return records.filter(
-        (record) => canonicalByKey.get(`${record.recordKind}:${record.code}:${String(record.start)}`) === record,
-    );
 }
 
 // Structurally matches the night-work fields of the viewer preferences.
@@ -93,7 +60,7 @@ export function evaluateDocumentCompliance(
     profile: IRuleProfile = EU_561_2006_STANDARD,
     nightWindow?: INightWindow,
 ): IComplianceEvaluationResult {
-    const activityDays = canonicalizeActivityDays(projectDocumentActivityDays(document));
+    const activityDays = projectDocumentCanonicalActivityDays(document);
     const intervals: ActivityInterval[] = [];
 
     for (const dayProjection of activityDays) {
@@ -112,7 +79,7 @@ export function evaluateDocumentCompliance(
     const drivingInfringements = evaluateDrivingInfringements(mergedIntervals, profile);
     const dailyRestResult = evaluateDailyRestCompliance(mergedIntervals, profile);
     const weeklyRestResult = evaluateWeeklyRestCompliance(mergedIntervals, profile);
-    const eventFaults = canonicalizeEventFaults(projectDocumentEventFaultRecords(document));
+    const eventFaults = projectDocumentCanonicalEventFaultRecords(document);
     const anomalyInfringements = evaluateAnomalyInfringements(eventFaults, profile);
     const workingTimeInfringements = evaluateWorkingTimeInfringements(mergedIntervals, profile, nightWindow);
 
@@ -136,6 +103,7 @@ export function evaluateDocumentCompliance(
         ],
         creditedAvailabilityBreaks: resolveCreditedAvailabilityBreaks(mergedIntervals, profile),
         crewDutyPeriods: resolveCrewDutyPeriods(mergedIntervals, profile),
+        evaluationIntervals: mergedIntervals,
         infringements: infringements,
         profile,
         totalCount: infringements.length,

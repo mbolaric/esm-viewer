@@ -70,11 +70,11 @@
     }
 
     function handleSaveHtml(html: string, suggestedName: string): Promise<void> {
-        return exportController.saveHtml(html, suggestedName, document?.source.sourceToken ?? null);
+        return exportController.saveHtml(html, suggestedName, document?.source ?? null);
     }
 
     function handleSavePdf(suggestedName: string, pdfRequest: IPdfDocumentRequest): Promise<void> {
-        return exportController.savePdf(suggestedName, document?.source.sourceToken ?? null, pdfRequest);
+        return exportController.savePdf(suggestedName, document?.source ?? null, pdfRequest);
     }
 
     const exportErrorMessage = $derived(

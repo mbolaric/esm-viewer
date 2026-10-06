@@ -39,6 +39,9 @@ pub fn clean_text(input: &str) -> String {
         if c == '<' {
             let rest: String = chars.clone().take(30).collect();
             if let Some(close_pos) = rest.find('>') {
+                // `find` reports a byte offset: skip that many bytes of the remaining characters as well, or a
+                // multi-byte character inside the tag would consume one character too many.
+                let consumed = rest[..close_pos].chars().count();
                 let tag_content = &rest[..close_pos];
                 if (tag_content.starts_with('/')
                     && tag_content.len() > 1
@@ -49,7 +52,7 @@ pub fn clean_text(input: &str) -> String {
                             ch.is_alphanumeric() || ch.is_whitespace() || ch == '-' || ch == '/' || ch == '=' || ch == '"'
                         }))
                 {
-                    for _ in 0..=close_pos {
+                    for _ in 0..=consumed {
                         chars.next();
                     }
                     continue;
@@ -217,6 +220,13 @@ impl Element for FittedParagraph {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn keeps_text_after_a_tag_that_contains_a_multibyte_character() {
+        // The closing bracket is found by byte offset, so skipping it must not consume an extra character.
+        assert_eq!(clean_text("<aé>bc"), "bc");
+        assert_eq!(clean_text("x<bé>y</bé>z"), "xyz");
+    }
 
     // One millimetre per character keeps the arithmetic obvious.
     fn char_width(s: &str) -> Mm {

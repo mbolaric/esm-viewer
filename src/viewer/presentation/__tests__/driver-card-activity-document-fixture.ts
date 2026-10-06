@@ -12,6 +12,7 @@ import {
     normalizeActivityDay,
     type ActivityInterval,
     type IActivityDay,
+    type IRecordedActivityInterval,
     type UtcTimestamp,
 } from '#viewer-domain';
 
@@ -61,6 +62,64 @@ export function createDriverCardActivityDocumentFixture(
 }
 
 // Builds multi-day Gen1 driver-card document fixture to test continuous-driving across midnight.
+// Builds a combined Gen1/Gen2 card whose two applications hold the same midnight, used to exercise the mirror
+// reconciliation: identical days are one piece of evidence, differing days stay visible but must not be added together.
+export function createCombinedCardActivityDocumentFixture(options: {
+    readonly gen1Intervals: readonly IRecordedActivityInterval[];
+    readonly gen2Intervals: readonly IRecordedActivityInterval[];
+    readonly midnight: number;
+    readonly openedAt: UtcTimestamp;
+}): OpenedTachographDocument {
+    const metadata = decodeFileMetadata({
+        byteLength: 3,
+        displayName: 'combined-card-activity.ddd',
+        sha256: 'c'.repeat(64),
+    });
+    if (!metadata.ok) {
+        throw new TypeError('The combined-card fixture metadata must be valid.');
+    }
+
+    const applicationPath = '/cardDataResponses';
+    if (!isJsonPointer(applicationPath)) {
+        throw new TypeError('The combined-card fixture source path must be valid.');
+    }
+
+    const application = (
+        generation: 'g1' | 'g2',
+        intervals: readonly IRecordedActivityInterval[],
+    ): IParsedDriverCardDocument['applications'][number] => ({
+        activityDays: [normalizeFixtureDay(options.midnight, intervals)],
+        cardNotes: null,
+        events: [],
+        faults: [],
+        generation,
+        identity: null,
+        locations: [],
+        source: createSourceReference('driverCard', generation, applicationPath),
+        technicalRecords: [],
+        verification: {
+            dataFiles: {},
+            dataFileSourcePaths: {},
+            generation,
+        },
+        vehicleUnitUses: [],
+        vehicleUses: [],
+        warnings: [],
+    });
+
+    const content: IParsedDriverCardDocument = {
+        applications: [application('g1', options.gen1Intervals), application('g2', options.gen2Intervals)],
+        cardType: 'driverCard',
+        documentKind: 'driverCard',
+        generation: 'combined',
+        parserVariant: 'cardGen2',
+        rawTree: {},
+        sections: [],
+    };
+
+    return createOpenedTachographDocument(createDocumentSource(metadata.value, options.openedAt), content);
+}
+
 export function createDriverCardActivityDocumentFixtureAcrossDays(
     options: IDriverCardActivityDocumentAcrossDaysFixtureOptions,
 ): OpenedTachographDocument {

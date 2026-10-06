@@ -58,8 +58,9 @@ function registerExportSourceToken(service: TauriPlatformService): Promise<{ rea
 export function createExportPort(service: TauriPlatformService, errorService: IErrorService): IViewerExportPort {
     return {
         async save(request: IViewerExportSaveRequest): Promise<ViewerExportOutcome> {
-            // Preserves source token to prevent overwriting source DDD files (PLATFORM-01).
-            let sourceToken = request.sourceToken ?? null;
+            // The guard needs the opened document's identity: its path token where one exists, and its digest, which
+            // is the only thing that identifies a dropped document.
+            let sourceToken: SourceToken | null = request.source?.sourceToken ?? null;
             if (sourceToken === null) {
                 const registration = await registerExportSourceToken(service);
                 if (registration === null) {
@@ -72,6 +73,7 @@ export function createExportPort(service: TauriPlatformService, errorService: IE
             try {
                 const result = await service.saveExport({
                     bytes: request.bytes,
+                    sourceSha256: request.source?.sha256 ?? null,
                     sourceToken,
                     suggestedName: request.suggestedName,
                 });
@@ -81,12 +83,14 @@ export function createExportPort(service: TauriPlatformService, errorService: IE
                     case 'saved':
                         return { status: 'saved' };
                     case 'failed':
-                        // Source conflict is handled as expected rejection, not reported to error service.
-                        if (result.code !== 'sourceConflict') {
+                        // Source conflict and an unrunnable guard are expected rejections the user must see, not
+                        // defects to report to the error service.
+                        if (result.code !== 'sourceConflict' && result.code !== 'guardUnavailable') {
                             void errorService.report(DESKTOP_FAILURE_EVENTS.exportSave);
                         }
                         return result.code === 'ioFailure' ||
                             result.code === 'sourceConflict' ||
+                            result.code === 'guardUnavailable' ||
                             result.code === 'destinationExists'
                             ? { code: result.code, status: 'failed' }
                             : { code: 'exportFailed', status: 'failed' };

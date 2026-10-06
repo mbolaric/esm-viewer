@@ -1,7 +1,9 @@
-import type { ExportFailureCode, IPdfDocumentRequest, SourceToken } from '#contracts';
+import type { ExportFailureCode, IPdfDocumentRequest } from '#contracts';
 import type { IViewerExportPort, IViewerPdfPort } from '#viewer-application';
 import type { AttestationReason, IComplianceTranslationService } from '#compliance';
 import type { ToastController } from '#ui';
+import type { IViewerExportSource } from '#viewer-application';
+
 import { translateExportFailure } from '#localization';
 
 import { printDocument, saveDocumentHtml, saveDocumentPdf } from '../helpers/print-helper.js';
@@ -70,9 +72,9 @@ export class ComplianceExportController {
         this.#_attestationReason = reason;
     }
 
-    public async saveHtml(html: string, suggestedName: string, sourceToken: SourceToken | null): Promise<void> {
+    public async saveHtml(html: string, suggestedName: string, source: IViewerExportSource | null): Promise<void> {
         this.#_error = null;
-        const result = await saveDocumentHtml(html, suggestedName, this._exportPort, sourceToken);
+        const result = await saveDocumentHtml(html, suggestedName, this._exportPort, source);
         if (result.status === 'saved') {
             this.#_isLetterOpen = false;
             this.#_isAttestationOpen = false;
@@ -90,9 +92,13 @@ export class ComplianceExportController {
         await printDocument(html, this._pdfPort);
     }
 
-    public async savePdf(suggestedName: string, sourceToken: SourceToken | null, pdfRequest: IPdfDocumentRequest): Promise<void> {
+    public async savePdf(
+        suggestedName: string,
+        source: IViewerExportSource | null,
+        pdfRequest: IPdfDocumentRequest,
+    ): Promise<void> {
         this.#_error = null;
-        const result = await saveDocumentPdf(suggestedName, this._exportPort, this._pdfPort, sourceToken, pdfRequest);
+        const result = await saveDocumentPdf(suggestedName, this._exportPort, this._pdfPort, source, pdfRequest);
         if (result.status === 'saved') {
             this.#_isLetterOpen = false;
             this.#_isAttestationOpen = false;

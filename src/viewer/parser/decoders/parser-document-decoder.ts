@@ -21,6 +21,7 @@ import type {
     SerializedTachographData,
 } from '../generated/esm_parser.js';
 import { normalizeDriverCardApplication } from '../card/driver-card-normalizer.js';
+import { reconcileMirroredApplications } from '../normalizers/mirrored-application-normalizer.js';
 import { createJsonPointer } from '../json-pointer.js';
 import type {
     IParserEmbeddedCardSnapshot,
@@ -219,22 +220,22 @@ function decodeEmbeddedCardSnapshot(
         if (typeId !== 'CardDownload' && typeId !== 'Gen2CardDownload') {
             continue;
         }
-        const generation: 'g1' | 'g2' = typeId === 'CardDownload' ? 'g1' : 'g2';
         const basePath: readonly (string | number)[] = ['transferResParams', index, 'data'];
-        if (generation === 'g1') {
+        const data = parameter.data;
+        // A Gen1 download records only the marker, so there is no snapshot; a Gen2 one carries the card data.
+        if (typeof data === 'string') {
             return {
                 applications: [],
-                generation,
+                generation: 'g1',
                 hasSignature: false,
                 pathTokens: basePath,
                 state: 'unsupported',
             };
         }
-        const data = parameter.data;
         if (typeof data !== 'object' || !('CardDownload' in data)) {
             return {
                 applications: null,
-                generation,
+                generation: 'g2',
                 hasSignature: false,
                 pathTokens: basePath,
                 state: 'unsupported',
@@ -247,7 +248,7 @@ function decodeEmbeddedCardSnapshot(
         if (response === 'Unsupported') {
             return {
                 applications: [],
-                generation,
+                generation: 'g2',
                 hasSignature,
                 pathTokens: snapshotPath,
                 state: 'unsupported',
@@ -256,7 +257,7 @@ function decodeEmbeddedCardSnapshot(
         if (response === null) {
             return {
                 applications: [],
-                generation,
+                generation: 'g2',
                 hasSignature,
                 pathTokens: snapshotPath,
                 state: 'noCard',
@@ -266,7 +267,7 @@ function decodeEmbeddedCardSnapshot(
         if (applications === null) {
             return {
                 applications: null,
-                generation,
+                generation: 'g2',
                 hasSignature,
                 pathTokens: snapshotPath,
                 state: 'parsed',
@@ -279,7 +280,7 @@ function decodeEmbeddedCardSnapshot(
                 pathTokens: [...snapshotPath, ...application.pathTokens],
                 value: application.value,
             })),
-            generation,
+            generation: 'g2',
             hasSignature,
             pathTokens: snapshotPath,
             state: 'parsed',
@@ -428,13 +429,15 @@ function decodeCardDocument(
         });
     }
 
-    const normalizedApplications = driverApplications.map((application) =>
-        normalizeDriverCardApplication(
-            application.value,
-            application.dataFiles,
-            application.generation,
-            application.pathTokens,
-            nationAlphaCodes,
+    const normalizedApplications = reconcileMirroredApplications(
+        driverApplications.map((application) =>
+            normalizeDriverCardApplication(
+                application.value,
+                application.dataFiles,
+                application.generation,
+                application.pathTokens,
+                nationAlphaCodes,
+            ),
         ),
     );
 
@@ -461,6 +464,10 @@ function parameterTypeMatchesVariant(
     parserVariant: Extract<ParserOutputVariant, 'vuGen1' | 'vuGen2'>,
 ): boolean {
     if (typeId === 'OddballCrashDump' || typeId === 'Unknown') {
+        return true;
+    }
+    // Card download is TREP 06 for both generations, so a Gen2 download may carry the un-prefixed identifier.
+    if (typeId === 'CardDownload') {
         return true;
     }
     return parserVariant === 'vuGen1' ? firstGenerationOnlyVuTypes.has(typeId) : typeId.startsWith('Gen2');
@@ -493,8 +500,12 @@ function parameterDataMatchesType(
         case 'Gen2v2TechnicalData':
             return typeof data === 'object' && 'Calibration' in data;
         case 'CardDownload':
-        case 'Gen2CardDownload':
             return parserVariant === 'vuGen1' ? data === 'CardDownload' : typeof data === 'object' && 'CardDownload' in data;
+        case 'Gen2CardDownload':
+            // The pinned parser routes an unparsed card-download block to the generic data-info record.
+            return parserVariant === 'vuGen1'
+                ? data === 'CardDownload'
+                : typeof data === 'object' && ('CardDownload' in data || 'Unknown' in data);
         case 'OddballCrashDump':
             return data === 'OddballCrashDump';
         case 'Unknown':

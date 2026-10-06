@@ -13,8 +13,8 @@ import {
 
 import {
     createDocumentOverviewProjection,
-    projectDocumentActivityDays,
     projectDocumentAssociations,
+    projectDocumentCanonicalActivityDays,
     projectDocumentEventFaultRecords,
     type IDocumentContentCounts,
     type IDocumentCoverage,
@@ -55,7 +55,7 @@ export interface IOpenedDocumentComparisonRecord {
 }
 
 function documentActivityTotals(document: OpenedTachographDocument): IActivityTotals | null {
-    const days = projectDocumentActivityDays(document);
+    const days = projectDocumentCanonicalActivityDays(document);
     if (days.length === 0) {
         return null;
     }

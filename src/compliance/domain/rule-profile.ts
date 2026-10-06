@@ -120,6 +120,8 @@ const EU_561_2006_ANNEX_I_SEVERITY_BANDS: Partial<Record<string, ISeverityThresh
     // Rows 22-23: multi-manning daily rest (9h within 30h); Annex I defines no MSI tier for it.
     DAILY_REST_MULTI_MANNING: { seriousMarginMinutes: 60, verySeriousMarginMinutes: 120 },
     DAILY_REST_REDUCTIONS_EXCEEDED: { seriousMarginMinutes: 60, verySeriousMarginMinutes: 150 },
+    // Section 3 rows 9-10 (Directive 2002/15/EC Art. 7(1)): 11h serious, 13h very serious against the 10h ceiling.
+    NIGHT_WORK_DAILY_LIMIT_10H: { seriousMarginMinutes: 60, verySeriousMarginMinutes: 180 },
     WEEKLY_DRIVING_BIWEEKLY_LIMIT: {
         mostSeriousMarginMinutes: 1350,
         seriousMarginMinutes: 600,
@@ -133,6 +135,14 @@ const EU_561_2006_ANNEX_I_SEVERITY_BANDS: Partial<Record<string, ISeverityThresh
     WEEKLY_REST_INSUFFICIENT: { seriousMarginMinutes: 120, verySeriousMarginMinutes: 240 },
     WEEKLY_REST_MAX_SPACING_EXCEEDED: { seriousMarginMinutes: 180, verySeriousMarginMinutes: 720 },
     WEEKLY_REST_REGULAR_MISSING: { seriousMarginMinutes: 180, verySeriousMarginMinutes: 540 },
+    // Section 3 rows 5-8: the break actually taken decides the tier, expressed here as its deficit against the
+    // rule's requirement (over nine hours of work: a 20-30 minute break is serious and 20 minutes or less is very
+    // serious; six to nine hours: 10-20 minutes serious, 10 minutes or less very serious).
+    WORKING_TIME_BREAK_6H: { seriousMarginMinutes: 10, verySeriousMarginMinutes: 20 },
+    WORKING_TIME_BREAK_9H: { seriousMarginMinutes: 15, verySeriousMarginMinutes: 25 },
+    // Section 3 rows 3-4 (Art. 4): 65h serious, 70h very serious against the 60h weekly cap. The 48-hour average
+    // rule is deliberately left on the flat margins: Annex I rows 1-2 classify a single week's hours, not an average.
+    WORKING_TIME_WEEKLY_LIMIT_60H: { seriousMarginMinutes: 300, verySeriousMarginMinutes: 600 },
 };
 
 const EU_561_2006_STANDARD_MULTI_MANNING_RULES: IMultiManningRuleConfig = {

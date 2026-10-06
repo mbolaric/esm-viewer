@@ -1,4 +1,5 @@
 import type { ILocalisationService } from '#localization';
+import { projectDocumentActivityDays, type OpenedTachographDocument } from '#viewer-application';
 import { isDurationMilliseconds, isUtcTimestamp, type DurationMilliseconds, type UtcTimestamp } from '#viewer-domain';
 
 import type {
@@ -9,12 +10,26 @@ import type {
     IFormattedValue,
 } from '../view-models/document-view-model.js';
 
-// A compliance evaluation with no findings, for view models that do not test compliance.
+// A compliance evaluation with no findings, for view models that do not test compliance or the driving notice.
 export const NO_COMPLIANCE_EVALUATION: ActivityComplianceInput = {
     creditedAvailabilityBreaks: [],
     crewDutyPeriods: [],
+    evaluationIntervals: [],
     infringements: [],
 };
+
+// The resolved intervals a real evaluation supplies for a fixture document. Fixture days are already normalized, so
+// their recorded intervals are the evaluation's input whenever the fixture declares no unrecorded time.
+export function complianceEvaluationFor(
+    document: OpenedTachographDocument,
+    overrides: Partial<ActivityComplianceInput> = {},
+): ActivityComplianceInput {
+    return {
+        ...NO_COMPLIANCE_EVALUATION,
+        evaluationIntervals: projectDocumentActivityDays(document).flatMap((projectedDay) => projectedDay.day.intervals),
+        ...overrides,
+    };
+}
 
 export function timestamp(value: number): UtcTimestamp {
     if (!isUtcTimestamp(value)) {

@@ -23,6 +23,7 @@ import { createRandomReopenToken, createRandomSourceToken } from './token.js';
 
 const OPEN_FAILURE_MAPPING: Record<DesktopOperationFailureCode, ParseError['code']> = {
     destinationExists: 'decoderContractViolation',
+    guardUnavailable: 'decoderContractViolation',
     fileNotFound: 'fileNotFound',
     invalidPreferences: 'decoderContractViolation',
     invalidRequest: 'decoderContractViolation',

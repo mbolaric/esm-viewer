@@ -214,7 +214,8 @@
 
     // The export dialog is already closed, so every outcome is reported by toast; a cancelled save needs none.
     async function saveExport(bytes: Uint8Array, suggestedName: string): Promise<void> {
-        const saveResult = await exportPort.save({ bytes, sourceToken: null, suggestedName });
+        // A comparison export has no opened document behind it, so there is no source to protect.
+        const saveResult = await exportPort.save({ bytes, source: null, suggestedName });
         if (saveResult.status === 'saved') {
             toastController.success(translationService.translate('export.toast.success', { fileName: suggestedName }));
         } else if (saveResult.status === 'failed') {

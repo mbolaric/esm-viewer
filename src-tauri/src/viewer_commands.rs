@@ -12,6 +12,7 @@ use serde::{Deserialize, Serialize};
 use tauri::Manager;
 
 use crate::blocking::{run_blocking, run_blocking_string};
+use crate::export_guard;
 use crate::runtime_versions;
 use crate::tachograph_file::{
     read_tachograph_file, TachographFileReadError, MAX_TACHOGRAPH_FILE_SIZE_BYTES, SUPPORTED_TACHOGRAPH_EXTENSIONS,
@@ -137,12 +138,31 @@ pub async fn read_ddd_file(file_path: String) -> Result<tauri::ipc::Response, Re
     .await
 }
 
+// Guards an export: the renderer asks before writing, and the comparison happens here where both paths can be
+// canonicalised and compared by file identity, so no permission or path spelling decides the answer.
+#[tauri::command]
+pub async fn export_destination_is_source(
+    source_path: String,
+    destination_path: String,
+    source_sha256: Option<String>,
+) -> Result<bool, String> {
+    run_blocking(move || -> Result<bool, String> {
+        Ok(export_guard::is_same_existing_file(&source_path, &destination_path, source_sha256.as_deref()))
+    })
+    .await
+}
+
 // Takes the file as the raw request body rather than a JSON number array.
 #[tauri::command]
 pub async fn parse_ddd_memory(request: tauri::ipc::Request<'_>) -> Result<ParseFileResponse, String> {
     let tauri::ipc::InvokeBody::Raw(esm_data) = request.body() else {
         return Ok(ParseFileResponse::failure("Expected the file bytes as a raw request body"));
     };
+    // Refuse an oversized body before copying it onto the worker thread; the closure's own check stays as the
+    // single authority for every other caller of `parse_bytes`.
+    if esm_data.len() > MAX_TACHOGRAPH_FILE_SIZE_BYTES as usize {
+        return Ok(ParseFileResponse::failure("Data size exceeds 50 MB limit"));
+    }
     let esm_data = esm_data.clone();
     run_blocking_string(move || Ok(into_response(parse_bytes(&esm_data)))).await
 }

@@ -6,6 +6,7 @@ export type ExportFailureTranslationKey =
     | 'export.error.archiveChanged'
     | 'export.error.destinationExists'
     | 'export.error.generic'
+    | 'export.error.guardUnavailable'
     | 'export.error.io'
     | 'export.error.sourceConflict';
 
@@ -14,6 +15,7 @@ const TRANSLATE_EXPORT_FAILURE_KEYS = {
     archiveChanged: 'export.error.archiveChanged',
     destinationExists: 'export.error.destinationExists',
     exportFailed: 'export.error.generic',
+    guardUnavailable: 'export.error.guardUnavailable',
     ioFailure: 'export.error.io',
     sourceConflict: 'export.error.sourceConflict',
 } satisfies Readonly<Record<ExportFailureCode, ExportFailureTranslationKey>>;

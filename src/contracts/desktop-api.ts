@@ -24,6 +24,7 @@ export type ReopenToken = string & {
 
 export type DesktopOperationFailureCode =
     | 'destinationExists'
+    | 'guardUnavailable'
     | 'fileNotFound'
     | 'invalidPreferences'
     | 'invalidRequest'
@@ -59,6 +60,9 @@ export interface IOpenTachographPathRequest {
 export interface ISaveExportRequest {
     readonly bytes: Uint8Array;
     readonly sourceToken: SourceToken;
+    // SHA-256 of the opened document, so the guard can recognise a destination that holds the source's bytes even when
+    // no path identifies it (a dropped file never discloses one).
+    readonly sourceSha256: string | null;
     readonly suggestedName: string;
 }
 

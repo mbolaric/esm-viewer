@@ -409,7 +409,7 @@
     {#if record.kind === 'loadTypeEntry'}
         <span>{translateLoadType(record.loadType, translationService)}</span>
     {:else if record.kind === 'accumulatedDrivingPosition'}
-        {@render positionEvidence(record.position)}
+        {@render positionOrMissing(record.position)}
     {:else if record.kind === 'borderCrossing'}
         <div class="record-stack">
             <span class="metadata">

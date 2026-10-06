@@ -563,9 +563,9 @@ export const pl = {
         'Dyrektywa 2002/15/WE: powyższe zasady czasu pracy razem z limitami UE dotyczącymi prowadzenia pojazdu i odpoczynku.',
     'guide.regulations.profilesTitle': 'Profile reguł',
     'guide.regulations.severityBands':
-        'Przepisy UE: dla przepisów UE o prowadzeniu pojazdu, przerwach i odpoczynku viewer klasyfikuje ustalenie jako poważne, bardzo poważne lub najpoważniejsze naruszenie według progów z załącznika I do rozporządzenia Komisji (UE) 2016/403. Wszystko poniżej tych progów jest pokazywane jako drobne.',
+        'Przepisy UE: dla przepisów UE o prowadzeniu pojazdu, przerwach, odpoczynku i czasie pracy viewer klasyfikuje ustalenie jako poważne, bardzo poważne lub najpoważniejsze naruszenie według progów z załącznika I do rozporządzenia Komisji (UE) 2016/403. Wszystko poniżej tych progów jest pokazywane jako drobne.',
     'guide.regulations.severityOther':
-        'Pozostałe przepisy: ustalenia dotyczące czasu pracy oraz profile AETR i UK używają zamiast tego prostego marginesu ponad limit. Anomalie są zawsze najpoważniejsze. Dotkliwość to własne obliczenie viewera, a nie oficjalna klasyfikacja.',
+        'Pozostałe przepisy: ustalenia dotyczące czasu pracy w profilu dyrektywy 2002/15/WE używają progów z sekcji 3 tego samego załącznika I (tygodniowy czas pracy, faktycznie wykorzystana przerwa i praca w porze nocnej), natomiast średnia 48 godzin zachowuje prosty margines ponad limit. Profile AETR i UK stosują proste marginesy w każdym przypadku. Anomalie są zawsze najpoważniejsze. Dotkliwość to własne obliczenie viewera, a nie oficjalna klasyfikacja.',
     'guide.regulations.severityTitle': 'Dotkliwość ustaleń',
     'guide.regulations.vehicleUnitDeadline':
         'Jednostki pokładowe (JP): muszą być pobierane i archiwizowane co najmniej raz na 90 dni.',
@@ -623,6 +623,8 @@ export const pl = {
     'export.error.generic': 'Nie udało się ukończyć eksportu.',
     'export.error.io': 'Nie udało się zapisać pliku.',
     'export.error.sourceConflict': 'Miejsce docelowe eksportu nie może zastąpić otwartego pliku źródłowego.',
+    'export.error.guardUnavailable':
+        'Nie udało się porównać miejsca docelowego z otwartym plikiem źródłowym, więc nic nie zapisano. Spróbuj ponownie lub wybierz inne miejsce.',
     'export.export': 'Eksportuj',
     'export.exporting': 'Eksportowanie…',
     'export.printing': 'Drukowanie…',

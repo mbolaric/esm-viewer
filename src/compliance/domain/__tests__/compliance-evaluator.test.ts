@@ -1117,6 +1117,35 @@ describe('Compliance Evaluators with Configurable Rule Profiles', () => {
         expect(sixHourFindings[0]?.excessOrDeficitMinutes).toBe(15);
     });
 
+    it('classifies a consecutive-work breach by the break taken, not by the minutes worked past six hours', () => {
+        const baseTime = new Date('2026-06-15T06:00:00Z').getTime();
+        // 6h15m in one run with only a 10-minute break afterwards. Annex I section 3 row 6 bands a break of
+        // 10 minutes or less as very serious; the 15-minute work excess must not select the tier instead.
+        const intervals: ActivityInterval[] = [
+            createInterval('work', baseTime, 6 * 60 + 15),
+            createInterval('breakOrRest', baseTime + (6 * 60 + 15) * 60000, 10),
+        ];
+
+        const infringements = evaluateWorkingTimeInfringements(intervals, DIRECTIVE_2002_15_EC_WORKING_TIME);
+        const findings = infringements.filter((i) => i.ruleId === 'WORKING_TIME_BREAK_6H');
+        expect(findings).toHaveLength(1);
+        expect(findings[0]?.severity).toBe('verySerious');
+    });
+
+    it('keeps a consecutive-work breach with a 20-minute break in the serious band (Annex I section 3 row 5)', () => {
+        const baseTime = new Date('2026-06-15T06:00:00Z').getTime();
+        const intervals: ActivityInterval[] = [
+            createInterval('work', baseTime, 60),
+            createInterval('breakOrRest', baseTime + 60 * 60000, 20),
+            createInterval('work', baseTime + 80 * 60000, 6 * 60 + 15),
+        ];
+
+        const infringements = evaluateWorkingTimeInfringements(intervals, DIRECTIVE_2002_15_EC_WORKING_TIME);
+        const findings = infringements.filter((i) => i.ruleId === 'WORKING_TIME_BREAK_6H');
+        expect(findings).toHaveLength(1);
+        expect(findings[0]?.severity).toBe('serious');
+    });
+
     it('reports the day-total 45-minute deficit even when an earlier 6h-consecutive violation already fired that day', () => {
         // Regression test: 6h15m worked, a 15-minute break, then 5h more
         // worked (11h15m total that day, only 15m of break). The
@@ -1138,12 +1167,17 @@ describe('Compliance Evaluators with Configurable Rule Profiles', () => {
             (i) => i.ruleId === 'WORKING_TIME_BREAK_6H' && i.id.startsWith('wt-break-6h-consecutive-'),
         );
         expect(consecutiveFindings).toHaveLength(1);
+        // The day exceeds nine hours with 15 minutes of break, so Annex I section 3 row 8 bands both this finding
+        // and the 9h aggregate below as very serious: one shortfall must not carry two different tiers.
+        expect(consecutiveFindings[0]?.severity).toBe('verySerious');
 
         const nineHourFindings = infringements.filter((i) => i.ruleId === 'WORKING_TIME_BREAK_9H');
         expect(nineHourFindings).toHaveLength(1);
         expect(nineHourFindings[0]?.allowedValueMinutes).toBe(45);
         expect(nineHourFindings[0]?.measuredValueMinutes).toBe(15);
         expect(nineHourFindings[0]?.excessOrDeficitMinutes).toBe(30);
+        // Annex I section 3 row 8: a break of 20 minutes or less over nine hours of work is very serious.
+        expect(nineHourFindings[0]?.severity).toBe('verySerious');
 
         // The 6-9h aggregate band shares its rule id with the consecutive
         // rule, so it must still be suppressed for this day (avoiding a
@@ -1880,6 +1914,39 @@ describe('Annex I severity classification (Commission Regulation (EU) 2016/403)'
         expect(calculateSeverity(180, EU_561_2006_STANDARD, 'WEEKLY_REST_MAX_SPACING_EXCEEDED')).toBe('serious');
         expect(calculateSeverity(719, EU_561_2006_STANDARD, 'WEEKLY_REST_MAX_SPACING_EXCEEDED')).toBe('serious');
         expect(calculateSeverity(720, EU_561_2006_STANDARD, 'WEEKLY_REST_MAX_SPACING_EXCEEDED')).toBe('verySerious');
+    });
+
+    it('classifies working-time rules against Annex I section 3, not the flat profile margins', () => {
+        // Night work, Art. 7(1) of Directive 2002/15/EC against the 10h ceiling: rows 9-10 (11h SI, 13h VSI).
+        expect(calculateSeverity(59, DIRECTIVE_2002_15_EC_WORKING_TIME, 'NIGHT_WORK_DAILY_LIMIT_10H')).toBe('minor');
+        expect(calculateSeverity(60, DIRECTIVE_2002_15_EC_WORKING_TIME, 'NIGHT_WORK_DAILY_LIMIT_10H')).toBe('serious');
+        expect(calculateSeverity(179, DIRECTIVE_2002_15_EC_WORKING_TIME, 'NIGHT_WORK_DAILY_LIMIT_10H')).toBe('serious');
+        expect(calculateSeverity(180, DIRECTIVE_2002_15_EC_WORKING_TIME, 'NIGHT_WORK_DAILY_LIMIT_10H')).toBe('verySerious');
+        // The 60h cap, Art. 4: rows 3-4 (65h SI, 70h VSI).
+        expect(calculateSeverity(299, DIRECTIVE_2002_15_EC_WORKING_TIME, 'WORKING_TIME_WEEKLY_LIMIT_60H')).toBe('minor');
+        expect(calculateSeverity(300, DIRECTIVE_2002_15_EC_WORKING_TIME, 'WORKING_TIME_WEEKLY_LIMIT_60H')).toBe('serious');
+        expect(calculateSeverity(599, DIRECTIVE_2002_15_EC_WORKING_TIME, 'WORKING_TIME_WEEKLY_LIMIT_60H')).toBe('serious');
+        expect(calculateSeverity(600, DIRECTIVE_2002_15_EC_WORKING_TIME, 'WORKING_TIME_WEEKLY_LIMIT_60H')).toBe('verySerious');
+    });
+
+    it('classifies aggregate break findings by the break taken, as Annex I section 3 rows 5-8 state', () => {
+        // Over nine hours of work (45-minute requirement): a 31-minute break is outside the classified bands.
+        expect(calculateSeverity(14, DIRECTIVE_2002_15_EC_WORKING_TIME, 'WORKING_TIME_BREAK_9H')).toBe('minor');
+        expect(calculateSeverity(15, DIRECTIVE_2002_15_EC_WORKING_TIME, 'WORKING_TIME_BREAK_9H')).toBe('serious');
+        expect(calculateSeverity(24, DIRECTIVE_2002_15_EC_WORKING_TIME, 'WORKING_TIME_BREAK_9H')).toBe('serious');
+        expect(calculateSeverity(25, DIRECTIVE_2002_15_EC_WORKING_TIME, 'WORKING_TIME_BREAK_9H')).toBe('verySerious');
+        // Six to nine hours of work (30-minute requirement): a 21-minute break is outside the classified bands.
+        expect(calculateSeverity(9, DIRECTIVE_2002_15_EC_WORKING_TIME, 'WORKING_TIME_BREAK_6H')).toBe('minor');
+        expect(calculateSeverity(10, DIRECTIVE_2002_15_EC_WORKING_TIME, 'WORKING_TIME_BREAK_6H')).toBe('serious');
+        expect(calculateSeverity(19, DIRECTIVE_2002_15_EC_WORKING_TIME, 'WORKING_TIME_BREAK_6H')).toBe('serious');
+        expect(calculateSeverity(20, DIRECTIVE_2002_15_EC_WORKING_TIME, 'WORKING_TIME_BREAK_6H')).toBe('verySerious');
+    });
+
+    it('keeps the flat margins for profiles Annex I does not govern', () => {
+        // AETR excludes the EU enforcement bands, so the profile's own margins still decide the tier.
+        expect(calculateSeverity(59, AETR_2020_INTERNATIONAL, 'NIGHT_WORK_DAILY_LIMIT_10H')).toBe('minor');
+        expect(calculateSeverity(60, AETR_2020_INTERNATIONAL, 'NIGHT_WORK_DAILY_LIMIT_10H')).toBe('serious');
+        expect(calculateSeverity(120, AETR_2020_INTERNATIONAL, 'NIGHT_WORK_DAILY_LIMIT_10H')).toBe('verySerious');
     });
 
     it('keeps a rest deficit exactly on an Annex I margin in the lower tier (rest bands are upper-exclusive)', () => {

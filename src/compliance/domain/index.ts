@@ -25,6 +25,11 @@ export type { ComplianceAssessmentRuleId, ComplianceAssessmentStatus, IComplianc
 
 export { mergeContiguousActivityIntervals } from './interval-merge.js';
 
+export type { EvaluationInterval, IUnrecordedRestInterval, UnrecordedTimeKind } from './unrecorded-time.js';
+
+// Shared continuous-driving rule machine: the break evaluator and presentation both read these samples.
+export { sampleContinuousDrivingByDay, type IContinuousDrivingDaySample } from './continuous-driving.js';
+
 export {
     resolveCreditedAvailabilityBreaks,
     resolveCrewDutyPeriods,

@@ -572,9 +572,9 @@ export const es = {
         'Directiva 2002/15/CE: las reglas de tiempo de trabajo anteriores, junto con los límites de conducción y descanso de la UE.',
     'guide.regulations.profilesTitle': 'Perfiles de reglas',
     'guide.regulations.severityBands':
-        'Normas de la UE: para las normas de la UE sobre conducción, pausas y descanso, el visor clasifica un hallazgo como infracción grave, muy grave o más grave según los márgenes del anexo I del Reglamento (UE) 2016/403 de la Comisión. Todo lo que queda por debajo se muestra como leve.',
+        'Normas de la UE: para las normas de la UE sobre conducción, pausas, descanso y tiempo de trabajo, el visor clasifica un hallazgo como infracción grave, muy grave o más grave según los márgenes del anexo I del Reglamento (UE) 2016/403 de la Comisión. Todo lo que queda por debajo se muestra como leve.',
     'guide.regulations.severityOther':
-        'Otras normas: los hallazgos sobre tiempo de trabajo y los perfiles AETR y UK usan en su lugar un margen simple sobre el límite. Las anomalías son siempre de la gravedad más alta. La gravedad es el cálculo propio del visor, no una clasificación oficial.',
+        'Otras normas: los hallazgos sobre tiempo de trabajo con el perfil de la Directiva 2002/15/CE usan las bandas de la sección 3 de ese mismo anexo I (tiempo de trabajo semanal, pausa efectivamente tomada y trabajo nocturno); la media de 48 horas mantiene un margen simple sobre el límite. Los perfiles AETR y UK usan márgenes simples en todos los casos. Las anomalías son siempre de la gravedad más alta. La gravedad es el cálculo propio del visor, no una clasificación oficial.',
     'guide.regulations.severityTitle': 'Gravedad de los hallazgos',
     'guide.regulations.vehicleUnitDeadline':
         'Unidades instaladas en el vehículo (UI): deben descargarse y archivarse al menos una vez cada 90 días.',
@@ -632,6 +632,8 @@ export const es = {
     'export.error.generic': 'No se pudo completar la exportación.',
     'export.error.io': 'No se pudo escribir el archivo.',
     'export.error.sourceConflict': 'El destino de la exportación no debe sustituir al archivo de origen abierto.',
+    'export.error.guardUnavailable':
+        'No se pudo comparar el destino con el archivo de origen abierto, por lo que no se escribió nada. Inténtelo de nuevo o elija otro destino.',
     'export.export': 'Exportar',
     'export.exporting': 'Exportando…',
     'export.printing': 'Imprimiendo…',

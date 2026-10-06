@@ -40,6 +40,8 @@ export {
     maximumDetailedSpeedRangeMilliseconds,
     projectDocumentAssociations,
     projectDocumentActivityDays,
+    projectDocumentCanonicalActivityDays,
+    projectDocumentCanonicalEventFaultRecords,
     projectDocumentActivityRecords,
     projectDocumentDailyOdometerRecords,
     projectDocumentDetailedSpeed,
@@ -96,6 +98,7 @@ export { writeTextToClipboard, type ITextClipboardPort, type TextClipboardWriteR
 export {
     type IViewerExportPort,
     type IViewerExportSaveRequest,
+    type IViewerExportSource,
     type IViewerPdfPort,
     type ViewerExportFailureCode,
     type ViewerExportOutcome,

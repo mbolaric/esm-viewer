@@ -56,6 +56,7 @@
     import PendingSectionScreen from '../screens/PendingSectionScreen.svelte';
     import PlacesScreen from '../screens/PlacesScreen.svelte';
     import RawDataScreen from '../screens/RawDataScreen.svelte';
+    import type { IRawDataRevealRequest } from '../../controllers/raw-data-controller.svelte.js';
     import SpeedScreen from '../screens/SpeedScreen.svelte';
     import TechnicalScreen from '../screens/TechnicalScreen.svelte';
     import ViewerCommandBar from './ViewerCommandBar.svelte';
@@ -157,7 +158,8 @@
             reopenToken: file.reopenToken,
         })),
     );
-    let requestedRawDataPointer = $state<JsonPointer | null>(null);
+    let requestedRawDataPointer = $state<IRawDataRevealRequest | null>(null);
+    let rawDataRevealSequence = 0;
 
     // Syncs pre-computed overview counts to shell status bar.
     $effect(() => {
@@ -204,7 +206,9 @@
     }
 
     function openRawDataSource(path: JsonPointer): void {
-        requestedRawDataPointer = path;
+        // Each activation is its own request, so opening the same pointer again returns to it.
+        rawDataRevealSequence += 1;
+        requestedRawDataPointer = { path, sequence: rawDataRevealSequence };
         documentController.selectSection('rawData');
     }
 
@@ -556,7 +560,12 @@ top-level snippets are needed for it to reference them at all.
 {/snippet}
 {#snippet rawDataSection({ overview: currentOverview }: ISectionSnippetContext)}
     {#if sections.rawDataExplorer !== null}
-        <RawDataScreen explorer={sections.rawDataExplorer} initialPath={requestedRawDataPointer} oncopy={copyRawDataEvidence} />
+        <RawDataScreen
+            explorer={sections.rawDataExplorer}
+            initialPath={requestedRawDataPointer?.path ?? null}
+            oncopy={copyRawDataEvidence}
+            revealRequest={requestedRawDataPointer}
+        />
     {:else}
         <PendingSectionScreen
             description={viewerContext.translationService.translate('section.pending.description')}

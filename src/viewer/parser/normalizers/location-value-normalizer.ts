@@ -9,6 +9,7 @@ import {
     isGnssAuthenticationStatus,
     isLatitude,
     isLongitude,
+    isUnknownParserCoordinate,
     type DailyWorkPeriodRegion,
     type IAccumulatedDrivingPosition,
     type IBorderCrossing,
@@ -132,6 +133,13 @@ export function normalizeGnssPositionEvidence(
     const accuracy = value.gnssAccuracy;
     const authenticationStatus = 'authenticationStatus' in value ? value.authenticationStatus : null;
     const normalizedAuthenticationStatus = isGnssAuthenticationStatus(authenticationStatus) ? authenticationStatus : null;
+    if (isUnknownParserCoordinate(rawCoordinates.latitude) || isUnknownParserCoordinate(rawCoordinates.longitude)) {
+        // The equipment recorded that it could not determine a position: the rest of the record stays evidence.
+        return {
+            value: null,
+            warnings: [],
+        };
+    }
     if (
         !isRecordedParserTimestamp(determinedAt) ||
         !isGnssAccuracyIndicator(accuracy) ||
@@ -286,17 +294,16 @@ export function normalizeAccumulatedDrivingPositionRecord(
     const { odometer, position } = normalizeRequiredPlaceAndOdometer(value, input, warnings);
 
     return {
-        value:
-            !isRecordedParserTimestamp(recordedAt) || position === null
-                ? null
-                : createAccumulatedDrivingPosition({
-                      coDriverCard: input.coDriverCard,
-                      driverCard: input.driverCard,
-                      odometer,
-                      position,
-                      recordedAt,
-                      source: input.source,
-                  }),
+        value: !isRecordedParserTimestamp(recordedAt)
+            ? null
+            : createAccumulatedDrivingPosition({
+                  coDriverCard: input.coDriverCard,
+                  driverCard: input.driverCard,
+                  odometer,
+                  position,
+                  recordedAt,
+                  source: input.source,
+              }),
         warnings: warnings,
     };
 }
@@ -333,17 +340,16 @@ export function normalizeBorderCrossingRecord(
     const { odometer, position } = normalizeRequiredPlaceAndOdometer(value, input, warnings);
 
     return {
-        value:
-            !isRecordedParserTimestamp(crossedAt) || position === null
-                ? null
-                : createBorderCrossing({
-                      countryEntered,
-                      countryLeft,
-                      crossedAt,
-                      odometer,
-                      position,
-                      source: input.source,
-                  }),
+        value: !isRecordedParserTimestamp(crossedAt)
+            ? null
+            : createBorderCrossing({
+                  countryEntered,
+                  countryLeft,
+                  crossedAt,
+                  odometer,
+                  position,
+                  source: input.source,
+              }),
         warnings: warnings,
     };
 }
@@ -379,18 +385,17 @@ export function normalizeLoadUnloadRecord(
     const { odometer, position } = normalizeRequiredPlaceAndOdometer(value, input, warnings);
 
     return {
-        value:
-            !isRecordedParserTimestamp(operationAt) || position === null
-                ? null
-                : createLoadUnloadOperation({
-                      country,
-                      odometer,
-                      operationAt,
-                      operationType: operationType ?? 'unknown',
-                      position,
-                      region: region.status === 'known' ? region.value : null,
-                      source: input.source,
-                  }),
+        value: !isRecordedParserTimestamp(operationAt)
+            ? null
+            : createLoadUnloadOperation({
+                  country,
+                  odometer,
+                  operationAt,
+                  operationType: operationType ?? 'unknown',
+                  position,
+                  region: region.status === 'known' ? region.value : null,
+                  source: input.source,
+              }),
         warnings: warnings,
     };
 }

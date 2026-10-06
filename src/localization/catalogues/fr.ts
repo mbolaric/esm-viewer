@@ -572,9 +572,9 @@ export const fr = {
         'Directive 2002/15/CE : les règles de temps de travail ci-dessus, avec les limites de conduite et de repos de l’UE.',
     'guide.regulations.profilesTitle': 'Profils de règles',
     'guide.regulations.severityBands':
-        'Règles de l’UE : pour les règles de l’UE sur la conduite, les pauses et le repos, le viewer classe une constatation comme infraction grave, très grave ou la plus grave selon les seuils de l’annexe I du règlement (UE) 2016/403 de la Commission. Tout ce qui est en dessous s’affiche comme mineure.',
+        'Règles de l’UE : pour les règles de l’UE sur la conduite, les pauses, le repos et le temps de travail, le viewer classe une constatation comme infraction grave, très grave ou la plus grave selon les seuils de l’annexe I du règlement (UE) 2016/403 de la Commission. Tout ce qui est en dessous s’affiche comme mineure.',
     'guide.regulations.severityOther':
-        'Autres règles : les constatations sur le temps de travail et les profils AETR et UK utilisent à la place une simple marge au-dessus de la limite. Les anomalies sont toujours de la gravité la plus élevée. La gravité est le calcul propre du viewer, pas une classification officielle.',
+        'Autres règles : les constatations sur le temps de travail avec le profil de la directive 2002/15/CE utilisent les bandes de la section 3 de cette même annexe I (temps de travail hebdomadaire, pause effectivement prise et travail de nuit), tandis que la moyenne de 48 heures conserve une simple marge au-dessus de la limite. Les profils AETR et UK utilisent des marges simples en toutes circonstances. Les anomalies sont toujours de la gravité la plus élevée. La gravité est le calcul propre du viewer, pas une classification officielle.',
     'guide.regulations.severityTitle': 'Gravité des constatations',
     'guide.regulations.vehicleUnitDeadline':
         'Unités embarquées (UE) : doivent être téléchargées et archivées au moins une fois tous les 90 jours.',
@@ -632,6 +632,8 @@ export const fr = {
     'export.error.generic': 'L’export n’a pas pu être terminé.',
     'export.error.io': 'Le fichier n’a pas pu être écrit.',
     'export.error.sourceConflict': 'La destination de l’export ne doit pas remplacer le fichier source ouvert.',
+    'export.error.guardUnavailable':
+        'La destination n’a pas pu être comparée au fichier source ouvert, rien n’a donc été écrit. Réessayez ou choisissez une autre destination.',
     'export.export': 'Exporter',
     'export.exporting': 'Exportation en cours…',
     'export.printing': 'Impression en cours…',

@@ -8,6 +8,7 @@
     import {
         RawDataController,
         type IRawDataPaginationItem,
+        type IRawDataRevealRequest,
         type IRawDataVisibleNode,
     } from '../../controllers/raw-data-controller.svelte.js';
     import type { TranslationKey } from '#i18n-locales';
@@ -17,9 +18,10 @@
         explorer: IRawDataExplorerViewModel;
         initialPath: JsonPointer | null;
         oncopy: (value: string) => Promise<boolean>;
+        revealRequest: IRawDataRevealRequest | null;
     }
 
-    let { explorer, initialPath, oncopy }: IProps = $props();
+    let { explorer, initialPath, oncopy, revealRequest }: IProps = $props();
 
     const translationService = useViewerTranslationService();
     const nodeKindTranslationKeys = {
@@ -34,9 +36,10 @@
     const snapshot = $derived(controller.snapshot);
     let copyStatus = $state<'failed' | 'idle' | 'succeeded'>('idle');
 
-    // A new reveal request reaches an already mounted tree, so the shell can re-point it without remounting the screen.
+    // A new reveal request reaches an already mounted tree, so the shell can re-point it without remounting the screen
+    // and asking for the same pointer twice returns to it.
     $effect(() => {
-        controller.revealRequest(initialPath);
+        controller.revealRequest(revealRequest);
     });
 
     function handleSearch(event: Event): void {

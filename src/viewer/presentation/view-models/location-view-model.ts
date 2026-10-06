@@ -62,7 +62,8 @@ export interface IAccumulatedDrivingPositionViewModel {
     readonly generation: TachographGeneration;
     readonly kind: 'accumulatedDrivingPosition';
     readonly odometer: IFormattedValue<OdometerKilometres> | null;
-    readonly position: IGnssPositionEvidenceViewModel;
+    // Null when the equipment recorded no position for the record; the rest of the record is still evidence.
+    readonly position: IGnssPositionEvidenceViewModel | null;
     readonly record: IAccumulatedDrivingPosition;
     readonly recordedAt: IFormattedValue<UtcTimestamp>;
     readonly source: IAccumulatedDrivingPosition['source'];
@@ -76,7 +77,8 @@ export interface IBorderCrossingViewModel {
     readonly generation: TachographGeneration;
     readonly kind: 'borderCrossing';
     readonly odometer: IFormattedValue<OdometerKilometres> | null;
-    readonly position: IGnssPositionEvidenceViewModel;
+    // Null when the equipment recorded no position for the record; the rest of the record is still evidence.
+    readonly position: IGnssPositionEvidenceViewModel | null;
     readonly record: IBorderCrossing;
     readonly source: IBorderCrossing['source'];
     readonly timestamp: IFormattedValue<UtcTimestamp>;
@@ -89,7 +91,8 @@ export interface ILoadUnloadOperationViewModel {
     readonly odometer: IFormattedValue<OdometerKilometres> | null;
     readonly operationAt: IFormattedValue<UtcTimestamp>;
     readonly operationType: ILoadUnloadOperation['operationType'];
-    readonly position: IGnssPositionEvidenceViewModel;
+    // Null when the equipment recorded no position for the record; the rest of the record is still evidence.
+    readonly position: IGnssPositionEvidenceViewModel | null;
     readonly record: ILoadUnloadOperation;
     readonly region: ILoadUnloadOperation['region'];
     readonly source: ILoadUnloadOperation['source'];
@@ -231,7 +234,7 @@ function createLocationRecordViewModel(
             generation: record.source.generation,
             kind: 'accumulatedDrivingPosition',
             odometer: formatOdometer(record.odometer, localisation),
-            position: createGnssPositionEvidenceViewModel(record.position, localisation),
+            position: record.position === null ? null : createGnssPositionEvidenceViewModel(record.position, localisation),
             record,
             recordedAt,
             source: record.source,
@@ -247,7 +250,7 @@ function createLocationRecordViewModel(
             generation: record.source.generation,
             kind: 'borderCrossing',
             odometer: formatOdometer(record.odometer, localisation),
-            position: createGnssPositionEvidenceViewModel(record.position, localisation),
+            position: record.position === null ? null : createGnssPositionEvidenceViewModel(record.position, localisation),
             record,
             source: record.source,
             timestamp: crossedAt,
@@ -262,7 +265,7 @@ function createLocationRecordViewModel(
             odometer: formatOdometer(record.odometer, localisation),
             operationAt,
             operationType: record.operationType,
-            position: createGnssPositionEvidenceViewModel(record.position, localisation),
+            position: record.position === null ? null : createGnssPositionEvidenceViewModel(record.position, localisation),
             record,
             region: record.region,
             source: record.source,
@@ -347,7 +350,7 @@ export function buildJourneySummary(
                 timestamp: rec.timestamp,
                 type: isStart ? 'start' : 'end',
             });
-        } else if (rec.kind === 'borderCrossing') {
+        } else if (rec.kind === 'borderCrossing' && rec.position !== null) {
             legs.push({
                 coordinates: {
                     latitude: rec.position.latitude.value,
@@ -362,7 +365,7 @@ export function buildJourneySummary(
                 timestamp: rec.timestamp,
                 type: 'border',
             });
-        } else if (rec.kind === 'accumulatedDrivingPosition') {
+        } else if (rec.kind === 'accumulatedDrivingPosition' && rec.position !== null) {
             legs.push({
                 coordinates: {
                     latitude: rec.position.latitude.value,
@@ -377,7 +380,7 @@ export function buildJourneySummary(
                 timestamp: rec.timestamp,
                 type: 'gnss',
             });
-        } else if (rec.kind === 'loadUnloadOperation') {
+        } else if (rec.kind === 'loadUnloadOperation' && rec.position !== null) {
             legs.push({
                 coordinates: {
                     latitude: rec.position.latitude.value,

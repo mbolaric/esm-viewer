@@ -715,9 +715,9 @@ export const de = {
         'Richtlinie 2002/15/EG: die oben genannten Arbeitszeitregeln zusammen mit den EU-Grenzwerten für Lenk- und Ruhezeiten.',
     'guide.regulations.profilesTitle': 'Regelprofile',
     'guide.regulations.severityBands':
-        'EU-Vorschriften: Bei den EU-Vorschriften zu Lenk-, Fahrtunterbrechungs- und Ruhezeiten stuft der Viewer eine Feststellung anhand der Schwellen in Anhang I der Verordnung (EU) 2016/403 der Kommission als schwerwiegend, sehr schwerwiegend oder schwersten Verstoß ein. Alles darunter wird als geringfügig angezeigt.',
+        'EU-Vorschriften: Bei den EU-Vorschriften zu Lenk-, Fahrtunterbrechungs-, Ruhe- und Arbeitszeiten stuft der Viewer eine Feststellung anhand der Schwellen in Anhang I der Verordnung (EU) 2016/403 der Kommission als schwerwiegend, sehr schwerwiegend oder schwersten Verstoß ein. Alles darunter wird als geringfügig angezeigt.',
     'guide.regulations.severityOther':
-        'Übrige Vorschriften: Feststellungen zur Arbeitszeit sowie die Profile AETR und UK verwenden stattdessen einen einfachen Abstand zum Grenzwert. Anomalien sind immer schwerste Verstöße. Der Schweregrad ist die eigene Berechnung des Viewers, keine amtliche Einstufung.',
+        'Übrige Vorschriften: Feststellungen zur Arbeitszeit im Profil der Richtlinie 2002/15/EG verwenden die Bänder in Abschnitt 3 desselben Anhangs I (wöchentliche Arbeitszeit, genommene Pause und Nachtarbeit); der 48-Stunden-Durchschnitt behält einen einfachen Abstand zum Grenzwert. Die Profile AETR und UK verwenden durchgehend einfache Abstände. Anomalien sind immer schwerste Verstöße. Der Schweregrad ist die eigene Berechnung des Viewers, keine amtliche Einstufung.',
     'guide.regulations.severityTitle': 'Schweregrad der Feststellungen',
     'guide.regulations.vehicleUnitDeadline':
         'Fahrzeugeinheiten (Massenspeicher): Müssen spätestens alle 90 Tage ausgelesen und archiviert werden.',
@@ -775,6 +775,8 @@ export const de = {
     'export.error.generic': 'Der Export konnte nicht abgeschlossen werden.',
     'export.error.io': 'Die Datei konnte nicht geschrieben werden.',
     'export.error.sourceConflict': 'Das Exportziel darf die geöffnete Quelldatei nicht ersetzen.',
+    'export.error.guardUnavailable':
+        'Das Ziel konnte nicht mit der geöffneten Quelldatei abgeglichen werden, daher wurde nichts geschrieben. Versuchen Sie es erneut oder wählen Sie ein anderes Ziel.',
     'export.export': 'Exportieren',
     'export.exporting': 'Exportiere…',
     'export.printing': 'Drucken…',

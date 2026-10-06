@@ -230,7 +230,8 @@ export class ViewerSectionViewModels {
             eventFaultRows: section === 'eventsAndFaults' ? (this.#_eventFault?.records ?? []) : [],
             identityRows: section === 'overview' ? overview.identities : [],
             locationRows: section === 'places' ? (this.#_location?.records ?? []) : [],
-            speedRows: section === 'speed' ? (this.#_speed?.records ?? []) : [],
+            // The inspector must find a selected sample on any page, not only the one on screen.
+            speedRows: section === 'speed' ? (this.#_speed?.allRecords ?? []) : [],
             technicalRows:
                 section === 'technical' && this.#_technical !== null
                     ? [...this.#_technical.identificationRecords, ...this.#_technical.operationalRecords]

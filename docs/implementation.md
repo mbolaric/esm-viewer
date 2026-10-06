@@ -121,7 +121,8 @@ visible only in a bundled `.app`.
 Native single-file and batch reads canonicalize the selected file path,
 require both selected and resolved names to have supported tachograph
 extensions, and enforce the 50 MB ceiling against the bytes actually
-streamed, not only pre-read metadata. Main-window access uses the exact
+streamed, not only pre-read metadata; the renderer's raw parse body is refused
+against the same ceiling before it is copied onto the worker thread. Main-window access uses the exact
 `"main"` label rather than an arbitrary first-window lookup, and release
 packaging compiles without Tauri devtools.
 
@@ -184,7 +185,13 @@ for Gen1 lists (a separate count field that must equal the array length) and
 `decodeVehicleUnitRecordArray` for Gen2 record arrays; a list that fails either
 yields no records and one `inconsistentData` warning. Transfer-parameter
 generation comes from the typeId prefix (`vehicle-unit-generation.ts`), and
-required/optional timestamps share `vehicle-unit-timestamps.ts`. The card's
+required/optional timestamps share `vehicle-unit-timestamps.ts`. Card download is
+TREP 06 for both generations, so the decoder accepts the un-prefixed
+`CardDownload` identifier in a Gen2 download, reads an embedded card snapshot
+from the parameter's data shape rather than from its identifier (a Gen1 download
+records only the marker and yields no snapshot), and keeps a Gen2 card-download
+block the parser left unparsed as a data-info record instead of rejecting the
+whole file. The card's
 cyclic location sections (places, GNSS positions, border crossings,
 load/unload operations, load types) go through one `normalizeCyclicSection`.
 Card and vehicle-unit verification decoders share the aggregate-status check
@@ -221,7 +228,27 @@ are serialized by the parser as `null` and normalized to absence without emittin
 spurious `invalidValue` warnings. If encountered in string form, the legacy maximum
 (`2106-02-07 06:28:15 UTC`) is likewise mapped to absence. Same-generation duplicate activity,
 event, or fault evidence is retained once and produces a source-linked
-duplicate-evidence warning instead of being silently double-counted.
+duplicate-evidence warning instead of being silently double-counted. A combined
+Gen1/Gen2 card is reconciled the same way but across applications
+(`mirrored-application-normalizer.ts`): copies whose recorded facts match are one
+piece of evidence and the newest generation represents it, with a
+duplicate-evidence warning pointing at the copy that is not counted; copies that
+disagree keep both records, because either may hold the only account of a fact,
+and carry an inconsistent-data warning. The comparison keys ignore the source
+pointer and the generation, so a mirror is recognised by what was recorded.
+
+GNSS positions use the specification's own "not available" coordinate marker
+(`0x7FFFFF` on the coordinate scale, `isUnknownParserCoordinate`). A record that
+carries it keeps every other fact it holds — timestamp, country, odometer, card
+references — with `position: null`, exactly as a country-only daily-work-period
+place does, and no warning is raised: the equipment recorded that it could not
+determine a position, which is absence of evidence, not invalid data. The map
+omits such a record because it cannot be plotted, the tables leave the position
+cell empty, and the exported report states the position as not recorded.
+Coordinates that are genuinely unusable (out of range, non-finite, or an
+authentication status missing where one is required) still produce a
+source-linked `invalidValue` warning, and the record is now kept for those too
+rather than discarded with its timestamp and odometer.
 
 Driver-card activity changes are decoded by the parser as the tachograph
 specification defines the `ActivityChangeInfo` word: while the card is not
@@ -317,9 +344,16 @@ the existing preferences store (`localStorage` in the current Tauri host,
   - *Day*: a per-day records table (start/end, duration, activity, card
     slot, crew — two cards, one card, or no crew status — and evidence) with
     the shared data-table filter/column-filter UI, a
-    day-summary totals list, a continuous-driving ratio/peak notice that uses
-    every break credited by the compliance evaluation (including qualifying
-    co-driver availability), a
+    duty shifts, crew state and break presentation are computed from the
+    canonical day per midnight — the same evidence the compliance evaluation
+    reads — while the day list keeps one entry per distinct evidence, so two
+    applications that disagree stay visible without being walked as one
+    sequence (which would report a shift longer than the clock time it covers);
+    a day-summary totals list, a continuous-driving ratio/peak notice sampled by
+    the compliance capability from its own resolved intervals and rule machine —
+    so unrecorded time counts as rest, a break that midnight splits counts once,
+    and a stint that midnight crosses keeps running — with every break the
+    evaluation credits, including qualifying co-driver availability, a
     duty-shift heading (with cross-day continuity badges for shifts spanning
     midnight, or "no work shift" when a day has full daily rest),
     previous/next-day navigation, a shift vs. UTC totals toggle, cross-links
@@ -370,7 +404,15 @@ the existing preferences store (`localStorage` in the current Tauri host,
   statistics (min/max/average/sample count); an overspeed-events table
   (max speed, duration, purpose, card number, similar-event grouping); and a
   paginated raw-samples table (time, speed, source) whose row selection is
-  bidirectionally linked to the chart's selected point.
+  bidirectionally linked to the chart's selected point. The table filters,
+  sorts and counts every sample of the selected range rather than the page on
+  screen, and pages through the result, so a sample on a later page is found by
+  search and a sort orders the whole range. Row selection is resolved across
+  the whole range too, so paging away from the selected sample keeps it in the
+  record inspector. Selecting a chart point pages to the row that record
+  occupies in the table as filtered and sorted, not to the chronological page
+  the chart computed, and leaves the table alone when the active filter excludes
+  it (the inspector still shows it).
 - **Places** — recorded positions, border crossings, and load/unload
   operations, each with country entered/left, odometer reading and
   discrepancy notes, GNSS accuracy/coordinate-precision caveats, and a
@@ -438,7 +480,12 @@ the existing preferences store (`localStorage` in the current Tauri host,
   Rendered with the fixed-viewport desktop data grid pattern (`fillHeight` on
   `RecordSectionLayout`), pinning screen headers and diff/export action controls
   while the comparison table body scrolls from row 1.
-- **Raw Data** — the canonical JSON-pointer tree explorer: a breadcrumb,
+- A source link asks the Raw Data screen to reveal a pointer through a request
+carrying its own sequence, so activating the same link again returns the tree to
+that pointer after the reader navigated elsewhere, while re-rendering the
+request already shown leaves the tree untouched.
+
+**Raw Data** — the canonical JSON-pointer tree explorer: a breadcrumb,
   collapse-all/expand-one-level controls, in-tree search that folds case and
   diacritics with the shared `#localization` normalisation (so it matches text
   the same way every table's filter does) with next/
@@ -659,17 +706,25 @@ Severity classification follows Annex I of Commission Regulation (EU)
 2016/403, which defines a four-tier classification — minor, serious (SI),
 very serious (VSI), and Most Serious Infringement (MSI). `rule-profile.ts` holds
 per-rule-id margin bands (`annexISeverityBands`) for continuous-driving breaks,
-daily and weekly driving limits, and daily and weekly rest shortfalls. Annex I
-section 3 also classifies the working-time rules, and those bands are not
-modelled: Article 4 weekly working time (SI at 56–60 h and VSI at 60 h and above
-once the 48-hour average's extension is consumed; SI at 65–70 h and VSI at 70 h
-and above against the 60-hour cap), Article 5(1) breaks (SI when the break taken
-is 10–20 min or 20–30 min, VSI at 10 min or 20 min and below) and Article 7(1)
-night work (SI at 11–13 h, VSI at 13 h and above). The working-time rules
-therefore keep the
-profile's flat `severityThresholds`, which margin the deficit instead of the
-hours worked or the break taken, so aggregate break findings stay minor and
-weekly-60-hour and night-work findings can be one tier too high (§12). Profiles
+daily and weekly driving limits, daily and weekly rest shortfalls, and the
+working-time rules Annex I section 3 classifies. Those working-time bands are
+expressed against the profile's own limits: Article 7(1) night work is serious
+at 11 h and very serious at 13 h against the 10-hour ceiling; the Article 4
+60-hour weekly cap is serious at 65 h and very serious at 70 h; and the
+Article 5(1) aggregate break rules are classified by the break actually taken,
+which the evaluators express as its deficit against the rule's requirement — a
+20–30 minute break over nine hours of work is serious and 20 minutes or less is
+very serious, while 10–20 minutes over six to nine hours is serious and
+10 minutes or less is very serious. A break outside those classified ranges
+(over 30 minutes but still short of 45, for example) stays minor. A
+consecutive-work finding carries the same tier as the day's aggregate break
+result: its band is settled at the end of the duty period, against the break the
+day actually took and the requirement the day actually carried (rows 5-6 up to
+nine hours of work, rows 7-8 beyond it), so one shortfall never reports two
+different tiers for the same day. The 48-hour
+average rule deliberately keeps the profile's flat margins, because Annex I
+rows 1–2 classify a single week's hours while that rule's subject is an average
+over the reference period (§12). Profiles
 Annex I does not govern (AETR, UK GB Domestic) keep the flat thresholds by
 design. Annex I states excess
 bands by a lower-inclusive bound on the value exceeded ("10h ≤ … < 11h" of daily
@@ -694,6 +749,22 @@ limit rather than tracking whether an extension was taken, and the EU text
 conditions both MSI rows on taking no break or rest of at least 4,5 hours, which
 is likewise not modelled; the UK Annex as amended in 2026 dropped that condition
 for the daily-driving rows. See §12 for the resulting simplification.
+
+Two activity-day projections share that reconciliation
+(`document-projections.ts`): the display projection keeps one row per UTC
+midnight and distinct evidence, and the canonical projection keeps one row per
+midnight for counts, totals, coverage and the compliance evaluation, which is why
+a mirrored generation is counted, totalled and evaluated once.
+
+`evaluateDocumentCompliance` returns the merged evaluation intervals it used,
+with unrecorded time already read as rest. The continuous-driving rule machine
+itself lives once, in `continuous-driving.ts`: `walkContinuousDriving` applies
+the 45-minute, 15 + 30 and credited co-driver availability resets and is what
+`evaluateBreakInfringements` reports from, and `sampleContinuousDrivingByDay`
+reads the same walk to give each UTC day its closing value and peak. The
+Activities notice therefore presents the evaluation's own rule machine instead
+of a second copy of it, and unrecorded time, midnight-spanning breaks and
+missing days cannot make the notice disagree with the findings beside it.
 
 The night-work daily limit (Art. 7(1) of Directive 2002/15/EC, "in each
 24-hour period") applies when work falls inside the configured local night
@@ -1397,16 +1468,11 @@ verify dispatch independently of a display. Standalone packaging remains in
   the "no break taken" condition. The condition itself changed in the United
   Kingdom's revised Annex I, which drops it for the daily-driving rows, so the
   deviation concerns the EU profiles only.
-- The working-time severities of Directive 2002/15/EC (§6) do not use the
-  Annex I section 3 bands, which classify Article 4 weekly working time
-  (56–60 h serious and 60 h and above very serious once the 48-hour average's
-  extension is consumed; 65–70 h serious and 70 h and above very serious against
-  the 60-hour cap), Article 5(1) breaks (10–20 min or 20–30 min taken serious,
-  10 min or 20 min and below very serious) and Article 7(1) night work (11–13 h
-  serious, 13 h and above very serious). The aggregate break rules apply the flat
-  60/120-minute margins to a deficit that cannot exceed 45 minutes, so they are
-  always minor, and the weekly-60-hour and night-work rules can be one tier too
-  high.
+- The 48-hour average working-time rule (§6) keeps the profile's flat severity
+  margins. Annex I section 3 rows 1–2 classify a single week's hours against the
+  weekly limits, while this rule's subject is an average over the reference
+  period, so no exact band mapping exists; the other working-time rules use the
+  section 3 bands.
 - Fortnightly weekly rest evaluation (§6) operates strictly on full calendar
   weeks bounded within the document coverage range (`fullWeeksWithinDocument`);
   partial calendar weeks at document start or end are excluded from the two-week
@@ -1421,6 +1487,12 @@ verify dispatch independently of a display. Standalone packaging remains in
   applications are unsigned by design and always report `unsupported`.
 - Release installers (§3) are built but not code-signed or notarized on any
   platform yet.
+- The hidden print webview (§5) has no navigation policy of its own: unlike the
+  main window it is created directly with WebKit, so it has neither an
+  `on_navigation` hook nor the application CSP. Its content is HTML the
+  application generates and escapes itself, and it is discarded after the print
+  operation, so this stays defence in depth rather than an exposure; adding a
+  delegate would mean implementing a WebKit navigation delegate natively.
 
 ## 13. Deliberate design decisions
 
@@ -1429,15 +1501,34 @@ view, so a review should not report it as a defect; changing one is a product
 decision, and this list must be updated with it.
 
 - **Unrestricted file-system capability.** The webview's `fs` read, write,
-  rename, stat, and remove permissions are granted on `**`. Tachograph files are
+  rename, and remove permissions are granted on `**`. Tachograph files are
   opened from USB sticks, network drives, and any folder the user picks, and
   exports are written atomically next to their chosen destination, so path
   scoping would break real use. Tachograph reads still go through the native
   reader's canonical-path, regular-file, extension, and 50 MB checks (§4). The
-  export path refuses a destination that is the opened source, comparing the
-  path text first and the file identity (`stat`) second, and reports a
-  diagnostic when the source's identity cannot be read at all rather than
-  skipping the check silently.
+  export path refuses a destination that is the opened source. The renderer
+  compares the path text, and the native `export_destination_is_source` command
+  (`export_guard.rs`) canonicalises both paths, falls back to the platform file
+  identity, and finally compares the destination's bytes against the SHA-256 of
+  the opened document. That last comparison is what protects a document the user
+  dropped into the window: the webview receives no path for a dropped file, so
+  the renderer registers an opaque token and only the digest identifies the
+  source. It also means an export refuses to overwrite a byte-identical copy of
+  an opened tachograph file, which is intended — writing export output over
+  tachograph data is what the guard exists to stop. No webview permission is
+  involved, which is why the `fs` grant list no longer needs `stat`.
+  The guard has three outcomes: same file, a proven different file, or
+  unavailable. Only the second may be written to — an IPC failure or a
+  non-boolean answer is reported to the diagnostic log and the export is refused
+  with `guardUnavailable` instead of being mistaken for a proven-different
+  destination.
+- **The print webview releases its AppKit handles only on the main thread.** The
+  hidden `WKWebView` and its window are handed between main-thread closures as
+  raw retained pointers (`print_engine.rs`). The holder consumes them exactly
+  once, and its destructor releases them when it runs on the main thread; on a
+  failure path that abandoned the holder on another thread it deliberately leaks
+  the two objects, because releasing an AppKit object from the wrong thread is
+  worse than a bounded leak on a print attempt that already failed.
 - **Detailed local diagnostic logs.** `app.log` holds sanitized, typed events
   only, while `native-debug.log` keeps raw error detail (messages, stacks,
   paths) in release builds too, so a reported problem can be diagnosed. Both

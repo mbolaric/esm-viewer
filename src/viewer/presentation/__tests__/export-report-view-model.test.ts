@@ -32,7 +32,7 @@ describe('createExportReportViewModel', () => {
                 version: '0.2.0',
             },
             createComplianceViewModel(document, undefined, EU_561_2006_STANDARD),
-            { creditedAvailabilityBreaks: [], crewDutyPeriods: [], infringements: [] },
+            { creditedAvailabilityBreaks: [], crewDutyPeriods: [], evaluationIntervals: [], infringements: [] },
         );
 
         expect(viewModel.overview.displayName).toBe('vehicle-unit.ddd');

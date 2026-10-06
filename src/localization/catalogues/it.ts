@@ -572,9 +572,9 @@ export const it = {
         'Direttiva 2002/15/CE: le regole sull’orario di lavoro sopra indicate, insieme ai limiti UE di guida e riposo.',
     'guide.regulations.profilesTitle': 'Profili di regole',
     'guide.regulations.severityBands':
-        'Norme UE: per le norme UE su guida, pause e riposo il viewer classifica un rilievo come infrazione grave, molto grave o più grave in base alle soglie dell’allegato I del regolamento (UE) 2016/403 della Commissione. Tutto ciò che sta sotto si mostra come minore.',
+        'Norme UE: per le norme UE su guida, pause, riposo e orario di lavoro il viewer classifica un rilievo come infrazione grave, molto grave o più grave in base alle soglie dell’allegato I del regolamento (UE) 2016/403 della Commissione. Tutto ciò che sta sotto si mostra come minore.',
     'guide.regulations.severityOther':
-        'Altre norme: i rilievi sull’orario di lavoro e i profili AETR e UK usano invece un semplice margine oltre il limite. Le anomalie sono sempre della gravità più alta. La gravità è il calcolo proprio del viewer, non una classificazione ufficiale.',
+        'Altre norme: i rilievi sull’orario di lavoro con il profilo della direttiva 2002/15/CE usano le fasce della sezione 3 di quello stesso allegato I (orario settimanale, pausa effettivamente fruita e lavoro notturno), mentre la media di 48 ore mantiene un semplice margine oltre il limite. I profili AETR e UK usano margini semplici in ogni caso. Le anomalie sono sempre della gravità più alta. La gravità è il calcolo proprio del viewer, non una classificazione ufficiale.',
     'guide.regulations.severityTitle': 'Gravità dei rilievi',
     'guide.regulations.vehicleUnitDeadline':
         'Unità di bordo (UB): devono essere scaricate e archiviate almeno una volta ogni 90 giorni.',
@@ -632,6 +632,8 @@ export const it = {
     'export.error.generic': 'Impossibile completare l’esportazione.',
     'export.error.io': 'Impossibile scrivere il file.',
     'export.error.sourceConflict': 'La destinazione dell’esportazione non deve sostituire il file sorgente aperto.',
+    'export.error.guardUnavailable':
+        'Non è stato possibile confrontare la destinazione con il file sorgente aperto, quindi non è stato scritto nulla. Riprova o scegli un’altra destinazione.',
     'export.export': 'Esporta',
     'export.exporting': 'Esportazione in corso…',
     'export.printing': 'Stampa in corso…',

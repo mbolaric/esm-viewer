@@ -1,4 +1,10 @@
-import { isDurationMilliseconds, isUtcTimestamp } from '#viewer-domain';
+import {
+    activityDayEvidenceKey,
+    eventFaultEvidenceKey,
+    eventFaultIdentityKey,
+    isDurationMilliseconds,
+    isUtcTimestamp,
+} from '#viewer-domain';
 import type {
     ActivityInterval,
     DurationMilliseconds,
@@ -66,7 +72,11 @@ export interface IDocumentDetailedSpeedProjection {
     readonly pageCount: number;
     readonly pageIndex: number;
     readonly range: IDocumentCoverage | null;
+    // Every sample the selected range holds, which is what the table filters and sorts over.
+    readonly filteredSamples: readonly IDetailedSpeedSample[];
+    readonly pageSize: number;
     readonly rangeLimited: boolean;
+    // One page of `filteredSamples`, so a caller that only renders rows keeps working unchanged.
     readonly samples: readonly IDetailedSpeedSample[];
     readonly statistics: IDetailedSpeedStatistics | null;
     readonly totalSamples: number;
@@ -208,14 +218,63 @@ function createActivityDayProjection(generation: TachographGeneration, day: IAct
     };
 }
 
-export function projectDocumentActivityDays(document: OpenedTachographDocument): readonly IDocumentActivityDayProjection[] {
+function allActivityDayProjections(document: OpenedTachographDocument): readonly IDocumentActivityDayProjection[] {
     if (document.content.documentKind !== 'driverCard') {
         return [];
     }
 
-    return document.content.applications
-        .flatMap((application) => application.activityDays.map((day) => createActivityDayProjection(application.generation, day)))
-        .sort(compareActivityDays);
+    return document.content.applications.flatMap((application) =>
+        application.activityDays.map((day) => createActivityDayProjection(application.generation, day)),
+    );
+}
+
+// Display list: one row per UTC midnight and distinct evidence. A proven mirror collapses to its highest generation,
+// while two applications that disagree both stay visible, because either copy may hold the only account of a fact.
+export function projectDocumentActivityDays(document: OpenedTachographDocument): readonly IDocumentActivityDayProjection[] {
+    return groupByMidnight(allActivityDayProjections(document), (projection) => activityDayEvidenceKey(projection.day)).sort(
+        compareActivityDays,
+    );
+}
+
+// Aggregate view: one row per UTC midnight, so derived totals, counts and coverage never add a mirrored copy twice.
+// A day whose copies disagree is represented by its highest generation, which the decode-time warning discloses.
+export function projectDocumentCanonicalActivityDays(
+    document: OpenedTachographDocument,
+): readonly IDocumentActivityDayProjection[] {
+    return groupByMidnight(allActivityDayProjections(document), () => '').sort(compareActivityDays);
+}
+
+function groupByMidnight<TProjection extends { readonly day: IActivityDay; readonly generation: TachographGeneration }>(
+    projections: readonly TProjection[],
+    evidenceKey: (projection: TProjection) => string,
+): TProjection[] {
+    const byMidnight = new Map<number, TProjection[]>();
+    for (const projection of projections) {
+        const group = byMidnight.get(projection.day.midnightUtc);
+        if (group === undefined) {
+            byMidnight.set(projection.day.midnightUtc, [projection]);
+        } else {
+            group.push(projection);
+        }
+    }
+
+    const reconciled: TProjection[] = [];
+    for (const group of byMidnight.values()) {
+        if (group.length === 1) {
+            reconciled.push(...group);
+            continue;
+        }
+        const byEvidence = new Map<string, TProjection>();
+        for (const projection of group) {
+            const key = evidenceKey(projection);
+            const current = byEvidence.get(key);
+            if (current === undefined || generationOrder[projection.generation] > generationOrder[current.generation]) {
+                byEvidence.set(key, projection);
+            }
+        }
+        reconciled.push(...byEvidence.values());
+    }
+    return reconciled;
 }
 
 export function projectDocumentActivityRecords(document: OpenedTachographDocument): readonly IDocumentActivityRecord[] {
@@ -224,16 +283,45 @@ export function projectDocumentActivityRecords(document: OpenedTachographDocumen
         .sort(compareActivityRecords);
 }
 
+function allEventFaultRecords(document: OpenedTachographDocument): readonly TachographEventFault[] {
+    return document.content.documentKind === 'driverCard'
+        ? document.content.applications.flatMap((application) => [...application.events, ...application.faults])
+        : [...document.content.events, ...document.content.faults];
+}
+
+function reconcileEventFaults(
+    records: readonly TachographEventFault[],
+    evidenceKey: (record: TachographEventFault) => string,
+): readonly TachographEventFault[] {
+    const byKey = new Map<string, TachographEventFault>();
+    for (const record of records) {
+        const key = evidenceKey(record);
+        const current = byKey.get(key);
+        if (current === undefined || generationOrder[record.source.generation] > generationOrder[current.source.generation]) {
+            byKey.set(key, record);
+        }
+    }
+    return [...byKey.values()];
+}
+
+// Display list: a mirrored copy collapses, records that disagree stay visible.
 export function projectDocumentEventFaultRecords(
     document: OpenedTachographDocument,
     filter: EventFaultTypeFilter = 'all',
 ): readonly TachographEventFault[] {
-    const records =
-        document.content.documentKind === 'driverCard'
-            ? document.content.applications.flatMap((application) => [...application.events, ...application.faults])
-            : [...document.content.events, ...document.content.faults];
+    return reconcileEventFaults(allEventFaultRecords(document), eventFaultEvidenceKey)
+        .filter((record) => filter === 'all' || record.recordKind === filter)
+        .sort(compareEventFaultRecords);
+}
 
-    return records.filter((record) => filter === 'all' || record.recordKind === filter).sort(compareEventFaultRecords);
+// Aggregate view: one record per kind, code and start instant, whatever the two applications recorded around it.
+export function projectDocumentCanonicalEventFaultRecords(
+    document: OpenedTachographDocument,
+    filter: EventFaultTypeFilter = 'all',
+): readonly TachographEventFault[] {
+    return reconcileEventFaults(allEventFaultRecords(document), eventFaultIdentityKey)
+        .filter((record) => filter === 'all' || record.recordKind === filter)
+        .sort(compareEventFaultRecords);
 }
 
 export function projectDocumentAssociations(
@@ -504,6 +592,8 @@ export function projectDocumentDetailedSpeed(
             measurement: null,
             pageCount: 0,
             pageIndex: 0,
+            filteredSamples: [],
+            pageSize: detailedSpeedPageSize,
             range: null,
             rangeLimited: false,
             samples: [],
@@ -538,9 +628,11 @@ export function projectDocumentDetailedSpeed(
         chartSamples,
         chartSamplesReduced: chartSamples.length < filtered.length,
         coverage,
+        filteredSamples: filtered,
         measurement: measureDetailedSpeedRange(filtered, rangeStart, rangeEnd),
         pageCount,
         pageIndex,
+        pageSize: detailedSpeedPageSize,
         range: {
             end: rangeEnd,
             start: rangeStart,
@@ -576,9 +668,11 @@ function updateCoverage(coverage: IDocumentCoverage | null, start: UtcTimestamp,
 }
 
 export function createDocumentOverviewProjection(document: OpenedTachographDocument): IDocumentOverviewProjection {
-    const activityDays = projectDocumentActivityDays(document);
+    // Counts and coverage describe the document, not the number of copies it holds, so they read the canonical
+    // projection: a mirrored generation contributes one day, one event and one coverage span.
+    const activityDays = projectDocumentCanonicalActivityDays(document);
     const activityRecords = activityDays.flatMap((day) => day.records);
-    const eventFaultRecords = projectDocumentEventFaultRecords(document);
+    const eventFaultRecords = projectDocumentCanonicalEventFaultRecords(document);
     const identities = projectDocumentIdentities(document);
     const warnings = projectDocumentWarnings(document);
     let coverage: IDocumentCoverage | null = null;

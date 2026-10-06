@@ -59,6 +59,46 @@ function document(): OpenedTachographDocument {
     });
 }
 
+function pagedDocument(): OpenedTachographDocument {
+    const start = Date.UTC(2026, 5, 18, 8, 42);
+    const samples = Array.from({ length: 501 }, (_unused, index) => {
+        const path = `/speed/${String(index)}`;
+        if (!isJsonPointer(path)) {
+            throw new TypeError('The paged speed view-model path must be valid.');
+        }
+        const speed = 72;
+        if (!isSpeedKilometresPerHour(speed)) {
+            throw new TypeError('The paged speed view-model speed must be valid.');
+        }
+        return createDetailedSpeedSample({
+            recordedAt: timestamp(start + index * 1000),
+            source: createSourceReference('vehicleUnit', 'g2', path),
+            speedKilometresPerHour: speed,
+        });
+    });
+    return createVehicleUnitDocumentFixture({
+        detailedSpeedSamples: samples,
+        openedAt: timestamp(Date.UTC(2026, 5, 19)),
+    });
+}
+
+describe('speed view model paging', () => {
+    it('exposes the whole selected range for filtering while keeping one page as the rendered slice', () => {
+        const viewModel = createSpeedSectionViewModel(pagedDocument(), localisation(), {
+            end: null,
+            pageIndex: 0,
+            preferredSample: null,
+            start: null,
+        });
+
+        expect(viewModel.records).toHaveLength(viewModel.pageSize);
+        expect(viewModel.allRecords.length).toBeGreaterThan(viewModel.pageSize);
+        expect(viewModel.allRecords[0]).toEqual(viewModel.records[0]);
+        // Filtering and sorting read this list, so a sample on a later page is reachable from the table.
+        expect(viewModel.allRecords.at(-1)?.id).not.toBe(viewModel.records.at(-1)?.id);
+    });
+});
+
 describe('speed view model', () => {
     it('formats a bounded page, factual statistics, and exact source records', () => {
         const viewModel = createSpeedSectionViewModel(document(), localisation(), {

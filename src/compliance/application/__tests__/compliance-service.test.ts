@@ -112,6 +112,13 @@ function parsedDriverCard(applications: readonly IDriverCardApplication[]): IPar
 }
 
 function combinedDocument(day: IActivityDay): ReturnType<typeof createOpenedTachographDocument> {
+    return combinedDocumentFromDays(day, day);
+}
+
+function combinedDocumentFromDays(
+    gen1Day: IActivityDay,
+    gen2Day: IActivityDay,
+): ReturnType<typeof createOpenedTachographDocument> {
     const metadata = decodeFileMetadata({
         byteLength: 3,
         displayName: 'combined.ddd',
@@ -120,8 +127,8 @@ function combinedDocument(day: IActivityDay): ReturnType<typeof createOpenedTach
     if (!metadata.ok) {
         throw new TypeError('The compliance fixture metadata must be valid.');
     }
-    const gen1 = application('g1', day, '/cardDataResponses/gen1/eventsData/0');
-    const gen2 = application('g2', day, '/cardDataResponses/gen2/eventsData/0');
+    const gen1 = application('g1', gen1Day, '/cardDataResponses/gen1/eventsData/0');
+    const gen2 = application('g2', gen2Day, '/cardDataResponses/gen2/eventsData/0');
     return createOpenedTachographDocument(
         {
             ...metadata.value,
@@ -131,6 +138,14 @@ function combinedDocument(day: IActivityDay): ReturnType<typeof createOpenedTach
         },
         parsedDriverCard([gen1, gen2]),
     );
+}
+
+function drivingMinutesOf(
+    intervals: readonly { readonly activity: string; readonly end: number; readonly start: number }[],
+): number {
+    return intervals
+        .filter((interval) => interval.activity === 'driving')
+        .reduce((total, interval) => total + (interval.end - interval.start) / 60_000, 0);
 }
 
 describe('evaluateDocumentCompliance with combined Gen1+Gen2 cards', () => {
@@ -155,6 +170,53 @@ describe('evaluateDocumentCompliance with combined Gen1+Gen2 cards', () => {
         expect(new Set(ids).size).toBe(ids.length);
         // Mirrored event fault (motion data error) is evaluated once.
         expect(ids.filter((id) => id.includes('motionDataError'))).toHaveLength(1);
+    });
+
+    it('reads a mirrored day once, whatever the lower generation holds', () => {
+        const midnightUtc = utc(Date.UTC(2026, 6, 27));
+        const mirrored = createRecordedActivityInterval(
+            'driving',
+            utc(midnightUtc + 6 * 3_600_000),
+            utc(midnightUtc + 10 * 3_600_000),
+            cardSource('g2', '/driverActivityData/0/0'),
+            singleDriverCrew,
+        );
+        if (mirrored === null) {
+            throw new TypeError('The compliance mirrored interval must be valid.');
+        }
+
+        const result = evaluateDocumentCompliance(combinedDocument(activityDay(midnightUtc, [mirrored])));
+
+        // Four hours of mirrored driving stay four hours; a doubled copy would read eight.
+        expect(drivingMinutesOf(result.evaluationIntervals)).toBe(240);
+    });
+
+    it('reads a day whose copies disagree once, from the higher generation', () => {
+        const midnightUtc = utc(Date.UTC(2026, 6, 27));
+        const fourHours = createRecordedActivityInterval(
+            'driving',
+            utc(midnightUtc + 6 * 3_600_000),
+            utc(midnightUtc + 10 * 3_600_000),
+            cardSource('g1', '/driverActivityData/0/0'),
+            singleDriverCrew,
+        );
+        const fiveHours = createRecordedActivityInterval(
+            'driving',
+            utc(midnightUtc + 6 * 3_600_000),
+            utc(midnightUtc + 11 * 3_600_000),
+            cardSource('g2', '/driverActivityData/0/0'),
+            singleDriverCrew,
+        );
+        if (fourHours === null || fiveHours === null) {
+            throw new TypeError('The compliance conflicting intervals must be valid.');
+        }
+
+        const result = evaluateDocumentCompliance(
+            combinedDocumentFromDays(activityDay(midnightUtc, [fourHours]), activityDay(midnightUtc, [fiveHours])),
+        );
+
+        // The conflict is disclosed by the decode-time warning; the aggregates use the newer application.
+        expect(drivingMinutesOf(result.evaluationIntervals)).toBe(300);
     });
 
     it('does not add generic Mobility Package assessments to a short document', () => {

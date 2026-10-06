@@ -49,6 +49,39 @@ mod macos {
     // SAFETY: Raw handles are only dereferenced on the main thread.
     unsafe impl Send for PrintWebview {}
 
+    impl PrintWebview {
+        // Takes the handles so exactly one owner releases each of them.
+        fn take(&mut self) -> (*mut WKWebView, *mut NSWindow) {
+            let handles = (self.0, self.1);
+            self.0 = std::ptr::null_mut();
+            self.1 = std::ptr::null_mut();
+            handles
+        }
+    }
+
+    impl Drop for PrintWebview {
+        fn drop(&mut self) {
+            let (webview, window) = self.take();
+            if webview.is_null() && window.is_null() {
+                return;
+            }
+            if MainThreadMarker::new().is_none() {
+                // AppKit objects must be released on the main thread. A holder that reaches this point was abandoned
+                // on a failure path that could not hop back to the main thread, and leaking it is safer than
+                // releasing it from the wrong thread.
+                return;
+            }
+            unsafe {
+                if !webview.is_null() {
+                    drop(Retained::from_raw(webview));
+                }
+                if !window.is_null() {
+                    drop(Retained::from_raw(window));
+                }
+            }
+        }
+    }
+
     pub(super) async fn print_html_macos<R: tauri::Runtime>(html: &str, app: &tauri::AppHandle<R>) -> Result<(), String> {
         let html_string = html.to_string();
 
@@ -62,11 +95,15 @@ mod macos {
         let holder = receiver.recv().map_err(|_| "Failed to initialize the print webview.".to_string())??;
 
         // Wait for WebKit layout.
-        tauri::async_runtime::spawn_blocking(|| {
+        if let Err(error) = tauri::async_runtime::spawn_blocking(|| {
             std::thread::sleep(Duration::from_millis(LAYOUT_SETTLE_MS));
         })
         .await
-        .map_err(|error| error.to_string())?;
+        {
+            // Release the hidden webview on the thread AppKit requires before reporting the failure.
+            let _ = app.run_on_main_thread(move || drop(holder));
+            return Err(error.to_string());
+        }
 
         // Open native print panel on main thread.
         let (sender, receiver) = mpsc::channel();
@@ -114,16 +151,18 @@ mod macos {
         Ok(PrintWebview(webview_raw, window_raw))
     }
 
-    fn run_print_operation(holder: PrintWebview, sender: mpsc::Sender<Result<(), String>>) {
-        let webview = match unsafe { Retained::from_raw(holder.0) } {
+    fn run_print_operation(mut holder: PrintWebview, sender: mpsc::Sender<Result<(), String>>) {
+        let (webview_pointer, window_pointer) = holder.take();
+        // Consume the window first so an unusable webview handle cannot leak it.
+        let window = unsafe { Retained::from_raw(window_pointer) };
+        let webview = match unsafe { Retained::from_raw(webview_pointer) } {
             Some(w) => w,
             None => {
+                drop(window);
                 let _ = sender.send(Err("Invalid webview handle.".to_string()));
                 return;
             }
         };
-        // Keep window alive for duration of print operation.
-        let _window = unsafe { Retained::from_raw(holder.1) };
 
         let print_info = NSPrintInfo::sharedPrintInfo();
         // Enforce ISO A4 dimensions matching PDF engine layout.
@@ -132,6 +171,7 @@ mod macos {
         operation.setShowsPrintPanel(true);
         // Modal runOperation returns on dismiss or cancel.
         operation.runOperation();
+        drop(window);
         let _ = sender.send(Ok(()));
     }
 }

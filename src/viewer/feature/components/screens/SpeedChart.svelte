@@ -14,7 +14,7 @@
     interface IProps {
         onclearrecord: () => void;
         onfailure: () => void;
-        onselectrecord: (record: IDetailedSpeedSample, pageIndex: number) => void;
+        onselectrecord: (record: IDetailedSpeedSample) => void;
         runtimeLoader?: TimeSeriesRuntimeLoader | undefined;
         selectedRecord: IDetailedSpeedSample | null;
         viewModel: ISpeedSectionViewModel;
@@ -75,7 +75,7 @@
         }
         const record = viewModel.chartRecords.find((candidate) => candidate.id === pointId);
         if (record !== undefined) {
-            onselectrecord(record.record, record.pageIndex);
+            onselectrecord(record.record);
         }
     }
 </script>

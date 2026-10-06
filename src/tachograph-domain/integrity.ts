@@ -6,7 +6,6 @@ export type IntegrityItemStatus = 'valid' | 'invalid';
 export type IntegrityNotCheckedReason = 'missingRootCertificate' | 'notRequested';
 export type IntegrityFailureCode =
     | 'certificateChainIncomplete'
-    | 'combinedCardRequiresSplit'
     | 'decoderContractViolation'
     | 'ercaKeyMismatch'
     | 'internalError'

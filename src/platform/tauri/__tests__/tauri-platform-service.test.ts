@@ -1,12 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { saveDialogMock, openDialogMock, statMock, writeFileMock, renameMock, removeMock, invokeMock } = vi.hoisted(() => ({
+const { saveDialogMock, openDialogMock, writeFileMock, renameMock, removeMock, invokeMock } = vi.hoisted(() => ({
     invokeMock: vi.fn(),
     openDialogMock: vi.fn(),
     removeMock: vi.fn(),
     renameMock: vi.fn(),
     saveDialogMock: vi.fn(),
-    statMock: vi.fn(),
     writeFileMock: vi.fn(),
 }));
 
@@ -22,7 +21,6 @@ vi.mock('@tauri-apps/plugin-dialog', () => ({
 vi.mock('@tauri-apps/plugin-fs', () => ({
     remove: removeMock,
     rename: renameMock,
-    stat: statMock,
     writeFile: writeFileMock,
 }));
 
@@ -35,6 +33,8 @@ import {
     type SourceToken,
 } from '#contracts';
 import { TauriPlatformService } from '../tauri-platform-service.js';
+
+const DIGEST = 'a'.repeat(64);
 
 function fixtureSourceToken(value: string): SourceToken {
     if (!isSourceToken(value)) {
@@ -97,8 +97,11 @@ describe('TauriPlatformService', () => {
         removeMock.mockReset();
         renameMock.mockReset();
         saveDialogMock.mockReset();
-        statMock.mockReset();
         writeFileMock.mockReset();
+        // The export guard answers natively; tests override it per case.
+        invokeMock.mockImplementation((command: string) =>
+            Promise.resolve(command === 'export_destination_is_source' ? false : undefined),
+        );
         service = new TauriPlatformService();
     });
 
@@ -269,61 +272,95 @@ describe('TauriPlatformService', () => {
     });
 
     describe('saveExport (PLATFORM-01)', () => {
-        it('rejects a destination path that is literally the source path, without writing', async () => {
-            const path = '/Users/driver/tacho.ddd';
-            saveDialogMock.mockResolvedValue(path);
-
-            const result = await service.saveExport({
-                bytes: new Uint8Array([1, 2, 3]),
-                sourceToken: fixtureSourceToken(path),
-                suggestedName: 'report.html',
-            });
-
-            expect(result).toEqual({ code: 'sourceConflict', status: 'failed' });
-            expect(statMock).not.toHaveBeenCalled();
-            expect(writeFileMock).not.toHaveBeenCalled();
-        });
-
-        it('rejects a destination that resolves to the source file via matching device/inode, even with a different path string', async () => {
+        async function expectRefusedGuardSave(configureGuard: () => void): Promise<void> {
             const sourcePath = '/Users/driver/tacho.ddd';
-            const destinationPath = '/Users/driver/TACHO.ddd';
-            saveDialogMock.mockResolvedValue(destinationPath);
-            statMock.mockImplementation((path: string) =>
-                Promise.resolve(path === sourcePath || path === destinationPath ? { dev: 1, ino: 42 } : { dev: 2, ino: 99 }),
-            );
-
-            const result = await service.saveExport({
-                bytes: new Uint8Array([1, 2, 3]),
-                sourceToken: fixtureSourceToken(sourcePath),
-                suggestedName: 'report.html',
-            });
-
-            expect(result).toEqual({ code: 'sourceConflict', status: 'failed' });
-            expect(writeFileMock).not.toHaveBeenCalled();
-        });
-
-        it('reports a source whose identity cannot be read and still saves, so a denied stat is never silent', async () => {
-            const sourcePath = '/Users/driver/tacho.ddd';
-            const destinationPath = '/Users/driver/report.html';
-            const denied = new Error('fs.stat not allowed. Permissions associated with this command: fs:allow-stat');
-            saveDialogMock.mockResolvedValue(destinationPath);
-            statMock.mockImplementation((path: string) =>
-                path === sourcePath ? Promise.reject(denied) : Promise.resolve({ dev: 2, ino: 99 }),
-            );
+            saveDialogMock.mockResolvedValue('/Users/driver/report.html');
+            configureGuard();
             writeFileMock.mockResolvedValue(undefined);
             renameMock.mockResolvedValue(undefined);
 
             const result = await service.saveExport({
                 bytes: new Uint8Array([1, 2, 3]),
+                sourceSha256: DIGEST,
                 sourceToken: fixtureSourceToken(sourcePath),
                 suggestedName: 'report.html',
             });
 
-            expect(result).toEqual({ status: 'saved' });
-            // The denied check reaches the diagnostic log instead of disappearing.
+            // A guard that cannot run proves nothing about the destination, so nothing is written.
+            expect(result).toEqual({ code: 'guardUnavailable', status: 'failed' });
+            expect(writeFileMock).not.toHaveBeenCalled();
             expect(invokeMock).toHaveBeenCalledWith(
                 'append_native_debug_log',
                 expect.objectContaining({ component: 'export-guard' }),
+            );
+        }
+
+        it('rejects a destination path that is literally the source path, without writing or asking the platform', async () => {
+            const path = '/Users/driver/tacho.ddd';
+            saveDialogMock.mockResolvedValue(path);
+
+            const result = await service.saveExport({
+                bytes: new Uint8Array([1, 2, 3]),
+                sourceSha256: DIGEST,
+                sourceToken: fixtureSourceToken(path),
+                suggestedName: 'report.html',
+            });
+
+            expect(result).toEqual({ code: 'sourceConflict', status: 'failed' });
+            expect(invokeMock).not.toHaveBeenCalledWith('export_destination_is_source', expect.anything());
+            expect(writeFileMock).not.toHaveBeenCalled();
+        });
+
+        it('asks the platform with the source digest, so a dropped document is protected too', async () => {
+            const destinationPath = '/Users/driver/report.html';
+            saveDialogMock.mockResolvedValue(destinationPath);
+            writeFileMock.mockResolvedValue(undefined);
+            renameMock.mockResolvedValue(undefined);
+
+            await service.saveExport({
+                bytes: new Uint8Array([1, 2, 3]),
+                sourceSha256: DIGEST,
+                // A dropped document registers an opaque token instead of a path.
+                sourceToken: fixtureSourceToken('3f2504e0-4f89-11d3-9a0c-0305e82c3301'),
+                suggestedName: 'report.html',
+            });
+
+            expect(invokeMock).toHaveBeenCalledWith('export_destination_is_source', {
+                destinationPath,
+                sourceSha256: DIGEST,
+                sourcePath: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
+            });
+        });
+
+        it('rejects a destination the platform reports as the source file, even with a different path string', async () => {
+            const sourcePath = '/Users/driver/tacho.ddd';
+            const destinationPath = '/Users/driver/TACHO.ddd';
+            saveDialogMock.mockResolvedValue(destinationPath);
+            invokeMock.mockImplementation((command: string) =>
+                Promise.resolve(command === 'export_destination_is_source' ? true : undefined),
+            );
+
+            const result = await service.saveExport({
+                bytes: new Uint8Array([1, 2, 3]),
+                sourceSha256: DIGEST,
+                sourceToken: fixtureSourceToken(sourcePath),
+                suggestedName: 'report.html',
+            });
+
+            expect(result).toEqual({ code: 'sourceConflict', status: 'failed' });
+            expect(writeFileMock).not.toHaveBeenCalled();
+        });
+
+        it('refuses the export when the guard cannot run, and reports it', async () => {
+            // An unavailable guard must never be mistaken for a destination that is provably different.
+            await expectRefusedGuardSave(() => invokeMock.mockRejectedValue(new Error('export_destination_is_source failed')));
+        });
+
+        it('refuses the export when the guard answers with something other than a verdict', async () => {
+            await expectRefusedGuardSave(() =>
+                invokeMock.mockImplementation((command: string) =>
+                    Promise.resolve(command === 'export_destination_is_source' ? 'yes' : undefined),
+                ),
             );
         });
 
@@ -331,20 +368,18 @@ describe('TauriPlatformService', () => {
             const sourcePath = '/Users/driver/tacho.ddd';
             const destinationPath = '/Users/driver/report.html';
             saveDialogMock.mockResolvedValue(destinationPath);
-            statMock.mockImplementation((path: string) =>
-                path === destinationPath ? Promise.reject(new Error('ENOENT')) : Promise.resolve({ dev: 1, ino: 42 }),
-            );
             writeFileMock.mockResolvedValue(undefined);
             renameMock.mockResolvedValue(undefined);
 
             const result = await service.saveExport({
                 bytes: new Uint8Array([1, 2, 3]),
+                sourceSha256: DIGEST,
                 sourceToken: fixtureSourceToken(sourcePath),
                 suggestedName: 'report.html',
             });
 
             expect(result).toEqual({ status: 'saved' });
-            // A destination that does not exist yet is not the source, so no degraded-check diagnostic is due.
+            // A destination the platform reports as a different file is not the source, so no diagnostic is due.
             expect(invokeMock).not.toHaveBeenCalledWith(
                 'append_native_debug_log',
                 expect.objectContaining({ component: 'export-guard' }),
@@ -363,9 +398,6 @@ describe('TauriPlatformService', () => {
 
         beforeEach(() => {
             saveDialogMock.mockResolvedValue(destinationPath);
-            statMock.mockImplementation((path: string) =>
-                path === destinationPath ? Promise.reject(new Error('ENOENT')) : Promise.resolve({ dev: 1, ino: 42 }),
-            );
         });
 
         it('never writes to the final destination path directly', async () => {
@@ -374,6 +406,7 @@ describe('TauriPlatformService', () => {
 
             await service.saveExport({
                 bytes: new Uint8Array([1, 2, 3]),
+                sourceSha256: DIGEST,
                 sourceToken: fixtureSourceToken(sourcePath),
                 suggestedName: 'report.html',
             });
@@ -389,6 +422,7 @@ describe('TauriPlatformService', () => {
 
             const result = await service.saveExport({
                 bytes: new Uint8Array([1, 2, 3]),
+                sourceSha256: DIGEST,
                 sourceToken: fixtureSourceToken(sourcePath),
                 suggestedName: 'report.html',
             });
@@ -412,6 +446,7 @@ describe('TauriPlatformService', () => {
 
             const result = await service.saveExport({
                 bytes: new Uint8Array([1, 2, 3]),
+                sourceSha256: DIGEST,
                 sourceToken: fixtureSourceToken(sourcePath),
                 suggestedName: 'report.html',
             });

@@ -244,15 +244,21 @@
             return;
         }
 
-        const preset = calculatePresetSpeedRange(viewModel.coverage, viewModel.records, durationMs);
+        const preset = calculatePresetSpeedRange(viewModel.coverage, viewModel.allRecords, durationMs);
         if (preset !== null) {
             rangeStatus = 'idle';
             onrange(preset.start, preset.end);
         }
     }
 
-    function selectChartRecord(record: IDetailedSpeedSample, pageIndex: number): void {
-        onpage(pageIndex);
+    function selectChartRecord(record: IDetailedSpeedSample): void {
+        // The chart's own page index describes chronological source order, which no longer matches the table once a
+        // filter or sort is applied. Page to the row the reader can actually see instead, and leave the table alone
+        // when the active filter excludes the record: the inspector still shows it.
+        const rowIndex = sampleRows.findIndex((row) => row.record === record);
+        if (rowIndex >= 0 && viewModel !== null) {
+            onpage(Math.floor(rowIndex / viewModel.pageSize));
+        }
         onselectrecord(record);
     }
 
@@ -263,6 +269,19 @@
     function isSpeedSampleSelected(record: ISpeedSampleViewModel): boolean {
         return record.record === selectedRecord;
     }
+
+    // P12: the table sees every sample of the range, so a filter or a sort applies to the whole set and only the
+    // displayed page is a slice of the result.
+    const sampleRows = $derived(sampleTooling.snapshot(viewModel?.allRecords ?? []).rows);
+    const filteredPageCount = $derived(
+        viewModel === null || viewModel.pageSize === 0 ? 0 : Math.ceil(sampleRows.length / viewModel.pageSize),
+    );
+    const filteredPageIndex = $derived(filteredPageCount === 0 ? 0 : Math.min(viewModel?.pageIndex ?? 0, filteredPageCount - 1));
+    const visibleSampleRows = $derived(
+        viewModel === null
+            ? []
+            : sampleRows.slice(filteredPageIndex * viewModel.pageSize, (filteredPageIndex + 1) * viewModel.pageSize),
+    );
 
     const tableLabels = $derived(createViewerDataTableLabels(translationService));
 </script>
@@ -597,42 +616,41 @@
                         </h2>
                         <p aria-live="polite">
                             {translationService.translate('speed.table.page', {
-                                page: viewModel.pageNumber.display,
-                                pageCount: viewModel.pageCount.display,
-                                samples: viewModel.totalSamples.display,
+                                page: String(filteredPageIndex + 1),
+                                pageCount: String(filteredPageCount),
+                                samples: String(sampleRows.length),
                             })}
                         </p>
                     </div>
                     <div class="page-actions">
                         <Button
-                            disabled={viewModel.pageIndex <= 0}
+                            disabled={filteredPageIndex <= 0}
                             label={translationService.translate('speed.table.previous')}
-                            onclick={() => onpage(viewModel.pageIndex - 1)}
+                            onclick={() => onpage(filteredPageIndex - 1)}
                         />
                         <Button
-                            disabled={viewModel.pageIndex >= viewModel.pageCount.value - 1}
+                            disabled={filteredPageIndex >= filteredPageCount - 1}
                             label={translationService.translate('speed.table.next')}
-                            onclick={() => onpage(viewModel.pageIndex + 1)}
+                            onclick={() => onpage(filteredPageIndex + 1)}
                         />
                     </div>
                 </div>
-                {#if viewModel.records.length === 0}
+                {#if viewModel.allRecords.length === 0}
                     <p>{translationService.translate('speed.table.empty')}</p>
                 {:else}
-                    {@const speedTableSnapshot = sampleTooling.snapshot(viewModel.records)}
                     <DataTable
                         labels={tableLabels}
                         tooling={sampleTooling}
                         caption={translationService.translate('speed.table.caption')}
                         {columns}
                         filterSummaryLabel={translationService.translate('table.filterResultCount', {
-                            shown: String(speedTableSnapshot.rows.length),
-                            total: String(viewModel.records.length),
+                            shown: String(sampleRows.length),
+                            total: String(viewModel.allRecords.length),
                         })}
                         layout="wide"
                         isRowSelected={isSpeedSampleSelected}
                         rowKey={recordKey}
-                        rows={speedTableSnapshot.rows}
+                        rows={visibleSampleRows}
                     />
                 {/if}
             </section>

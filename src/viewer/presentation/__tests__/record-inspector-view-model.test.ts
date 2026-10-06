@@ -132,16 +132,20 @@ function longitude(value: number): Longitude {
     return value;
 }
 
-function speedSample(): IDetailedSpeedSample {
+function speedSampleAt(path: string, recordedAtMs: number): IDetailedSpeedSample {
     const speedKilometresPerHour = 84;
     if (!isSpeedKilometresPerHour(speedKilometresPerHour)) {
         throw new TypeError('The inspector fixture speed must be valid.');
     }
     return createDetailedSpeedSample({
-        recordedAt: timestamp(Date.UTC(2026, 5, 18, 10)),
-        source: source('vehicleUnit', '/vuDetailedSpeedBlocks/0/samples/0'),
+        recordedAt: timestamp(recordedAtMs),
+        source: source('vehicleUnit', path),
         speedKilometresPerHour,
     });
+}
+
+function speedSample(): IDetailedSpeedSample {
+    return speedSampleAt('/vuDetailedSpeedBlocks/0/samples/0', Date.UTC(2026, 5, 18, 10));
 }
 
 function recordedActivity(): ActivityInterval {
@@ -379,6 +383,10 @@ function positionRecord(): Extract<TachographLocationRecord, { readonly kind: 'a
 function positionRow(
     record: Extract<TachographLocationRecord, { readonly kind: 'accumulatedDrivingPosition' }>,
 ): LocationRecordViewModel {
+    const position = record.position;
+    if (position === null) {
+        throw new TypeError('The inspector accumulated-position fixture needs a recorded position.');
+    }
     return {
         coDriverCard: record.coDriverCard,
         driverCard: record.driverCard,
@@ -386,13 +394,13 @@ function positionRow(
         kind: 'accumulatedDrivingPosition',
         odometer: null,
         position: {
-            accuracy: formatted(record.position.accuracy, '10'),
+            accuracy: formatted(position.accuracy, '10'),
             authenticationStatus: null,
             coordinateCopyValue: '45.100000, 13.200000',
             coordinateDisplayValue: '45.100000, 13.200000',
-            determinedAt: formatted(record.position.determinedAt, '10:00'),
-            latitude: formatted(record.position.coordinates.latitude, '45.100000'),
-            longitude: formatted(record.position.coordinates.longitude, '13.200000'),
+            determinedAt: formatted(position.determinedAt, '10:00'),
+            latitude: formatted(position.coordinates.latitude, '45.100000'),
+            longitude: formatted(position.coordinates.longitude, '13.200000'),
         },
         record,
         recordedAt: formatted(record.recordedAt, '10:00'),
@@ -486,7 +494,7 @@ function technicalRow(record: TachographTechnicalRecord): ITechnicalRecordViewMo
 function speedRow(record: IDetailedSpeedSample): ISpeedSampleViewModel {
     return {
         generation: record.source.generation,
-        id: 'speed:0',
+        id: `speed:${record.source.path}`,
         record,
         recordedAt: formatted(record.recordedAt, '12:00'),
         source: record.source,
@@ -672,6 +680,19 @@ describe('createRecordInspectorViewModel', () => {
                 kind: 'display',
             },
         });
+    });
+
+    it('finds a selected speed sample that sits on another table page', () => {
+        const firstPage = speedSampleAt('/vuDetailedSpeedBlocks/0/samples/0', Date.UTC(2026, 5, 18, 10));
+        const laterPage = speedSampleAt('/vuDetailedSpeedBlocks/0/samples/1', Date.UTC(2026, 5, 18, 11));
+        // The table filters and pages over the whole range, so the inspector receives every sample, not one page.
+        const viewModel = createRecordInspectorViewModel(laterPage, 'speed', 'vehicleUnit', {
+            ...emptySources(),
+            speedRows: [speedRow(firstPage), speedRow(laterPage)],
+        });
+
+        expect(viewModel.sourcePath).toBe('/vuDetailedSpeedBlocks/0/samples/1');
+        expect(viewModel.rows).not.toHaveLength(0);
     });
 
     it('returns an empty fallback when the record is not part of the sources', () => {

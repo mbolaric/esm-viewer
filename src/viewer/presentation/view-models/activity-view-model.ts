@@ -5,6 +5,7 @@ import {
     type ICrewDutyPeriod,
     type IInfringement,
     type IRuleProfile,
+    sampleContinuousDrivingByDay,
 } from '#compliance';
 import {
     getUtcDuration,
@@ -20,7 +21,7 @@ import {
 } from '#viewer-domain';
 import {
     projectDocumentActivityDays,
-    type IDocumentActivityDayProjection,
+    projectDocumentCanonicalActivityDays,
     type IDocumentActivityRecord,
     type OpenedTachographDocument,
 } from '#viewer-application';
@@ -170,7 +171,7 @@ export interface IActivityRestWindowViewModel {
 
 export type ActivityComplianceInput = Pick<
     IComplianceEvaluationResult,
-    'creditedAvailabilityBreaks' | 'crewDutyPeriods' | 'infringements'
+    'creditedAvailabilityBreaks' | 'crewDutyPeriods' | 'evaluationIntervals' | 'infringements'
 >;
 
 export interface IActivityDayViewModel {
@@ -234,26 +235,8 @@ const CONTINUOUS_DRIVING_WARNING_RATIO = 0.8;
 
 const MAJOR_REST_BREAK_THRESHOLD_MS = 9 * MILLISECONDS_PER_HOUR;
 
-// Continuous driving and break thresholds derived from selected compliance profile.
-interface IContinuousDrivingThresholds {
-    readonly maxContinuousDrivingMs: number;
-    readonly minFullBreakMs: number;
-    readonly splitBreak: { readonly firstBreakMs: number; readonly secondBreakMs: number } | null;
-}
-
-function continuousDrivingThresholds(profile: IRuleProfile): IContinuousDrivingThresholds {
-    const firstSplitRule = profile.breakRules.splitBreaks[0];
-    return {
-        maxContinuousDrivingMs: profile.breakRules.maxContinuousDrivingMinutes * MILLISECONDS_PER_MINUTE,
-        minFullBreakMs: profile.breakRules.minTotalBreakMinutes * MILLISECONDS_PER_MINUTE,
-        splitBreak:
-            firstSplitRule === undefined
-                ? null
-                : {
-                      firstBreakMs: firstSplitRule.firstBreakMinutes * MILLISECONDS_PER_MINUTE,
-                      secondBreakMs: firstSplitRule.secondBreakMinutes * MILLISECONDS_PER_MINUTE,
-                  },
-    };
+function maxContinuousDrivingMs(profile: IRuleProfile): number {
+    return profile.breakRules.maxContinuousDrivingMinutes * MILLISECONDS_PER_MINUTE;
 }
 
 const TIMELINE_TICK_HOURS = [0, 6, 12, 18] as const;
@@ -321,73 +304,6 @@ function buildContinuousDrivingProgressViewModel(
         percentage,
         status,
     };
-}
-
-function endsCreditedAvailabilityBreak(
-    record: IDocumentActivityRecord,
-    creditedAvailabilityBreaks: ActivityComplianceInput['creditedAvailabilityBreaks'],
-): boolean {
-    return (
-        record.interval.activity === 'availability' &&
-        creditedAvailabilityBreaks.some(
-            (creditedBreak) => record.interval.start < creditedBreak.end && creditedBreak.end <= record.interval.end,
-        )
-    );
-}
-
-// Evaluates EU 561/2006 Art. 7 continuous driving across midnight boundaries without resetting at day edges.
-function calculateContinuousDrivingProgressByDay(
-    projectedDays: readonly IDocumentActivityDayProjection[],
-    creditedAvailabilityBreaks: ActivityComplianceInput['creditedAvailabilityBreaks'],
-    thresholds: IContinuousDrivingThresholds,
-    localisation: ViewerLocalisationService,
-): readonly IContinuousDrivingProgressViewModel[] {
-    let currentMs = 0;
-    let splitFirstBreakMs = 0;
-    const progressByDay: IContinuousDrivingProgressViewModel[] = [];
-
-    for (const projectedDay of projectedDays) {
-        // Day peak starts from driving clock carried in from before midnight; resets if break occurred.
-        let peakMs = currentMs;
-
-        for (const record of projectedDay.records) {
-            const duration = Math.max(0, record.interval.end - record.interval.start);
-            if (record.interval.activity === 'driving') {
-                currentMs += duration;
-                if (currentMs > peakMs) {
-                    peakMs = currentMs;
-                }
-            } else if (endsCreditedAvailabilityBreak(record, creditedAvailabilityBreaks)) {
-                // The credit ends within this projection even if the availability period crosses midnight.
-                currentMs = 0;
-                splitFirstBreakMs = 0;
-            } else if (record.interval.activity === 'breakOrRest') {
-                if (duration >= thresholds.minFullBreakMs) {
-                    currentMs = 0;
-                    splitFirstBreakMs = 0;
-                } else if (
-                    thresholds.splitBreak !== null &&
-                    splitFirstBreakMs >= thresholds.splitBreak.firstBreakMs &&
-                    duration >= thresholds.splitBreak.secondBreakMs
-                ) {
-                    currentMs = 0;
-                    splitFirstBreakMs = 0;
-                } else if (
-                    thresholds.splitBreak !== null &&
-                    splitFirstBreakMs === 0 &&
-                    duration >= thresholds.splitBreak.firstBreakMs
-                ) {
-                    splitFirstBreakMs = duration;
-                }
-            }
-        }
-
-        progressByDay.push(
-            buildContinuousDrivingProgressViewModel(currentMs, peakMs, thresholds.maxContinuousDrivingMs, localisation),
-        );
-    }
-
-    return progressByDay;
 }
 
 // Evaluates duty shifts across complete chronologically-ordered records to preserve spans across midnight.
@@ -702,7 +618,11 @@ export function createActivitySectionViewModel(
     evaluation: ActivityComplianceInput,
 ): DocumentViewModelResult<IActivitySectionViewModel> {
     const { crewDutyPeriods, infringements } = evaluation;
+    // The day list keeps one entry per distinct evidence so a conflict stays visible, while shifts, crew state and
+    // break presentation read the canonical day per midnight: the compliance evaluation reads that same set, and a
+    // shared walk over both conflicting copies would invent a duty shift longer than the clock time it covers.
     const projectedDays = projectDocumentActivityDays(document);
+    const canonicalDays = projectDocumentCanonicalActivityDays(document);
     const firstDay = projectedDays[0];
     if (firstDay === undefined) {
         return ok({
@@ -718,15 +638,17 @@ export function createActivitySectionViewModel(
         return err(classifyParseError('projectionFailed'));
     }
 
-    const continuousDrivingByDay = calculateContinuousDrivingProgressByDay(
-        projectedDays,
-        evaluation.creditedAvailabilityBreaks,
-        continuousDrivingThresholds(profile),
-        localisation,
+    const continuousDrivingLimitMs = maxContinuousDrivingMs(profile);
+    const continuousDrivingByDay = sampleContinuousDrivingByDay(
+        projectedDays.map((projectedDay) => projectedDay.day.midnightUtc),
+        evaluation.evaluationIntervals,
+        profile,
+    ).map((sample) =>
+        buildContinuousDrivingProgressViewModel(sample.valueMs, sample.peakMs, continuousDrivingLimitMs, localisation),
     );
 
     const recordsByDay: IActivityRecordViewModel[][] = [];
-    const allRecords: IActivityRecordViewModel[] = [];
+    const canonicalRecords: IActivityRecordViewModel[] = [];
     for (const projectedDay of projectedDays) {
         const records: IActivityRecordViewModel[] = [];
         for (const record of projectedDay.records) {
@@ -737,11 +659,19 @@ export function createActivitySectionViewModel(
             records.push(mapped.value);
         }
         recordsByDay.push(records);
-        allRecords.push(...records);
+    }
+    for (const projectedDay of canonicalDays) {
+        for (const record of projectedDay.records) {
+            const mapped = createActivityRecordViewModel(record, localisation);
+            if (!mapped.ok) {
+                return mapped;
+            }
+            canonicalRecords.push(mapped.value);
+        }
     }
 
-    // Shifts computed once across whole document, then attributed to each shift's starting calendar day.
-    const allDutyShifts = calculateDutyShifts(allRecords, localisation).map((shift) => ({
+    // Shifts computed once across the canonical records, then attributed to each shift's starting calendar day.
+    const allDutyShifts = calculateDutyShifts(canonicalRecords, localisation).map((shift) => ({
         ...shift,
         crew: createDutyShiftCrewViewModel(shift, crewDutyPeriods, localisation),
     }));

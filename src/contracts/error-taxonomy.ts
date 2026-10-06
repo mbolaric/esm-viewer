@@ -12,7 +12,6 @@ export type ParseErrorCategory =
 export type ParseFailureCode =
     | 'cancelled'
     | 'certificateChainIncomplete'
-    | 'combinedCardRequiresSplit'
     | 'decoderContractViolation'
     | 'documentCleanupFailed'
     | 'ercaKeyMismatch'
@@ -77,7 +76,6 @@ export interface IIntegrityLimitationError extends IBaseParseFailure {
     readonly category: 'integrityLimitation';
     readonly code:
         | 'certificateChainIncomplete'
-        | 'combinedCardRequiresSplit'
         | 'ercaKeyMismatch'
         | 'rootCertificateMissing'
         | 'unsupportedCertificateProfile'
@@ -143,7 +141,6 @@ export function classifyParseError(code: ParseFailureCode): ParseError {
             };
 
         case 'certificateChainIncomplete':
-        case 'combinedCardRequiresSplit':
         case 'ercaKeyMismatch':
         case 'rootCertificateMissing':
         case 'unsupportedCertificateProfile':

@@ -14,6 +14,13 @@ export interface IRawDataVisibleNode {
     readonly node: IRawDataNodeViewModel;
 }
 
+// One shell request to show a pointer in the tree. The sequence makes a repeat of the same pointer a new request while
+// keeping a re-render of the request that is already shown a no-op.
+export interface IRawDataRevealRequest {
+    readonly path: JsonPointer;
+    readonly sequence: number;
+}
+
 export interface IRawDataPaginationItem {
     readonly indentationLevels: readonly number[];
     readonly itemType: 'pagination';
@@ -53,7 +60,7 @@ export class RawDataController {
     #_findTruncated = $state<boolean>(false);
     #_lastRevealError = $state<RawDataExplorationError | null>(null);
     // Last path the shell asked for, so a repeated request does not disturb the tree the user navigated.
-    #_lastRequestedPath: JsonPointer | null = null;
+    #_lastRevealSequence: number | null = null;
     #_matches = $state<readonly IRawDataNodeViewModel[]>([]);
     private readonly _pageOffsets = new SvelteMap<JsonPointer, number>();
     #_requestedPath = $state<JsonPointer | null>(null);
@@ -87,16 +94,17 @@ export class RawDataController {
             this._pageOffsets.set(explorer.root.path, 0);
         }
         this.#_lastRevealError = initialPath === null ? null : this.revealPath(initialPath);
-        this.#_lastRequestedPath = initialPath;
     }
 
-    // Reveals a source the shell asked for; a repeated request for the same path leaves the tree untouched.
-    public revealRequest(path: JsonPointer | null): IRawDataSnapshot {
-        if (path === null || path === this.#_lastRequestedPath) {
+    // Reveals a source the shell asked for. The request carries its own sequence, so asking for the same pointer
+    // twice still returns the tree to it after the reader navigated elsewhere; only a repeated rendering of one
+    // request leaves the tree untouched.
+    public revealRequest(request: IRawDataRevealRequest | null): IRawDataSnapshot {
+        if (request === null || request.sequence === this.#_lastRevealSequence) {
             return this.snapshot;
         }
-        this.#_lastRequestedPath = path;
-        return this.select(path);
+        this.#_lastRevealSequence = request.sequence;
+        return this.select(request.path);
     }
 
     public get snapshot(): IRawDataSnapshot {

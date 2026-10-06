@@ -474,10 +474,14 @@ function cardReferenceLines(card: IRecordedCardReference | null, translationServ
 }
 
 function positionEvidenceLines(
-    position: IGnssPositionEvidenceViewModel,
+    position: IGnssPositionEvidenceViewModel | null,
     translationService: ViewerTranslationService,
 ): ReportLine[] {
     const t = translationService.translate.bind(translationService);
+    if (position === null) {
+        // The equipment recorded that it could not determine a position; the record itself is still evidence.
+        return [labelled(t('places.positionType'), null)];
+    }
     return [
         labelled(t('places.determinedAt'), position.determinedAt.display),
         labelled(t('places.coordinates'), position.coordinateDisplayValue, true),

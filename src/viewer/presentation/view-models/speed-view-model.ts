@@ -89,6 +89,10 @@ export interface ISpeedSectionViewModel {
     readonly pageNumber: IFormattedValue<number>;
     readonly range: IFormattedUtcRangeInput | null;
     readonly rangeLimited: boolean;
+    // Every sample in the selected range, which the table filters and sorts before paging.
+    readonly allRecords: readonly ISpeedSampleViewModel[];
+    readonly pageSize: number;
+    // The page the range projection selected, for callers that render without table tooling.
     readonly records: readonly ISpeedSampleViewModel[];
     readonly statistics: ISpeedStatisticsViewModel | null;
     readonly timeZone: string;
@@ -270,6 +274,9 @@ export function createSpeedSectionViewModel(
         ),
         range: formatRange(projection.range, localisation),
         rangeLimited: projection.rangeLimited,
+        // The table filters and sorts over every sample of the range, then shows one page of the result.
+        allRecords: projection.filteredSamples.map((record) => mapRecord(record, localisation)),
+        pageSize: projection.pageSize,
         records: projection.samples.map((record) => mapRecord(record, localisation)),
         statistics,
         timeZone: localisation.timeZone,

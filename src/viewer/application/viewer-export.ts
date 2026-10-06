@@ -2,9 +2,16 @@ import type { ExportFailureCode, IPdfDocumentRequest, SourceToken } from '#contr
 
 export type ViewerExportFailureCode = ExportFailureCode;
 
+// What the export guard needs to recognise the opened document: its path token where one exists, and always the
+// digest of its bytes, because a dropped document never discloses a path.
+export interface IViewerExportSource {
+    readonly sha256: string;
+    readonly sourceToken: SourceToken | null;
+}
+
 export interface IViewerExportSaveRequest {
     readonly bytes: Uint8Array;
-    readonly sourceToken: SourceToken | null;
+    readonly source: IViewerExportSource | null;
     readonly suggestedName: string;
 }
 

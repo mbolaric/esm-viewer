@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { open as openDialog, save as saveDialog, type OpenDialogOptions } from '@tauri-apps/plugin-dialog';
-import { remove, rename, stat, writeFile } from '@tauri-apps/plugin-fs';
+import { remove, rename, writeFile } from '@tauri-apps/plugin-fs';
 import {
     decodeBinaryPayload,
     decodeReadTachographFileFailure,
@@ -71,40 +71,45 @@ function normalizePathSeparators(path: string): string {
     return path.replace(/\\/gu, '/');
 }
 
-// Checks whether the export destination is the opened document source: the path text first, then the file identity.
-async function isSameFile(destinationPath: string, sourcePath: string): Promise<boolean> {
-    // Non-string or undefined source tokens safely resolve to false (not same file).
-    if (typeof destinationPath !== 'string' || typeof sourcePath !== 'string') {
-        return false;
+// The export guard answers with three states: the destination is the source, it is provably a different file, or the
+// check could not run at all. Only the middle state may be written to, because the project invariant is that a source
+// tachograph file is never overwritten.
+type ExportGuardVerdict = 'different' | 'same' | 'unavailable';
+
+async function judgeExportDestination(
+    destinationPath: string,
+    sourceToken: string,
+    sourceSha256: string | null,
+): Promise<ExportGuardVerdict> {
+    // Non-string or undefined source tokens safely resolve to absence (no source to protect).
+    if (typeof destinationPath !== 'string' || typeof sourceToken !== 'string') {
+        return 'different';
     }
 
-    if (normalizePathSeparators(destinationPath) === normalizePathSeparators(sourcePath)) {
-        return true;
+    if (normalizePathSeparators(destinationPath) === normalizePathSeparators(sourceToken)) {
+        return 'same';
     }
 
-    let sourceInfo;
     try {
-        sourceInfo = await stat(sourcePath);
+        const verdict: unknown = await invoke('export_destination_is_source', {
+            destinationPath,
+            sourceSha256,
+            sourcePath: sourceToken,
+        });
+        if (verdict === true) {
+            return 'same';
+        }
+        if (verdict === false) {
+            return 'different';
+        }
+        logPlatformError('export-guard', new TypeError('The export guard returned a non-boolean answer'));
+        return 'unavailable';
     } catch (error) {
-        // Without the source's identity the comparison cannot run; the export stays usable, but the gap is reported.
+        // An unrunnable guard must not be mistaken for a proven-different destination: a dropped document carries no
+        // path, so the digest comparison is the only thing standing between an alias and the source file.
         logPlatformError('export-guard', error);
-        return false;
+        return 'unavailable';
     }
-
-    let destinationInfo;
-    try {
-        destinationInfo = await stat(destinationPath);
-    } catch {
-        // A destination that does not exist yet cannot be the source file, so this is not a degraded check.
-        return false;
-    }
-
-    return (
-        destinationInfo.dev !== null &&
-        destinationInfo.ino !== null &&
-        destinationInfo.dev === sourceInfo.dev &&
-        destinationInfo.ino === sourceInfo.ino
-    );
 }
 
 // Writes bytes to temporary file first then atomically renames to prevent partial writes.
@@ -401,8 +406,12 @@ export class TauriPlatformService {
             }
 
             // Prevent overwriting active source file with export output.
-            if (await isSameFile(path, request.sourceToken)) {
+            const verdict = await judgeExportDestination(path, request.sourceToken, request.sourceSha256);
+            if (verdict === 'same') {
                 return { code: 'sourceConflict', status: 'failed' };
+            }
+            if (verdict === 'unavailable') {
+                return { code: 'guardUnavailable', status: 'failed' };
             }
 
             this.rememberSelectedDirectory(path);
@@ -424,6 +433,8 @@ export class TauriPlatformService {
             const suggestedName = `esm-viewer-error-log-${now}.jsonl`;
             return await this.saveExport({
                 bytes,
+                // Logs are not tied to an opened document, so there is no source file to protect.
+                sourceSha256: null,
                 sourceToken: createRandomSourceToken(),
                 suggestedName,
             });

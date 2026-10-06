@@ -2,6 +2,7 @@ import type { ILocalisationService } from '#localization';
 import type {
     ActivityKind,
     DurationMilliseconds,
+    IActivityCrewContext,
     IRecordedActivityInterval,
     ISourceReference,
     UtcTimestamp,
@@ -15,7 +16,7 @@ import {
 } from '#viewer-domain';
 import { describe, expect, it } from 'vitest';
 
-import { EU_561_2006_STANDARD, UK_GB_DOMESTIC } from '#compliance';
+import { EU_561_2006_STANDARD, EU_MOBILITY_PACKAGE_2020, evaluateDocumentCompliance, UK_GB_DOMESTIC } from '#compliance';
 
 import {
     createActivitySectionViewModel,
@@ -25,10 +26,11 @@ import {
 } from '../view-models/activity-view-model.js';
 import { createLocalisationServiceFake, fixtureSingleDriverCrew } from '#testing';
 import {
+    createCombinedCardActivityDocumentFixture,
     createDriverCardActivityDocumentFixture,
     createDriverCardActivityDocumentFixtureAcrossDays,
 } from './driver-card-activity-document-fixture.js';
-import { NO_COMPLIANCE_EVALUATION } from './activity-view-model-fixture.js';
+import { complianceEvaluationFor } from './activity-view-model-fixture.js';
 
 type ViewerLocalisationService = ILocalisationService<UtcTimestamp, number>;
 
@@ -49,14 +51,14 @@ function cardSource(path: string): ISourceReference<'g1', 'driverCard'> {
 const hour = 3_600_000;
 const minute = 60_000;
 
-function interval(activity: ActivityKind, startMs: number, endMs: number, path: string): IRecordedActivityInterval {
-    const interval = createRecordedActivityInterval(
-        activity,
-        utc(startMs),
-        utc(endMs),
-        cardSource(path),
-        fixtureSingleDriverCrew,
-    );
+function interval(
+    activity: ActivityKind,
+    startMs: number,
+    endMs: number,
+    path: string,
+    crew: IActivityCrewContext = fixtureSingleDriverCrew,
+): IRecordedActivityInterval {
+    const interval = createRecordedActivityInterval(activity, utc(startMs), utc(endMs), cardSource(path), crew);
     if (interval === null) {
         throw new TypeError('The continuous-driving interval fixture must be valid.');
     }
@@ -74,7 +76,7 @@ function progressDocument(
         openedAt: utc(midnight + 10_000),
         sha256: 'b'.repeat(64),
     });
-    return createActivitySectionViewModel(document, localisation(), EU_561_2006_STANDARD, NO_COMPLIANCE_EVALUATION);
+    return createActivitySectionViewModel(document, localisation(), EU_561_2006_STANDARD, complianceEvaluationFor(document));
 }
 
 function localisation(): ViewerLocalisationService {
@@ -257,23 +259,24 @@ describe('calculateContinuousDrivingProgress', () => {
         // Driving from 22:00 to 03:00 with no break: 3h before midnight,
         // 2h after - individually under the 4.5h limit, but the driver has
         // actually been driving continuously for 5h by 03:00.
+        const fixture = createDriverCardActivityDocumentFixtureAcrossDays({
+            days: [
+                {
+                    intervals: [interval('driving', day1Midnight - 3 * hour, day1Midnight, '/activities/0')],
+                    midnight: day1Midnight - 24 * hour,
+                },
+                {
+                    intervals: [interval('driving', day2Midnight, day2Midnight + 3 * hour, '/activities/1')],
+                    midnight: day2Midnight,
+                },
+            ],
+            openedAt: utc(day2Midnight + 3 * hour + 10_000),
+        });
         const viewModel = createActivitySectionViewModel(
-            createDriverCardActivityDocumentFixtureAcrossDays({
-                days: [
-                    {
-                        intervals: [interval('driving', day1Midnight - 3 * hour, day1Midnight, '/activities/0')],
-                        midnight: day1Midnight - 24 * hour,
-                    },
-                    {
-                        intervals: [interval('driving', day2Midnight, day2Midnight + 3 * hour, '/activities/1')],
-                        midnight: day2Midnight,
-                    },
-                ],
-                openedAt: utc(day2Midnight + 3 * hour + 10_000),
-            }),
+            fixture,
             localisation(),
             EU_561_2006_STANDARD,
-            NO_COMPLIANCE_EVALUATION,
+            complianceEvaluationFor(fixture),
         );
 
         // Day 1 (ending at midnight, 3h in): under the limit on its own.
@@ -294,31 +297,27 @@ describe('calculateContinuousDrivingProgress', () => {
         const day1Midnight = Date.UTC(2026, 6, 27);
         const day2Midnight = Date.UTC(2026, 6, 28);
 
+        const fixture2 = createDriverCardActivityDocumentFixtureAcrossDays({
+            days: [
+                {
+                    intervals: [interval('driving', day1Midnight - 2 * hour, day1Midnight, '/activities/0')],
+                    midnight: day1Midnight - 24 * hour,
+                },
+                {
+                    intervals: [
+                        interval('breakOrRest', day2Midnight, day2Midnight + 45 * minute, '/activities/1'),
+                        interval('driving', day2Midnight + 45 * minute, day2Midnight + 2 * hour + 45 * minute, '/activities/2'),
+                    ],
+                    midnight: day2Midnight,
+                },
+            ],
+            openedAt: utc(day2Midnight + 2 * hour + 45 * minute + 10_000),
+        });
         const viewModel = createActivitySectionViewModel(
-            createDriverCardActivityDocumentFixtureAcrossDays({
-                days: [
-                    {
-                        intervals: [interval('driving', day1Midnight - 2 * hour, day1Midnight, '/activities/0')],
-                        midnight: day1Midnight - 24 * hour,
-                    },
-                    {
-                        intervals: [
-                            interval('breakOrRest', day2Midnight, day2Midnight + 45 * minute, '/activities/1'),
-                            interval(
-                                'driving',
-                                day2Midnight + 45 * minute,
-                                day2Midnight + 2 * hour + 45 * minute,
-                                '/activities/2',
-                            ),
-                        ],
-                        midnight: day2Midnight,
-                    },
-                ],
-                openedAt: utc(day2Midnight + 2 * hour + 45 * minute + 10_000),
-            }),
+            fixture2,
             localisation(),
             EU_561_2006_STANDARD,
-            NO_COMPLIANCE_EVALUATION,
+            complianceEvaluationFor(fixture2),
         );
 
         // The qualifying 45-minute break just after midnight still resets
@@ -334,39 +333,35 @@ describe('calculateContinuousDrivingProgress', () => {
         const day2Midnight = Date.UTC(2026, 6, 28);
         const day3Midnight = Date.UTC(2026, 6, 29);
 
+        const fixture3 = createDriverCardActivityDocumentFixtureAcrossDays({
+            days: [
+                {
+                    // Day 1: drive 5h straight (danger/100%), then a
+                    // qualifying 45-minute break well before midnight.
+                    intervals: [
+                        interval('driving', day1Midnight + 1 * hour, day1Midnight + 6 * hour, '/activities/0'),
+                        interval('breakOrRest', day1Midnight + 6 * hour, day1Midnight + 6 * hour + 45 * minute, '/activities/1'),
+                    ],
+                    midnight: day1Midnight,
+                },
+                {
+                    // Day 2: no driving at all - a full rest day.
+                    intervals: [interval('breakOrRest', day2Midnight, day2Midnight + 24 * hour, '/activities/2')],
+                    midnight: day2Midnight,
+                },
+                {
+                    // Day 3: just 31 minutes of driving.
+                    intervals: [interval('driving', day3Midnight, day3Midnight + 31 * minute, '/activities/3')],
+                    midnight: day3Midnight,
+                },
+            ],
+            openedAt: utc(day3Midnight + 31 * minute + 10_000),
+        });
         const viewModel = createActivitySectionViewModel(
-            createDriverCardActivityDocumentFixtureAcrossDays({
-                days: [
-                    {
-                        // Day 1: drive 5h straight (danger/100%), then a
-                        // qualifying 45-minute break well before midnight.
-                        intervals: [
-                            interval('driving', day1Midnight + 1 * hour, day1Midnight + 6 * hour, '/activities/0'),
-                            interval(
-                                'breakOrRest',
-                                day1Midnight + 6 * hour,
-                                day1Midnight + 6 * hour + 45 * minute,
-                                '/activities/1',
-                            ),
-                        ],
-                        midnight: day1Midnight,
-                    },
-                    {
-                        // Day 2: no driving at all - a full rest day.
-                        intervals: [interval('breakOrRest', day2Midnight, day2Midnight + 24 * hour, '/activities/2')],
-                        midnight: day2Midnight,
-                    },
-                    {
-                        // Day 3: just 31 minutes of driving.
-                        intervals: [interval('driving', day3Midnight, day3Midnight + 31 * minute, '/activities/3')],
-                        midnight: day3Midnight,
-                    },
-                ],
-                openedAt: utc(day3Midnight + 31 * minute + 10_000),
-            }),
+            fixture3,
             localisation(),
             EU_561_2006_STANDARD,
-            NO_COMPLIANCE_EVALUATION,
+            complianceEvaluationFor(fixture3),
         );
 
         // Day 1 ends with a valid break already taken, so its current
@@ -412,7 +407,7 @@ describe('duty shift crew qualification', () => {
 
     it('shows the 30-hour window of the compliance duty period that contains the shift', () => {
         const viewModel = createActivitySectionViewModel(document, localisation(), EU_561_2006_STANDARD, {
-            ...NO_COMPLIANCE_EVALUATION,
+            ...complianceEvaluationFor(document),
             crewDutyPeriods: [
                 {
                     qualification: { failedAt: null, status: 'crew' },
@@ -436,32 +431,39 @@ describe('duty shift crew qualification', () => {
         expect(day2.restWindows).toEqual([expect.objectContaining({ hours: 30, timelineEnd: 24 * hour, timelineStart: 0 })]);
     });
 
-    it('maps a credited co-driver break and resets continuous-driving progress across midnight', () => {
+    it('resets the notice at a co-driver availability break the evaluation credits', () => {
+        // Multi-manning with two cards inserted: Art. 7 third paragraph credits 45 minutes of co-driver availability,
+        // and the Mobility Package profile is the one that applies that reading.
+        const crew: IActivityCrewContext = { crewPresence: 'crew', slot: 'Driver' };
         const availabilityDocument = createDriverCardActivityDocumentFixtureAcrossDays({
             days: [
                 {
                     intervals: [
-                        interval('driving', day1Midnight + 18 * hour, day1Midnight + 22 * hour, '/activities/0'),
-                        interval('availability', day1Midnight + 22 * hour, day2Midnight, '/activities/1'),
+                        interval('driving', day1Midnight + 18 * hour, day1Midnight + 22 * hour, '/activities/0', crew),
+                        interval('availability', day1Midnight + 22 * hour, day2Midnight, '/activities/1', crew),
                     ],
                     midnight: day1Midnight,
                 },
                 {
                     intervals: [
-                        interval('availability', day2Midnight, day2Midnight + hour, '/activities/2'),
-                        interval('driving', day2Midnight + hour, day2Midnight + 2 * hour, '/activities/3'),
+                        interval('availability', day2Midnight, day2Midnight + hour, '/activities/2', crew),
+                        interval('driving', day2Midnight + hour, day2Midnight + 2 * hour, '/activities/3', crew),
                     ],
                     midnight: day2Midnight,
                 },
             ],
             openedAt: utc(day2Midnight + 2 * hour),
         });
-        const creditedStart = day1Midnight + 23 * hour + 30 * minute;
-
-        const viewModel = createActivitySectionViewModel(availabilityDocument, localisation(), EU_561_2006_STANDARD, {
-            ...NO_COMPLIANCE_EVALUATION,
-            creditedAvailabilityBreaks: [{ end: creditedStart + 45 * 60 * 1_000, start: creditedStart }],
-        });
+        const evaluation = evaluateDocumentCompliance(availabilityDocument, EU_MOBILITY_PACKAGE_2020);
+        expect(evaluation.creditedAvailabilityBreaks).toEqual([
+            { end: day1Midnight + 22 * hour + 45 * minute, start: day1Midnight + 22 * hour },
+        ]);
+        const viewModel = createActivitySectionViewModel(
+            availabilityDocument,
+            localisation(),
+            EU_MOBILITY_PACKAGE_2020,
+            evaluation,
+        );
         const { day1, day2 } = unwrapTwoDays(viewModel);
 
         expect(day1.continuousDriving.currentContinuousDriving.value).toBe(4 * hour);
@@ -471,8 +473,8 @@ describe('duty shift crew qualification', () => {
         expect(day1.creditedBreaks).toEqual([
             expect.objectContaining({
                 recordId: availabilityRecord?.id,
-                timelineEnd: 24 * hour,
-                timelineStart: 23 * hour + 30 * minute,
+                timelineEnd: 22 * hour + 45 * minute,
+                timelineStart: 22 * hour,
             }),
         ]);
     });
@@ -480,7 +482,7 @@ describe('duty shift crew qualification', () => {
     it('names the driving record where the multi-manning condition failed', () => {
         const failedAt = day2Midnight + hour;
         const viewModel = createActivitySectionViewModel(document, localisation(), EU_561_2006_STANDARD, {
-            ...NO_COMPLIANCE_EVALUATION,
+            ...complianceEvaluationFor(document),
             crewDutyPeriods: [
                 {
                     qualification: { failedAt, status: 'crewFailed' },
@@ -499,13 +501,71 @@ describe('duty shift crew qualification', () => {
 
     it('assigns the single-driver 24-hour rest window when no crew duty period covers the shift', () => {
         const { day1 } = unwrapTwoDays(
-            createActivitySectionViewModel(document, localisation(), EU_561_2006_STANDARD, NO_COMPLIANCE_EVALUATION),
+            createActivitySectionViewModel(document, localisation(), EU_561_2006_STANDARD, complianceEvaluationFor(document)),
         );
 
         const crew = day1.dutyShifts[0]?.crew;
         expect(crew?.status).toBe('single');
         expect(crew?.restWindowHours).toBe(24);
         expect(crew?.failedAt).toBeNull();
+    });
+});
+
+describe('conflicting dual-generation copies (P2)', () => {
+    it('derives duty shifts from the canonical day instead of adding both copies together', () => {
+        const midnight = Date.UTC(2026, 6, 27);
+        // The two applications disagree about the same day: 4 hours recorded by Gen1, 5 by Gen2. Reading both as one
+        // sequence would report a 9-hour shift covering only five clock hours.
+        const document = createCombinedCardActivityDocumentFixture({
+            gen1Intervals: [interval('driving', midnight + 6 * hour, midnight + 10 * hour, '/gen1/activities/0')],
+            gen2Intervals: [interval('driving', midnight + 6 * hour, midnight + 11 * hour, '/gen2/activities/0')],
+            midnight,
+            openedAt: utc(midnight + 12 * hour),
+        });
+        const viewModel = createActivitySectionViewModel(
+            document,
+            localisation(),
+            EU_561_2006_STANDARD,
+            complianceEvaluationFor(document),
+        );
+
+        expect(viewModel.ok).toBe(true);
+        if (!viewModel.ok) {
+            return;
+        }
+        // Both copies stay visible as days, so the reader sees the disagreement.
+        expect(viewModel.value.days).toHaveLength(2);
+        const shifts = viewModel.value.days.flatMap((day) => day.dutyShifts);
+        // One shift, attributed to both rows that show that date, and measured once: the newer application represents
+        // the day exactly as the compliance evaluation reads it.
+        expect(new Set(shifts.map((shift) => shift.id)).size).toBe(1);
+        expect(shifts[0]?.drivingDuration.value).toBe(5 * hour);
+        expect(shifts[0]?.totalDutyDuration.value).toBe(5 * hour);
+        expect(shifts.every((shift) => shift.totalDutyDuration.value === 5 * hour)).toBe(true);
+    });
+
+    it('collapses copies that recorded the same day into one shift', () => {
+        const midnight = Date.UTC(2026, 6, 27);
+        const document = createCombinedCardActivityDocumentFixture({
+            gen1Intervals: [interval('driving', midnight + 6 * hour, midnight + 10 * hour, '/gen1/activities/0')],
+            gen2Intervals: [interval('driving', midnight + 6 * hour, midnight + 10 * hour, '/gen2/activities/0')],
+            midnight,
+            openedAt: utc(midnight + 12 * hour),
+        });
+        const viewModel = createActivitySectionViewModel(
+            document,
+            localisation(),
+            EU_561_2006_STANDARD,
+            complianceEvaluationFor(document),
+        );
+
+        expect(viewModel.ok).toBe(true);
+        if (!viewModel.ok) {
+            return;
+        }
+        expect(viewModel.value.days).toHaveLength(1);
+        expect(viewModel.value.days[0]?.dutyShifts).toHaveLength(1);
+        expect(viewModel.value.days[0]?.dutyShifts[0]?.totalDutyDuration.value).toBe(4 * hour);
     });
 });
 
@@ -516,23 +576,24 @@ describe('calculateDutyShifts across a UTC midnight boundary (VIEWER-03)', () =>
 
         // 4h driving before midnight, 2h after, with no break at all - one
         // continuous 6h shift, not two shifts of 4h and 2h.
+        const fixture4 = createDriverCardActivityDocumentFixtureAcrossDays({
+            days: [
+                {
+                    intervals: [interval('driving', day1Midnight + 20 * hour, day2Midnight, '/activities/0')],
+                    midnight: day1Midnight,
+                },
+                {
+                    intervals: [interval('driving', day2Midnight, day2Midnight + 2 * hour, '/activities/1')],
+                    midnight: day2Midnight,
+                },
+            ],
+            openedAt: utc(day2Midnight + 2 * hour + 10_000),
+        });
         const viewModel = createActivitySectionViewModel(
-            createDriverCardActivityDocumentFixtureAcrossDays({
-                days: [
-                    {
-                        intervals: [interval('driving', day1Midnight + 20 * hour, day2Midnight, '/activities/0')],
-                        midnight: day1Midnight,
-                    },
-                    {
-                        intervals: [interval('driving', day2Midnight, day2Midnight + 2 * hour, '/activities/1')],
-                        midnight: day2Midnight,
-                    },
-                ],
-                openedAt: utc(day2Midnight + 2 * hour + 10_000),
-            }),
+            fixture4,
             localisation(),
             EU_561_2006_STANDARD,
-            NO_COMPLIANCE_EVALUATION,
+            complianceEvaluationFor(fixture4),
         );
 
         const { day1, day2 } = unwrapTwoDays(viewModel);
@@ -566,29 +627,30 @@ describe('calculateDutyShifts across a UTC midnight boundary (VIEWER-03)', () =>
         // tail on day 1 and a 6h head on day 2 - neither half alone reaches
         // the 9-hour major-rest threshold, but the driver's real, continuous
         // rest does, and must still end the shift before it.
+        const fixture5 = createDriverCardActivityDocumentFixtureAcrossDays({
+            days: [
+                {
+                    intervals: [
+                        interval('driving', day1Midnight + 18 * hour, day1Midnight + 20 * hour, '/activities/0'),
+                        interval('breakOrRest', day1Midnight + 20 * hour, day2Midnight, '/activities/1'),
+                    ],
+                    midnight: day1Midnight,
+                },
+                {
+                    intervals: [
+                        interval('breakOrRest', day2Midnight, day2Midnight + 6 * hour, '/activities/2'),
+                        interval('driving', day2Midnight + 6 * hour, day2Midnight + 8 * hour, '/activities/3'),
+                    ],
+                    midnight: day2Midnight,
+                },
+            ],
+            openedAt: utc(day2Midnight + 8 * hour + 10_000),
+        });
         const viewModel = createActivitySectionViewModel(
-            createDriverCardActivityDocumentFixtureAcrossDays({
-                days: [
-                    {
-                        intervals: [
-                            interval('driving', day1Midnight + 18 * hour, day1Midnight + 20 * hour, '/activities/0'),
-                            interval('breakOrRest', day1Midnight + 20 * hour, day2Midnight, '/activities/1'),
-                        ],
-                        midnight: day1Midnight,
-                    },
-                    {
-                        intervals: [
-                            interval('breakOrRest', day2Midnight, day2Midnight + 6 * hour, '/activities/2'),
-                            interval('driving', day2Midnight + 6 * hour, day2Midnight + 8 * hour, '/activities/3'),
-                        ],
-                        midnight: day2Midnight,
-                    },
-                ],
-                openedAt: utc(day2Midnight + 8 * hour + 10_000),
-            }),
+            fixture5,
             localisation(),
             EU_561_2006_STANDARD,
-            NO_COMPLIANCE_EVALUATION,
+            complianceEvaluationFor(fixture5),
         );
 
         const { day1, day2 } = unwrapTwoDays(viewModel);
@@ -616,13 +678,13 @@ describe('continuous-driving thresholds follow the selected compliance rule prof
         // profile differs, matching the Compliance screen's own selector
         // (audit's exact reproduction).
         const euProgress = progressOf(
-            createActivitySectionViewModel(document, localisation(), EU_561_2006_STANDARD, NO_COMPLIANCE_EVALUATION),
+            createActivitySectionViewModel(document, localisation(), EU_561_2006_STANDARD, complianceEvaluationFor(document)),
         );
         expect(euProgress.maxMs).toBe(4.5 * hour);
         expect(euProgress.status).toBe('danger');
 
         const ukProgress = progressOf(
-            createActivitySectionViewModel(document, localisation(), UK_GB_DOMESTIC, NO_COMPLIANCE_EVALUATION),
+            createActivitySectionViewModel(document, localisation(), UK_GB_DOMESTIC, complianceEvaluationFor(document)),
         );
         expect(ukProgress.maxMs).toBe(5.5 * hour);
         // Under the EU default, 5h is already past the 4.5h limit (danger).
@@ -659,12 +721,12 @@ describe('continuous-driving thresholds follow the selected compliance rule prof
         });
 
         const euProgress = progressOf(
-            createActivitySectionViewModel(document, localisation(), EU_561_2006_STANDARD, NO_COMPLIANCE_EVALUATION),
+            createActivitySectionViewModel(document, localisation(), EU_561_2006_STANDARD, complianceEvaluationFor(document)),
         );
         expect(euProgress.currentMs).toBe(0);
 
         const ukProgress = progressOf(
-            createActivitySectionViewModel(document, localisation(), UK_GB_DOMESTIC, NO_COMPLIANCE_EVALUATION),
+            createActivitySectionViewModel(document, localisation(), UK_GB_DOMESTIC, complianceEvaluationFor(document)),
         );
         // Neither break alone reaches UK's 45-minute full-break
         // requirement, and UK has no split-break provision - 3h + 3h = 6h

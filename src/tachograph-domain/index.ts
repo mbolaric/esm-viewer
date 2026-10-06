@@ -70,6 +70,7 @@ export {
     isGnssAccuracyIndicator,
     isGnssAuthenticationStatus,
     isLatitude,
+    isUnknownParserCoordinate,
     isLongitude,
     type DailyWorkPeriodEntryType,
     type DailyWorkPeriodRegion,
@@ -273,4 +274,5 @@ export {
     type IUtcInterval,
     type UtcTimestamp,
 } from './time.js';
+export { activityDayEvidenceKey, eventFaultEvidenceKey, eventFaultIdentityKey } from './mirrored-evidence.js';
 export { createTachographWarning, type ITachographWarning, type TachographWarningCode } from './warning.js';

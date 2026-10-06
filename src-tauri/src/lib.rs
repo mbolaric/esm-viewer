@@ -1,4 +1,5 @@
 pub mod blocking;
+pub mod export_guard;
 pub mod logger;
 pub mod pdf_engine;
 pub mod print_engine;
@@ -25,6 +26,7 @@ macro_rules! with_viewer_commands {
             $crate::viewer_commands::verify_document,
             $crate::viewer_commands::verify_vu_document,
             $crate::viewer_commands::read_ddd_file,
+            $crate::viewer_commands::export_destination_is_source,
             $crate::viewer_commands::open_devtools,
             $crate::viewer_commands::execute_window_command,
             $crate::pdf_engine::commands::generate_pdf_document,

@@ -14,6 +14,7 @@ import type {
     ISpeedSectionViewModel,
 } from '#viewer-presentation';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
+import { tick } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import SpeedScreen from '../components/screens/SpeedScreen.svelte';
@@ -96,6 +97,8 @@ function viewModel(): ISpeedSectionViewModel {
             startInput: 'Jun 18, 2026 08:42:00',
         },
         rangeLimited: true,
+        allRecords: [first, second],
+        pageSize: 500,
         records: [first, second],
         statistics: {
             average: formatted(72.5, '72.5'),
@@ -122,6 +125,8 @@ function emptyViewModel(): ISpeedSectionViewModel {
         pageNumber: formatted(0, '0'),
         range: null,
         rangeLimited: false,
+        allRecords: [],
+        pageSize: 500,
         records: [],
         statistics: null,
         timeZone: 'UTC',
@@ -256,6 +261,104 @@ describe('SpeedScreen', () => {
 
         await fireEvent.click(screen.getByRole('button', { name: 'Reset range' }));
         expect(reset).toHaveBeenCalledTimes(1);
+    });
+
+    it('filters and sorts the whole range, not only the page on screen', async () => {
+        const start = timestamp(Date.UTC(2026, 5, 18, 8, 42, 0));
+        const pageOne = [speedRecord(start, 50, 0), speedRecord(timestamp(start + 1000), 51, 1)];
+        const pageTwo = speedRecord(timestamp(start + 2000), 72, 2);
+        const page = vi.fn();
+        const filterText = createDocumentScopedValue('');
+        const model = viewModel();
+        render(
+            SpeedScreen,
+            {
+                props: {
+                    onchartfailure: vi.fn(),
+                    onclearrecord: vi.fn(),
+                    onpage: page,
+                    onrange: vi.fn(),
+                    onreset: vi.fn(),
+                    onselectrecord: vi.fn(),
+                    onopensource: vi.fn(),
+                    overspeedFilterText: createDocumentScopedValue(''),
+                    sampleFilterText: filterText,
+                    selectedRecord: null,
+                    // Three samples with a page size of two: the third lives on the next page.
+                    viewModel: { ...model, allRecords: [...pageOne, pageTwo], pageSize: 2, records: pageOne },
+                },
+            },
+            createViewerTestRenderOptions(),
+        );
+
+        const table = screen.getByRole('table', {
+            name: 'Exact chronological detailed-speed samples for the selected UTC range',
+        });
+        expect(within(table).getAllByRole('row')).toHaveLength(3);
+
+        // The sample on the second page is found by filtering the whole range.
+        filterText.set('72');
+        await tick();
+        expect(within(table).getAllByRole('row')).toHaveLength(2);
+        expect(within(table).getByRole('button', { name: /Select speed sample: .*72 km\/h/u })).toBeTruthy();
+
+        // Paging follows the filtered result: one page now, so Next is disabled and the heading says one page.
+        filterText.set('');
+        await tick();
+        await fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+        expect(page).toHaveBeenCalledWith(1);
+    });
+
+    it('pages to the row a chart selection actually has once a filter is active', async () => {
+        const start = timestamp(Date.UTC(2026, 5, 18, 8, 42, 0));
+        const samples = [
+            speedRecord(start, 50, 0),
+            speedRecord(timestamp(start + 1000), 51, 1),
+            speedRecord(timestamp(start + 2000), 72, 2),
+        ];
+        const page = vi.fn();
+        const selectRecord = vi.fn();
+        const filterText = createDocumentScopedValue('');
+        const model = viewModel();
+        render(
+            SpeedScreen,
+            {
+                props: {
+                    onchartfailure: vi.fn(),
+                    onclearrecord: vi.fn(),
+                    onpage: page,
+                    onrange: vi.fn(),
+                    onreset: vi.fn(),
+                    onselectrecord: selectRecord,
+                    onopensource: vi.fn(),
+                    overspeedFilterText: createDocumentScopedValue(''),
+                    sampleFilterText: filterText,
+                    selectedRecord: null,
+                    viewModel: {
+                        ...model,
+                        // The chart keeps chronological page indexes: the third sample is on page 2 of the unfiltered
+                        // table and on page 1 of the filtered one.
+                        allRecords: samples,
+                        chartRecords: samples.map((sample, index) => ({ ...sample, pageIndex: index < 2 ? 0 : 1 })),
+                        pageSize: 2,
+                        records: samples.slice(0, 2),
+                    },
+                },
+            },
+            createViewerTestRenderOptions(),
+        );
+
+        const chart = screen.getByRole('button', {
+            name: 'A detailed-speed time series for the selected UTC range. Use the arrow keys to move through displayed source samples.',
+        });
+
+        // Filtering keeps only the third sample, so it is the first row of the filtered table.
+        filterText.set('72');
+        await tick();
+        await fireEvent.keyDown(chart, { key: 'End' });
+
+        expect(selectRecord).toHaveBeenCalledWith(expect.objectContaining({ speedKilometresPerHour: 72 }));
+        expect(page).toHaveBeenCalledWith(0);
     });
 
     it('parses edited range values in the active display format and keeps untouched precision', async () => {

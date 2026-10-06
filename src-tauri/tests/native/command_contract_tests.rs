@@ -291,6 +291,36 @@ fn logging_dispatch_uses_host_log_location_and_sanitizes_error_events() {
 }
 
 #[test]
+fn export_guard_dispatch_compares_real_paths_and_rejects_invalid_arguments() {
+    let fixture = NativeFixture::new(false);
+    let directory = fixture.directory.join("export-guard");
+    std::fs::create_dir(&directory).expect("fixture directory should be creatable");
+    let source = directory.join("tacho.ddd");
+    std::fs::write(&source, b"source").expect("source file should be writable");
+    let source_text = source.to_string_lossy().into_owned();
+
+    // The same file spelled through a redundant separator is the source.
+    let aliased = format!("{}//./tacho.ddd", directory.display());
+    assert_eq!(
+        fixture.json("export_destination_is_source", json!({ "sourcePath": source_text, "destinationPath": aliased }),),
+        Ok(json!(true)),
+    );
+    // A destination that does not exist yet cannot be the source.
+    assert_eq!(
+        fixture.json(
+            "export_destination_is_source",
+            json!({
+                "sourcePath": source_text,
+                "destinationPath": directory.join("report.html").to_string_lossy(),
+            }),
+        ),
+        Ok(json!(false)),
+    );
+    // Missing arguments are rejected at the boundary rather than compared as empty paths.
+    assert!(fixture.json("export_destination_is_source", json!({ "sourcePath": source_text })).is_err());
+}
+
+#[test]
 fn devtools_command_remains_callable_with_packaged_devtools_disabled() {
     let config: Config = serde_json::from_str(include_str!("../../tauri.conf.json")).expect("Viewer config must decode");
     let main = config.app.windows.iter().find(|window| window.label == "main").expect("main window must be configured");

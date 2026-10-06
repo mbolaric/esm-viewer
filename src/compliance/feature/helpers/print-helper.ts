@@ -1,5 +1,5 @@
-import type { IPdfDocumentRequest, SourceToken } from '#contracts';
-import type { IViewerExportPort, IViewerPdfPort, ViewerExportOutcome } from '#viewer-application';
+import type { IPdfDocumentRequest } from '#contracts';
+import type { IViewerExportPort, IViewerExportSource, IViewerPdfPort, ViewerExportOutcome } from '#viewer-application';
 
 // Triggers native print panel via Rust backend, falling back to DOM printing on unsupported hosts.
 export async function printDocument(html: string, pdfPort: IViewerPdfPort): Promise<void> {
@@ -53,13 +53,13 @@ export async function saveDocumentHtml(
     html: string,
     suggestedName: string,
     exportPort: IViewerExportPort,
-    sourceToken: SourceToken | null,
+    source: IViewerExportSource | null,
 ): Promise<ViewerExportOutcome> {
     const encoder = new TextEncoder();
     const bytes = encoder.encode(html);
     return await exportPort.save({
         bytes,
-        sourceToken,
+        source,
         suggestedName,
     });
 }
@@ -71,14 +71,14 @@ export async function saveDocumentPdf(
     suggestedName: string,
     exportPort: IViewerExportPort,
     pdfPort: IViewerPdfPort,
-    sourceToken: SourceToken | null,
+    source: IViewerExportSource | null,
     pdfRequest: IPdfDocumentRequest,
 ): Promise<PdfSaveOutcome> {
     const generation = await pdfPort.generatePdf(pdfRequest);
     if (generation.status === 'converted') {
         return await exportPort.save({
             bytes: generation.bytes,
-            sourceToken,
+            source,
             suggestedName,
         });
     }

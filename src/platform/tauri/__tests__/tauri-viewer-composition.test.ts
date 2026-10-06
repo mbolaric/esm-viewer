@@ -25,6 +25,8 @@ function fixtureErrorService(): IFixtureErrorService {
     return { errorService, reportSpy };
 }
 
+const DIGEST = 'a'.repeat(64);
+
 describe('createExportPort', () => {
     it('forwards the opened document real source token unchanged to saveExport (PLATFORM-01)', async () => {
         const service = new TauriPlatformService();
@@ -36,7 +38,7 @@ describe('createExportPort', () => {
 
         const outcome = await port.save({
             bytes: new Uint8Array([1, 2, 3]),
-            sourceToken: realToken,
+            source: { sha256: DIGEST, sourceToken: realToken },
             suggestedName: 'report.html',
         });
 
@@ -57,7 +59,7 @@ describe('createExportPort', () => {
         const port = createExportPort(service, fixtureErrorService().errorService);
         await port.save({
             bytes: new Uint8Array([1]),
-            sourceToken: null,
+            source: null,
             suggestedName: 'report.html',
         });
 
@@ -76,7 +78,7 @@ describe('createExportPort', () => {
         const port = createExportPort(service, errorService);
         const outcome = await port.save({
             bytes: new Uint8Array([1]),
-            sourceToken: fixtureSourceToken('/Users/driver/tacho.ddd'),
+            source: { sha256: DIGEST, sourceToken: fixtureSourceToken('/Users/driver/tacho.ddd') },
             suggestedName: 'report.html',
         });
 
@@ -95,7 +97,7 @@ describe('createExportPort', () => {
         const port = createExportPort(service, fixtureErrorService().errorService);
         const outcome = await port.save({
             bytes: new Uint8Array([1]),
-            sourceToken: fixtureSourceToken('/Users/driver/tacho.ddd'),
+            source: { sha256: DIGEST, sourceToken: fixtureSourceToken('/Users/driver/tacho.ddd') },
             suggestedName: 'report.html',
         });
 
@@ -114,7 +116,7 @@ describe('createExportPort', () => {
         const port = createExportPort(service, errorService);
         const outcome = await port.save({
             bytes: new Uint8Array([1]),
-            sourceToken: fixtureSourceToken('/Users/driver/tacho.ddd'),
+            source: { sha256: DIGEST, sourceToken: fixtureSourceToken('/Users/driver/tacho.ddd') },
             suggestedName: 'report.html',
         });
 

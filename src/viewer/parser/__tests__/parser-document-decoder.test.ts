@@ -40,6 +40,7 @@ import type {
 import { decodeParserNationAlphaCodes, type ParserNationAlphaCodes } from '../normalizers/parser-value-normalizer.js';
 import {
     activityChange,
+    cardActivityDailyRecord,
     cardAndGeneration,
     fullCardNumber,
     gen1CardData,
@@ -133,6 +134,38 @@ function driverIdentification(): DriverCardIdentification {
         throw new TypeError('The synthetic driver identity must use the driver variant.');
     }
     return identification;
+}
+
+function decodeGen2VehicleUnitParameter(parameter: ParserGen2VehicleUnitTransferParameter): ReturnType<typeof decode> {
+    return decode({
+        data: {
+            dataFiles: [],
+            header: vehicleUnitHeader('SecondGeneration'),
+            transferResParams: [parameter],
+        },
+        kind: 'vuGen2',
+    });
+}
+
+function hasParsedEmbeddedCardSnapshot(result: ReturnType<typeof decode>): boolean {
+    return (
+        result.ok &&
+        result.value.documentKind === 'vehicleUnit' &&
+        result.value.technicalRecords.some(
+            (record) =>
+                record.kind === 'vehicleUnitEmbeddedCardSnapshotTechnicalRecord' &&
+                record.snapshotState === 'parsed' &&
+                record.cardType === 'driverCard',
+        )
+    );
+}
+
+function hasEmbeddedCardMarkerRecord(result: ReturnType<typeof decode>): boolean {
+    return (
+        result.ok &&
+        result.value.documentKind === 'vehicleUnit' &&
+        result.value.technicalRecords.some((record) => record.kind === 'vehicleUnitEmbeddedCardTechnicalRecord')
+    );
 }
 
 describe('decodeParserDocument', () => {
@@ -229,6 +262,49 @@ describe('decodeParserDocument', () => {
             [activitySource, application.driverActivityData?.activityDailyRecords[0]?.activityChangeInfo[0] ?? null],
             [vehicleSource, application.vehiclesUsed?.cardVehicleRecords[0] ?? null],
         ]);
+    });
+
+    it('warns instead of silently choosing when a combined card mirrors or contradicts a day', () => {
+        function activityData(
+            drivingStartMinute: number,
+        ): NonNullable<Exclude<Parameters<typeof gen2DriverCard>[0], undefined>['driverActivityData']> {
+            return {
+                activityDailyRecords: [
+                    cardActivityDailyRecord('2026-01-05 00:00:00 UTC', [activityChange('Driving', drivingStartMinute)]),
+                ],
+                activityPointerNewestRecord: 16,
+                activityPointerOldestDayRecord: 0,
+            };
+        }
+        const mirrored = decode({
+            data: gen2CardData({
+                gen1: gen1DriverCard({ driverActivityData: activityData(0) }),
+                gen2: gen2DriverCard({ driverActivityData: activityData(0) }),
+            }),
+            kind: 'cardGen2',
+        });
+        expect(mirrored.ok).toBe(true);
+        if (!mirrored.ok || mirrored.value.documentKind !== 'driverCard') {
+            return;
+        }
+        const [mirroredGen1, mirroredGen2] = mirrored.value.applications;
+        expect(mirroredGen1?.warnings.filter((warning) => warning.code === 'duplicateEvidence')).toHaveLength(0);
+        expect(mirroredGen2?.warnings.filter((warning) => warning.code === 'duplicateEvidence')).toHaveLength(1);
+
+        const conflicting = decode({
+            data: gen2CardData({
+                gen1: gen1DriverCard({ driverActivityData: activityData(0) }),
+                gen2: gen2DriverCard({ driverActivityData: activityData(60) }),
+            }),
+            kind: 'cardGen2',
+        });
+        expect(conflicting.ok).toBe(true);
+        if (!conflicting.ok || conflicting.value.documentKind !== 'driverCard') {
+            return;
+        }
+        expect(conflicting.value.applications[1]?.warnings.filter((warning) => warning.code === 'inconsistentData')).toHaveLength(
+            1,
+        );
     });
 
     it('distinguishes Gen2, Gen2v2, and combined card applications', () => {
@@ -528,8 +604,42 @@ describe('decodeParserDocument', () => {
         expect(result.value.sections.every((section) => !section.source.path.startsWith('/data/'))).toBe(true);
     });
 
+    it('accepts the CardDownload identifier the pinned parser emits for a Gen2 VU card download', () => {
+        const result = decodeGen2VehicleUnitParameter({
+            data: {
+                CardDownload: {
+                    card: gen2CardData(),
+                    signatureRecordArray: null,
+                },
+            },
+            position: 0,
+            typeId: 'CardDownload',
+        });
+
+        expect(hasParsedEmbeddedCardSnapshot(result)).toBe(true);
+    });
+
+    it('accepts an unparsed Gen2CardDownload block instead of rejecting the whole document', () => {
+        const result = decodeGen2VehicleUnitParameter({
+            data: {
+                Unknown: {
+                    data: [],
+                    noOfRecords: 0,
+                    recordSize: 0,
+                    recordType: 'Unknown',
+                    trepId: 'Gen2CardDownload',
+                },
+            },
+            position: 0,
+            typeId: 'Gen2CardDownload',
+        });
+
+        expect(result.ok).toBe(true);
+        expect(hasEmbeddedCardMarkerRecord(result)).toBe(false);
+    });
+
     it('normalizes the embedded-card snapshot into technical records', () => {
-        const parameter: ParserGen2VehicleUnitTransferParameter = {
+        const result = decodeGen2VehicleUnitParameter({
             data: {
                 CardDownload: {
                     card: gen2CardData(),
@@ -538,31 +648,10 @@ describe('decodeParserDocument', () => {
             },
             position: 0,
             typeId: 'Gen2CardDownload',
-        };
-        const result = decode({
-            data: {
-                dataFiles: [],
-                header: vehicleUnitHeader('SecondGeneration'),
-                transferResParams: [parameter],
-            },
-            kind: 'vuGen2',
         });
 
-        expect(result.ok).toBe(true);
-        if (!result.ok || result.value.documentKind !== 'vehicleUnit') {
-            return;
-        }
-        expect(
-            result.value.technicalRecords.some(
-                (record) =>
-                    record.kind === 'vehicleUnitEmbeddedCardSnapshotTechnicalRecord' &&
-                    record.snapshotState === 'parsed' &&
-                    record.cardType === 'driverCard',
-            ),
-        ).toBe(true);
-        expect(result.value.technicalRecords.some((record) => record.kind === 'vehicleUnitEmbeddedCardTechnicalRecord')).toBe(
-            false,
-        );
+        expect(hasParsedEmbeddedCardSnapshot(result)).toBe(true);
+        expect(hasEmbeddedCardMarkerRecord(result)).toBe(false);
     });
 
     it('normalizes the Gen1 marker-only card download as an unsupported snapshot', () => {

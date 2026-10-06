@@ -102,6 +102,7 @@ describe('RawDataScreen', () => {
                     explorer: explorer(),
                     initialPath: pointer('/a'),
                     oncopy,
+                    revealRequest: { path: pointer('/a'), sequence: 1 },
                 },
             },
             createViewerTestRenderOptions(),
@@ -112,6 +113,7 @@ describe('RawDataScreen', () => {
             explorer: explorer(),
             initialPath: pointer('/b'),
             oncopy,
+            revealRequest: { path: pointer('/b'), sequence: 2 },
         });
         expect(selectedPath()).toBe('/b');
     });

@@ -144,6 +144,7 @@ function evaluateWorkingTimeBreakRules(
     let periodBreakMs = 0;
     let periodLastInterval: EvaluationInterval | null = null;
     let periodFlaggedByConsecutiveRule = false;
+    const periodConsecutiveFindingIndices: number[] = [];
 
     // Finalizes period totals. The 45m (>9h) requirement supersedes the 30m (6-9h) band.
     // Consecutive-hours and >9h deficit are distinct rules; 6-9h is skipped if consecutive rule already flagged.
@@ -152,12 +153,33 @@ function evaluateWorkingTimeBreakRules(
         const periodTotalWorkMs = periodWorkMs;
         const periodTotalBreakMs = periodBreakMs;
         const flaggedByConsecutiveRule = periodFlaggedByConsecutiveRule;
+        const consecutiveFindingIndices = [...periodConsecutiveFindingIndices];
 
         periodWindow = null;
         periodWorkMs = 0;
         periodBreakMs = 0;
         periodLastInterval = null;
         periodFlaggedByConsecutiveRule = false;
+        periodConsecutiveFindingIndices.length = 0;
+
+        // Annex I section 3 bands this rule family by the break taken against the requirement the day actually
+        // carried: rows 5-6 up to nine hours of work, rows 7-8 beyond it. The tier is therefore settled here, once
+        // the period's break total is complete, rather than from the work excess at the moment the run breached.
+        if (consecutiveFindingIndices.length > 0) {
+            const longDay = periodTotalWorkMs > longWorkdayThresholdMs;
+            const requirementMinutes = longDay ? config.breakRequirementOver9hMinutes : config.breakRequirement6to9hMinutes;
+            const bandKey = longDay ? WORKING_TIME_LONG_DAY_BREAK_RULE_ID : WORKING_TIME_BREAK_RULE_ID;
+            const { deficitMinutes } = measureDeficitMinutes(periodTotalBreakMs, requirementMinutes);
+            for (const index of consecutiveFindingIndices) {
+                const finding = infringements[index];
+                if (finding !== undefined) {
+                    infringements[index] = {
+                        ...finding,
+                        severity: calculateSeverity(deficitMinutes, profile, bandKey),
+                    };
+                }
+            }
+        }
 
         if (lastInterval === null) {
             return;
@@ -249,6 +271,10 @@ function evaluateWorkingTimeBreakRules(
                         consecutiveWorkMs,
                         config.continuousWorkLimitMinutes,
                     );
+                    // The tier is settled at period close, where the day's break total is known; this provisional
+                    // one only stands if the period never closes with a last interval.
+                    const { deficitMinutes } = measureDeficitMinutes(periodBreakMs, config.breakRequirement6to9hMinutes);
+                    periodConsecutiveFindingIndices.push(infringements.length);
                     infringements.push({
                         allowedValueMinutes: config.continuousWorkLimitMinutes,
                         category: 'workingTime',
@@ -263,7 +289,7 @@ function evaluateWorkingTimeBreakRules(
                         profileId: profile.profileId,
                         recordedAt: interval.start,
                         ruleId: WORKING_TIME_BREAK_RULE_ID,
-                        severity: calculateSeverity(excessMinutes, profile, WORKING_TIME_BREAK_RULE_ID),
+                        severity: calculateSeverity(deficitMinutes, profile, WORKING_TIME_BREAK_RULE_ID),
                         source,
                         title: 'Working Time Break (6h) Exceeded',
                     });

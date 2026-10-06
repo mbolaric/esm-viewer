@@ -5,7 +5,6 @@ import { classifyParseError, type ParseFailureCode } from '../index.js';
 const allCodes: readonly ParseFailureCode[] = [
     'cancelled',
     'certificateChainIncomplete',
-    'combinedCardRequiresSplit',
     'decoderContractViolation',
     'documentCleanupFailed',
     'ercaKeyMismatch',
@@ -38,7 +37,6 @@ describe('classifyParseError', () => {
         const expected: Readonly<Record<ParseFailureCode, string>> = {
             cancelled: 'cancellation',
             certificateChainIncomplete: 'integrityLimitation',
-            combinedCardRequiresSplit: 'integrityLimitation',
             decoderContractViolation: 'internalDefect',
             documentCleanupFailed: 'platformFailure',
             ercaKeyMismatch: 'integrityLimitation',

@@ -1,7 +1,8 @@
-import type { IPdfDocumentRequest, SourceToken } from '#contracts';
+import type { IPdfDocumentRequest } from '#contracts';
 import type { ILocalisationService, ITranslationService } from '#localization';
 import type {
     IViewerExportPort,
+    IViewerExportSource,
     IViewerPdfPort,
     IViewerRuntimeVersionsPort,
     OpenedTachographDocument,
@@ -92,7 +93,7 @@ export class ViewerExportController {
     public async export(
         bytes: Uint8Array,
         suggestedName: string,
-        sourceToken: SourceToken | null,
+        source: IViewerExportSource | null,
     ): Promise<'cancelled' | 'failed' | 'saved'> {
         if (!this.#_isOpen || this.#_saving) {
             return 'failed';
@@ -101,13 +102,13 @@ export class ViewerExportController {
         this.#_error = null;
         this.#_isOpen = true;
         this.#_saving = true;
-        return this.completeExport(bytes, suggestedName, sourceToken);
+        return this.completeExport(bytes, suggestedName, source);
     }
 
     public async exportPdf(
         pdfRequest: IPdfDocumentRequest,
         suggestedName: string,
-        sourceToken: SourceToken | null,
+        source: IViewerExportSource | null,
     ): Promise<'cancelled' | 'failed' | 'saved'> {
         if (!this.#_isOpen || this.#_saving) {
             return 'failed';
@@ -130,7 +131,7 @@ export class ViewerExportController {
             return 'saved';
         }
 
-        return this.completeExport(generation.bytes, suggestedName, sourceToken);
+        return this.completeExport(generation.bytes, suggestedName, source);
     }
 
     // Orchestrates report view model construction, serialization, naming, and file export.
@@ -174,22 +175,18 @@ export class ViewerExportController {
                               this._localisationService.locale,
                           ),
                           fileName,
-                          document.source.sourceToken,
+                          document.source,
                       )
                     : await this.export(
                           new TextEncoder().encode(serializeHtmlReport(reportViewModel, this._translationService)),
                           fileName,
-                          document.source.sourceToken,
+                          document.source,
                       );
             return { fileName, status };
         }
 
         const fileName = exportFileName(document.source.displayName, '.json');
-        const status = await this.export(
-            new TextEncoder().encode(serializeRawJson(document.raw)),
-            fileName,
-            document.source.sourceToken,
-        );
+        const status = await this.export(new TextEncoder().encode(serializeRawJson(document.raw)), fileName, document.source);
         return { fileName, status };
     }
 
@@ -222,11 +219,11 @@ export class ViewerExportController {
     private async completeExport(
         bytes: Uint8Array,
         suggestedName: string,
-        sourceToken: SourceToken | null,
+        source: IViewerExportSource | null,
     ): Promise<'cancelled' | 'failed' | 'saved'> {
         const outcome = await this._exportPort.save({
             bytes,
-            sourceToken,
+            source,
             suggestedName,
         });
         if (outcome.status === 'saved') {

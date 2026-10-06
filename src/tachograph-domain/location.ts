@@ -73,7 +73,8 @@ export interface IAccumulatedDrivingPosition {
     readonly driverCard: IRecordedCardReference | null;
     readonly kind: 'accumulatedDrivingPosition';
     readonly odometer: OdometerKilometres | null;
-    readonly position: IGnssPositionEvidence;
+    // Null when the equipment recorded the "not available" coordinate marker.
+    readonly position: IGnssPositionEvidence | null;
     readonly recordedAt: UtcTimestamp;
     readonly source: ISourceReference;
 }
@@ -84,7 +85,8 @@ export interface IBorderCrossing {
     readonly crossedAt: UtcTimestamp;
     readonly kind: 'borderCrossing';
     readonly odometer: OdometerKilometres | null;
-    readonly position: IGnssPositionEvidence;
+    // Null when the equipment recorded the "not available" coordinate marker.
+    readonly position: IGnssPositionEvidence | null;
     readonly source: ISourceReference;
 }
 
@@ -96,7 +98,8 @@ export interface ILoadUnloadOperation {
     readonly odometer: OdometerKilometres | null;
     readonly operationAt: UtcTimestamp;
     readonly operationType: LoadUnloadOperationType;
-    readonly position: IGnssPositionEvidence;
+    // Null when the equipment recorded the "not available" coordinate marker.
+    readonly position: IGnssPositionEvidence | null;
     readonly region: DailyWorkPeriodRegion | null;
     readonly source: ISourceReference;
 }
@@ -115,6 +118,12 @@ export type TachographLocationRecord =
 
 const maximumByteValue = 0xff;
 const parserUnknownCoordinate = 0x7f_ff_ff / 600_000;
+
+// The specification's "not available" coordinate marker: a position the recording equipment was not able to
+// determine, which is absence of evidence rather than invalid data.
+export function isUnknownParserCoordinate(value: unknown): boolean {
+    return value === parserUnknownCoordinate;
+}
 
 export function isGnssAccuracyIndicator(value: unknown): value is GnssAccuracyIndicator {
     return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= maximumByteValue;
@@ -184,7 +193,7 @@ export interface IAccumulatedDrivingPositionInput {
     readonly coDriverCard: IRecordedCardReference | null;
     readonly driverCard: IRecordedCardReference | null;
     readonly odometer: OdometerKilometres | null;
-    readonly position: IGnssPositionEvidence;
+    readonly position: IGnssPositionEvidence | null;
     readonly recordedAt: UtcTimestamp;
     readonly source: ISourceReference;
 }
@@ -206,7 +215,7 @@ export interface IBorderCrossingInput {
     readonly countryLeft: RecordedIssuingMemberState | null;
     readonly crossedAt: UtcTimestamp;
     readonly odometer: OdometerKilometres | null;
-    readonly position: IGnssPositionEvidence;
+    readonly position: IGnssPositionEvidence | null;
     readonly source: ISourceReference;
 }
 
@@ -227,7 +236,7 @@ export interface ILoadUnloadOperationInput {
     readonly odometer: OdometerKilometres | null;
     readonly operationAt: UtcTimestamp;
     readonly operationType: LoadUnloadOperationType;
-    readonly position: IGnssPositionEvidence;
+    readonly position: IGnssPositionEvidence | null;
     readonly region: DailyWorkPeriodRegion | null;
     readonly source: ISourceReference;
 }
