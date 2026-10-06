@@ -520,7 +520,7 @@ export const es = {
     'guide.regulations.dailyRest':
         'Descanso diario: descanso diario normal de al menos 11 horas (o fraccionado 3 h + 9 h); descanso diario reducido de al menos 9 horas (hasta 3 veces entre períodos de descanso semanal).',
     'guide.regulations.downloadBasis':
-        'Cómo se cuentan los días: cuando los archivos cubren todos los días hasta hoy, solo cuentan para un plazo los días con actividad registrada. En caso contrario se cuentan días naturales, lo que solo puede avisar antes.',
+        'Cómo se cuentan los días: las tarjetas de conductor deben descargarse en un plazo máximo de 28 días naturales y las unidades intravehiculares en 90 días naturales conforme al Reglamento (UE) n.º 581/2010. Los días con actividad registrada también se supervisan para evitar la sobreescritura de memoria antes del plazo legal.',
     'guide.regulations.driverCardDeadline':
         'Tarjetas de conductor: deben descargarse y archivarse al menos una vez cada 28 días.',
     'guide.regulations.ec561Title': 'Reglamento (CE) n.º 561/2006 (Tiempos de conducción y descanso)',

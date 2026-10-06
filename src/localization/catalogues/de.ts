@@ -665,7 +665,7 @@ export const de = {
     'guide.regulations.dailyRest':
         'Tägliche Ruhezeit: regelmäßige tägliche Ruhezeit von mindestens 11 Stunden (oder aufgeteilt in 3 + 9 Stunden); reduzierte tägliche Ruhezeit von mindestens 9 Stunden (höchstens dreimal zwischen zwei wöchentlichen Ruhezeiten).',
     'guide.regulations.downloadBasis':
-        'Zählweise der Tage: Decken die Dateien jeden Tag bis heute ab, zählen nur Tage mit aufgezeichneter Tätigkeit für die Frist. Andernfalls werden Kalendertage gezählt, was nur früher warnen kann.',
+        'Zählweise der Tage: Fahrerkarten müssen gemäß Verordnung (EU) Nr. 581/2010 nach spätestens 28 Kalendertagen und Fahrzeugeinheiten nach spätestens 90 Tagen ausgelesen werden. Tage mit aufgezeichneter Aktivität werden zusätzlich überwacht, um ein Überschreiben des Kartenspeichers vor der Kalenderfrist zu verhindern.',
     'guide.regulations.driverCardDeadline': 'Fahrerkarten: Müssen spätestens alle 28 Tage ausgelesen und archiviert werden.',
     'guide.regulations.ec561Title': 'Verordnung (EG) Nr. 561/2006 (Lenk- und Ruhezeiten)',
     'guide.regulations.eu581Title': 'Verordnung (EU) Nr. 581/2010 (Auslesefristen)',

@@ -513,7 +513,7 @@ export const pl = {
     'guide.regulations.dailyRest':
         'Dzienny okres odpoczynku: regularny dzienny okres odpoczynku trwający co najmniej 11 godzin (lub w dwóch częściach: 3 godz. + 9 godz.); skrócony dzienny okres odpoczynku trwający co najmniej 9 godzin (do 3 razy między tygodniowymi okresami odpoczynku).',
     'guide.regulations.downloadBasis':
-        'Sposób liczenia dni: gdy pliki obejmują każdy dzień do dziś, do terminu liczą się tylko dni z zarejestrowaną aktywnością. W przeciwnym razie liczone są dni kalendarzowe, co może tylko ostrzec wcześniej.',
+        'Sposób liczenia dni: karty kierowcy muszą być pobierane w maksymalnym terminie 28 dni kalendarzowych, a tachografy (VU) w terminie 90 dni zgodnie z rozporządzeniem (UE) nr 581/2010. Dni z zarejestrowaną aktywnością są dodatkowo monitorowane, aby zapobiec nadpisaniu pamięci przed upływem terminu kalendarzowego.',
     'guide.regulations.driverCardDeadline': 'Karty kierowców: muszą być pobierane i archiwizowane co najmniej raz na 28 dni.',
     'guide.regulations.ec561Title': 'Rozporządzenie (WE) nr 561/2006 (Czas jazdy i odpoczynku)',
     'guide.regulations.eu581Title': 'Rozporządzenie (UE) nr 581/2010 (Terminy pobierania danych)',

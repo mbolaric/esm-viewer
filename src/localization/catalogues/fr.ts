@@ -520,7 +520,7 @@ export const fr = {
     'guide.regulations.dailyRest':
         'Repos journalier : repos journalier normal d’au moins 11 heures (ou fractionné 3 h + 9 h) ; repos journalier réduit d’au moins 9 heures (jusqu’à 3 fois entre les périodes de repos hebdomadaire).',
     'guide.regulations.downloadBasis':
-        'Décompte des jours : lorsque les fichiers couvrent chaque jour jusqu’à aujourd’hui, seuls les jours avec activité enregistrée comptent pour une échéance. Sinon, les jours calendaires sont comptés, ce qui ne peut qu’alerter plus tôt.',
+        'Décompte des jours : les cartes de conducteur doivent être téléchargées dans un délai calendaire maximal de 28 jours et les unités embarquées dans un délai de 90 jours conformément au règlement (UE) n° 581/2010. Les jours d’activité enregistrée sont également surveillés afin d’éviter l’écrasement de la mémoire avant l’échéance légale.',
     'guide.regulations.driverCardDeadline':
         'Cartes de conducteur : doivent être téléchargées et archivées au moins une fois tous les 28 jours.',
     'guide.regulations.ec561Title': 'Règlement (CE) n° 561/2006 (Temps de conduite et de repos)',

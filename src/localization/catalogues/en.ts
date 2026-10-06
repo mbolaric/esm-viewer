@@ -505,7 +505,7 @@ export const en = {
     'guide.regulations.dailyRest':
         'Daily rest: Regular daily rest of at least 11 hours (or split 3h + 9h); reduced daily rest of at least 9 hours (up to 3 times between weekly rest periods).',
     'guide.regulations.downloadBasis':
-        'How days are counted: When the files cover every day up to today, only days with recorded activity count toward a deadline. Otherwise calendar days are counted, which can only warn earlier.',
+        'How days are counted: Driver cards must be downloaded within a maximum calendar period of 28 days, and vehicle units within 90 days, under Regulation (EU) No 581/2010. Recorded activity days are also monitored to prevent memory overwrite before the calendar deadline.',
     'guide.regulations.driverCardDeadline': 'Driver cards: Must be downloaded and archived at least once every 28 days.',
     'guide.regulations.ec561Title': 'Regulation (EC) No 561/2006 (Driving & Rest Times)',
     'guide.regulations.eu581Title': 'Regulation (EU) No 581/2010 (Download Deadlines)',

@@ -513,7 +513,7 @@ export const hr = {
     'guide.regulations.dailyRest':
         'Dnevno razdoblje odmora: redovno dnevno razdoblje odmora od najmanje 11 sati (ili u dva dijela: 3 h + 9 h); skraćeno dnevno razdoblje odmora od najmanje 9 sati (do 3 puta između tjednih razdoblja odmora).',
     'guide.regulations.downloadBasis':
-        'Način brojanja dana: kad datoteke pokrivaju svaki dan do danas, u rok se broje samo dani sa zabilježenom aktivnošću. Inače se broje kalendarski dani, što može samo ranije upozoriti.',
+        'Način brojanja dana: vozačke kartice moraju se preuzeti u maksimalnom kalendarskom roku od 28 dana, a jedinice u vozilu u roku od 90 dana prema Uredbi (EU) br. 581/2010. Dani sa zabilježenom aktivnošću također se prate kako bi se spriječilo prepisivanje memorije prije kalendarskog roka.',
     'guide.regulations.driverCardDeadline': 'Vozačke kartice: moraju se preuzimati i arhivirati najmanje jednom svakih 28 dana.',
     'guide.regulations.ec561Title': 'Uredba (EZ) br. 561/2006 (Vrijeme vožnje i odmora)',
     'guide.regulations.eu581Title': 'Uredba (EU) br. 581/2010 (Rokovi preuzimanja podataka)',

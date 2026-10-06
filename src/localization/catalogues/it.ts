@@ -520,7 +520,7 @@ export const it = {
     'guide.regulations.dailyRest':
         'Riposo giornaliero: riposo giornaliero regolare di almeno 11 ore (o frazionato 3 h + 9 h); riposo giornaliero ridotto di almeno 9 ore (fino a 3 volte tra i periodi di riposo settimanale).',
     'guide.regulations.downloadBasis':
-        'Come si contano i giorni: quando i file coprono ogni giorno fino a oggi, per una scadenza contano solo i giorni con attività registrata. Altrimenti si contano i giorni di calendario, il che può solo avvisare prima.',
+        'Come si contano i giorni: le carte del conducente devono essere scaricate entro un termine massimo di 28 giorni di calendario e le unità di bordo entro 90 giorni ai sensi del Regolamento (UE) n. 581/2010. I giorni con attività registrata vengono inoltre monitorati per evitare la sovrascrittura della memoria prima della scadenza di calendario.',
     'guide.regulations.driverCardDeadline':
         'Carte del conducente: devono essere scaricate e archiviate almeno una volta ogni 28 giorni.',
     'guide.regulations.ec561Title': 'Regolamento (CE) n. 561/2006 (Tempi di guida e riposo)',
