@@ -25,6 +25,7 @@ if (untrusted.length > 0) {
 
 for (const [name, reviewedVersion] of [
     ['brace-expansion', '5.0.12'],
+    ['source-map-js', '1.2.2'],
     ['undici', '8.11.2'],
 ] as const) {
     const pattern = new RegExp(`\\b${name}@([^\\s:()'",}\\]]+)`, 'gu');
