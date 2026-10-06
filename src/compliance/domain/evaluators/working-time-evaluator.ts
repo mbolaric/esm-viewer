@@ -429,7 +429,16 @@ function evaluateNightWorkLimitRule(
 
     for (let i = 0; i < intervals.length; i++) {
         const current = intervals[i];
-        if (current === undefined || !isWorkingTimeInterval(current)) {
+        if (current === undefined) {
+            continue;
+        }
+        if (!isWorkingTimeInterval(current)) {
+            // A qualifying daily rest starts a new daily working period, so a later breach is a separate duty and
+            // must not be collapsed into the run that the previous one opened.
+            if (isQualifyingDailyRest(current, profile)) {
+                previousWindowWasViolation = false;
+                currentRunReported = false;
+            }
             continue;
         }
 

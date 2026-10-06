@@ -14,8 +14,8 @@ function pointer(value: string): JsonPointer {
     return value;
 }
 
-function scalarNode(index: number, setSize: number): IRawDataNodeViewModel {
-    const value = `match-${String(index)}`;
+function scalarNode(index: number, setSize: number, searchValue?: string): IRawDataNodeViewModel {
+    const value = searchValue ?? `match-${String(index)}`;
     return {
         childCount: {
             display: '0',
@@ -34,8 +34,8 @@ function scalarNode(index: number, setSize: number): IRawDataNodeViewModel {
     };
 }
 
-function explorerWithMatches(matchCount: number): IRawDataExplorerViewModel {
-    const nodes = Array.from({ length: matchCount }, (_, index) => scalarNode(index, matchCount));
+function explorerWithMatches(matchCount: number, searchValues?: readonly string[]): IRawDataExplorerViewModel {
+    const nodes = Array.from({ length: matchCount }, (_, index) => scalarNode(index, matchCount, searchValues?.[index]));
     const root: IRawDataNodeViewModel = {
         childCount: {
             display: String(matchCount),
@@ -93,7 +93,7 @@ function explorerWithMatches(matchCount: number): IRawDataExplorerViewModel {
 describe('RawDataController', () => {
     it('reveals a canonical source in its bounded child page', () => {
         const explorer = explorerWithMatches(501);
-        const controller = new RawDataController(explorer, 'en', pointer('/450'));
+        const controller = new RawDataController(explorer, pointer('/450'));
 
         expect(controller.snapshot.error).toBeNull();
         expect(controller.snapshot.selectedNode.path).toBe('/450');
@@ -107,7 +107,7 @@ describe('RawDataController', () => {
     });
 
     it('bounds broad searches and supports refinement to later evidence', () => {
-        const controller = new RawDataController(explorerWithMatches(maximumRawDataFindMatches + 1), 'en');
+        const controller = new RawDataController(explorerWithMatches(maximumRawDataFindMatches + 1));
 
         expect(controller.find('match').find).toEqual({
             currentMatchNumber: 1,
@@ -127,8 +127,39 @@ describe('RawDataController', () => {
         });
     });
 
+    it('matches folded diacritics the same way every table does', () => {
+        const controller = new RawDataController(explorerWithMatches(2, ['Čačić', 'Bjørn Straße']));
+
+        expect(controller.find('cacic').find.matchCount).toBe(1);
+        expect(controller.find('bjorn').find.matchCount).toBe(1);
+        expect(controller.find('  BJORN STRASSE  ')).toMatchObject({
+            find: {
+                currentMatchNumber: 1,
+                matchCount: 1,
+            },
+            selectedNode: {
+                path: '/1',
+            },
+        });
+    });
+
+    it('ignores a repeated reveal request for the path it already revealed', () => {
+        const controller = new RawDataController(explorerWithMatches(3), pointer('/2'));
+        expect(controller.snapshot.selectedNode.path).toBe('/2');
+
+        controller.collapseAll();
+        expect(controller.snapshot.visibleItems).toHaveLength(1);
+
+        // The same request must not re-expand the tree the user folded away.
+        controller.revealRequest(pointer('/2'));
+        expect(controller.snapshot.visibleItems).toHaveLength(1);
+
+        // A different request still re-points the tree.
+        expect(controller.revealRequest(pointer('/1')).selectedNode.path).toBe('/1');
+    });
+
     it('reports a missing requested source instead of guessing a path', () => {
-        const controller = new RawDataController(explorerWithMatches(2), 'en', pointer('/9'));
+        const controller = new RawDataController(explorerWithMatches(2), pointer('/9'));
 
         expect(controller.snapshot).toMatchObject({
             error: 'missingArrayEntry',

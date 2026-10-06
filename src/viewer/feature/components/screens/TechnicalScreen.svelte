@@ -97,7 +97,7 @@
         ],
         sortValue: createStandardSortValue({
             type: (record) => record.kind,
-            recordedAt: (record) => record.recordedAt,
+            recordedAt: (record) => record.recordedAtTimestamp,
             details: (record) => record.fields.map((field) => fieldValueText(field)).join(' '),
             source: (record) => record.source.path,
         }),

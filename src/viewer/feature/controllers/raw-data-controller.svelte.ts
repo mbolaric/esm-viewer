@@ -1,11 +1,7 @@
 import type { RawDataExplorationError } from '#viewer-application';
 import type { JsonPointer } from '#viewer-domain';
-import {
-    normalizeSearchValue,
-    validateLocale,
-    type IRawDataExplorerViewModel,
-    type IRawDataNodeViewModel,
-} from '#viewer-presentation';
+import { normalizeSearchText } from '#localization';
+import { type IRawDataExplorerViewModel, type IRawDataNodeViewModel } from '#viewer-presentation';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
 const maximumRawDataFindMatches = 500;
@@ -56,7 +52,8 @@ export class RawDataController {
     #_findQuery = $state<string>('');
     #_findTruncated = $state<boolean>(false);
     #_lastRevealError = $state<RawDataExplorationError | null>(null);
-    private readonly _locale: string;
+    // Last path the shell asked for, so a repeated request does not disturb the tree the user navigated.
+    #_lastRequestedPath: JsonPointer | null = null;
     #_matches = $state<readonly IRawDataNodeViewModel[]>([]);
     private readonly _pageOffsets = new SvelteMap<JsonPointer, number>();
     #_requestedPath = $state<JsonPointer | null>(null);
@@ -82,15 +79,24 @@ export class RawDataController {
         };
     });
 
-    public constructor(explorer: IRawDataExplorerViewModel, locale: string, initialPath: JsonPointer | null = null) {
+    public constructor(explorer: IRawDataExplorerViewModel, initialPath: JsonPointer | null = null) {
         this._explorer = explorer;
-        this._locale = validateLocale(locale);
         this.#_selectedNode = explorer.root;
         if (explorer.root.childCount.value > 0) {
             this._expandedPaths.add(explorer.root.path);
             this._pageOffsets.set(explorer.root.path, 0);
         }
         this.#_lastRevealError = initialPath === null ? null : this.revealPath(initialPath);
+        this.#_lastRequestedPath = initialPath;
+    }
+
+    // Reveals a source the shell asked for; a repeated request for the same path leaves the tree untouched.
+    public revealRequest(path: JsonPointer | null): IRawDataSnapshot {
+        if (path === null || path === this.#_lastRequestedPath) {
+            return this.snapshot;
+        }
+        this.#_lastRequestedPath = path;
+        return this.select(path);
     }
 
     public get snapshot(): IRawDataSnapshot {
@@ -188,12 +194,12 @@ export class RawDataController {
             return this.closeFind();
         }
 
-        const normalizedQuery = normalizeSearchValue(query, this._locale);
+        const normalizedQuery = normalizeSearchText(query.trim());
         const matches: IRawDataNodeViewModel[] = [];
         let truncated = false;
 
         for (const node of this._explorer.nodes()) {
-            if (node.searchValues.some((value) => normalizeSearchValue(value, this._locale).includes(normalizedQuery))) {
+            if (node.searchValues.some((value) => normalizeSearchText(value).includes(normalizedQuery))) {
                 if (matches.length === maximumRawDataFindMatches) {
                     truncated = true;
                     break;

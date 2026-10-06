@@ -83,7 +83,6 @@ export {
     type IYearPresenceDayViewModel,
 } from './view-models/activity-year-presence-view-model.js';
 export { createRecentFilesViewModel, type IRecentFileViewModel } from './view-models/recent-files-view-model.js';
-export { normalizeSearchValue, validateLocale } from './helpers/search-text.js';
 export {
     createRawDataExplorerViewModel,
     type IRawDataChildPageViewModel,

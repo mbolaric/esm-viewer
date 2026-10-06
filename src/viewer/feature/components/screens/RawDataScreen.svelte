@@ -16,11 +16,10 @@
     interface IProps {
         explorer: IRawDataExplorerViewModel;
         initialPath: JsonPointer | null;
-        locale: string;
         oncopy: (value: string) => Promise<boolean>;
     }
 
-    let { explorer, initialPath, locale, oncopy }: IProps = $props();
+    let { explorer, initialPath, oncopy }: IProps = $props();
 
     const translationService = useViewerTranslationService();
     const nodeKindTranslationKeys = {
@@ -31,9 +30,14 @@
         object: 'rawData.type.object',
         string: 'rawData.type.string',
     } satisfies Readonly<Record<RawDataNodeKind, TranslationKey>>;
-    const controller = untrack(() => new RawDataController(explorer, locale, initialPath));
+    const controller = untrack(() => new RawDataController(explorer, initialPath));
     const snapshot = $derived(controller.snapshot);
     let copyStatus = $state<'failed' | 'idle' | 'succeeded'>('idle');
+
+    // A new reveal request reaches an already mounted tree, so the shell can re-point it without remounting the screen.
+    $effect(() => {
+        controller.revealRequest(initialPath);
+    });
 
     function handleSearch(event: Event): void {
         const target = event.currentTarget;

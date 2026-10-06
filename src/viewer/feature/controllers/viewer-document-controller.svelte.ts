@@ -1,5 +1,6 @@
 import {
     acquireDocumentCandidate,
+    documentComparisonKey,
     verifyDriverCardDocumentIntegrity,
     verifyVehicleUnitDocumentIntegrity,
 } from '#viewer-application';
@@ -21,6 +22,7 @@ import type {
 } from '#viewer-application';
 import type { IErrorService } from '#error-reporting';
 import { ERROR_CODES, classifyParseError, type FileDisplayName, type ReopenToken } from '#contracts';
+import { SvelteSet } from 'svelte/reactivity';
 
 export interface IViewerDocumentControllerDependencies {
     readonly clock: DocumentClock;
@@ -55,6 +57,8 @@ export class ViewerDocumentController {
     private _selectionController: IDocumentSelectionController | null = null;
     private _selectionDocument: OpenedTachographDocument | null = null;
     private _selectionGeneration = 0;
+    // Comparison entries the user removed; a document stays out of the history until it is opened again.
+    private readonly _removedComparisonKeys = new SvelteSet<string>();
     private _verifyingDocument: OpenedTachographDocument | null = null;
     #_selectingFile = $state(false);
     #_verifying = $state(false);
@@ -99,12 +103,16 @@ export class ViewerDocumentController {
 
     public clearComparison(): boolean {
         const cleared = this._comparison.clear();
+        this._removedComparisonKeys.clear();
         this.synchronizeComparison();
         return cleared;
     }
 
     public removeComparisonRecord(key: string): boolean {
         const removed = this._comparison.remove(key);
+        if (removed) {
+            this._removedComparisonKeys.add(key);
+        }
         this.synchronizeComparison();
         return removed;
     }
@@ -354,7 +362,11 @@ export class ViewerDocumentController {
 
     private synchronizeComparison(): void {
         const current = this.snapshot.current;
-        if (current !== null && this.snapshot.status === 'ready') {
+        if (
+            current !== null &&
+            this.snapshot.status === 'ready' &&
+            !this._removedComparisonKeys.has(documentComparisonKey(current))
+        ) {
             this._comparison.add(current);
         }
         this.#_comparisonSnapshot = this._comparison.snapshot;
@@ -363,6 +375,12 @@ export class ViewerDocumentController {
     private synchronizeSelection(document: OpenedTachographDocument | null): void {
         if (document === this._selectionDocument) {
             return;
+        }
+
+        // Opening a file again restores the history entry that removing it suppressed.
+        const nextKey = document === null ? null : documentComparisonKey(document);
+        if (nextKey !== null && nextKey !== this._selectionDocument?.source.sha256) {
+            this._removedComparisonKeys.delete(nextKey);
         }
 
         this.#_verifying = document !== null && this._verifyingDocument === document;

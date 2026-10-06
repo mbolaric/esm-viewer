@@ -887,6 +887,36 @@ describe('Compliance Evaluators with Configurable Rule Profiles', () => {
         expect(nightInfringements[0]?.recordedAt).toBe(mondayUtc + 20 * 3600 * 1000);
     });
 
+    it('reports each night-work breach that a qualifying daily rest separates', () => {
+        const mondayUtc = new Date('2026-06-15T18:00:00Z').getTime();
+        // 12h of night work, a full daily rest (11h), then 12h of night work again. The two 24-hour windows are
+        // disjoint, so suppressing the second breach would hide a separate statutory duty.
+        const intervals: ActivityInterval[] = [
+            createInterval('driving', mondayUtc, 720),
+            createInterval('breakOrRest', mondayUtc + 12 * 3600 * 1000, 660),
+            createInterval('driving', mondayUtc + 23 * 3600 * 1000, 720),
+        ];
+
+        const infringements = evaluateWorkingTimeInfringements(intervals, DIRECTIVE_2002_15_EC_WORKING_TIME);
+        const nightInfringements = infringements.filter((i) => i.ruleId === 'NIGHT_WORK_DAILY_LIMIT_10H');
+        expect(nightInfringements.map((i) => i.recordedAt)).toEqual([mondayUtc, mondayUtc + 23 * 3600 * 1000]);
+        // The first window also reaches the first hour of the second shift, which is the documented 24-hour reading.
+        expect(nightInfringements.map((i) => i.measuredValueMinutes)).toEqual([780, 720]);
+    });
+
+    it('still collapses night-work anchors that a short break does not separate into separate duties', () => {
+        const mondayUtc = new Date('2026-06-15T18:00:00Z').getTime();
+        // A 30-minute break is no qualifying daily rest, so both anchors still describe one continuous duty period.
+        const intervals: ActivityInterval[] = [
+            createInterval('driving', mondayUtc, 120),
+            createInterval('breakOrRest', mondayUtc + 2 * 3600 * 1000, 30),
+            createInterval('driving', mondayUtc + 2.5 * 3600 * 1000, 660),
+        ];
+
+        const infringements = evaluateWorkingTimeInfringements(intervals, DIRECTIVE_2002_15_EC_WORKING_TIME);
+        expect(infringements.filter((i) => i.ruleId === 'NIGHT_WORK_DAILY_LIMIT_10H')).toHaveLength(1);
+    });
+
     it('evaluates Directive 2002/15/EC Article 7 night work 10h ceiling', () => {
         // Shift starts at 02:00 UTC (inside the night window 00:00-04:00) with 11h total work
         const shiftStart = new Date('2026-06-15T02:00:00Z').getTime();

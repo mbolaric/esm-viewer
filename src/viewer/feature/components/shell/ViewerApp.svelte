@@ -556,12 +556,7 @@ top-level snippets are needed for it to reference them at all.
 {/snippet}
 {#snippet rawDataSection({ overview: currentOverview }: ISectionSnippetContext)}
     {#if sections.rawDataExplorer !== null}
-        <RawDataScreen
-            explorer={sections.rawDataExplorer}
-            initialPath={requestedRawDataPointer}
-            locale={currentOverview.locale}
-            oncopy={copyRawDataEvidence}
-        />
+        <RawDataScreen explorer={sections.rawDataExplorer} initialPath={requestedRawDataPointer} oncopy={copyRawDataEvidence} />
     {:else}
         <PendingSectionScreen
             description={viewerContext.translationService.translate('section.pending.description')}

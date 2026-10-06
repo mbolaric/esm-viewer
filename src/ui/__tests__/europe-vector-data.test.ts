@@ -23,6 +23,13 @@ describe('getApproximateCountryPosition', () => {
         expect(getApproximateCountryPosition('A', -1)).not.toBeNull();
     });
 
+    it('translates the South-East European signs whose recorded spelling is not their ISO code', () => {
+        // 'SRB', 'BIH' and 'MNE' are the Annex 1C signs; the geometry and centroids are ISO-coded.
+        expect(isInsideCountry('RS', getApproximateCountryPosition('SRB', -1))).toBe(true);
+        expect(isInsideCountry('BA', getApproximateCountryPosition('BIH', 1))).toBe(true);
+        expect(isInsideCountry('ME', getApproximateCountryPosition('MNE', -1))).toBe(true);
+    });
+
     it('offsets the start and end positions in opposite directions so they never collapse onto the same point', () => {
         const start = getApproximateCountryPosition('DE', -1);
         const end = getApproximateCountryPosition('DE', 1);

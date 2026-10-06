@@ -424,23 +424,31 @@ the existing preferences store (`localStorage` in the current Tauri host,
   verification). A VU download with no Overview/Control record at all (e.g. a
   partial/truncated download) has nothing to verify and is reported
   `unsupported` (`missingVehicleUnitOverview`).
-- **Comparison / Session history** — a side-by-side table across every currently open
-  document: identity, kind, coverage, odometer range, activity totals,
+- **Comparison / Session history** — a side-by-side table across the session's
+  open documents: identity, kind, coverage, odometer range, activity totals,
   content counts, security counts, integrity status, and overlapping-
   session detection (half-open intervals: sessions that only touch at one
   instant do not overlap, and a session without an end is the instant of its
   start), with per-cell "differs" highlighting, remove/reopen/
   clear-all actions, and export of the comparison itself to HTML or PDF.
+  Removing an entry keeps it out of the history until that file is opened
+  again, so a removal survives every later re-synchronisation of the session;
+  clear-all empties the history and the open document returns as the first
+  entry.
   Rendered with the fixed-viewport desktop data grid pattern (`fillHeight` on
   `RecordSectionLayout`), pinning screen headers and diff/export action controls
   while the comparison table body scrolls from row 1.
 - **Raw Data** — the canonical JSON-pointer tree explorer: a breadcrumb,
-  collapse-all/expand-one-level controls, in-tree search with next/
+  collapse-all/expand-one-level controls, in-tree search that folds case and
+  diacritics with the shared `#localization` normalisation (so it matches text
+  the same way every table's filter does) with next/
   previous match navigation and a "results truncated" notice for large
   matches, and a per-value inspector (type, RFC 6901 path, structured
   value, copy-path/copy-value actions) — every displayed value elsewhere
   in the app traces back to a path here, so nothing is a lossy display
-  transform of the decoded document.
+  transform of the decoded document. A source link that arrives while the
+  section is already open re-points the tree at that path instead of being
+  ignored.
 - **Load lifecycle**: Welcome (no document open yet — see the recent-files
   list below), Opening (load in progress), Pending Section (a section still
   loading while others are ready), Open Failure (parse/open error with
@@ -650,11 +658,20 @@ Regulation allows for some occasional passenger services are not evaluated.
 Severity classification follows Annex I of Commission Regulation (EU)
 2016/403, which defines a four-tier classification — minor, serious (SI),
 very serious (VSI), and Most Serious Infringement (MSI). `rule-profile.ts` holds
-per-rule-id margin bands (`annexISeverityBands`) for the categories Annex I
-classifies — continuous-driving breaks, daily and weekly driving limits, and
-daily and weekly rest shortfalls — falling back to a profile's flat
-`severityThresholds` for rules Annex I does not classify (working-time) and for
-profiles Annex I does not govern (AETR, UK GB Domestic). Annex I states excess
+per-rule-id margin bands (`annexISeverityBands`) for continuous-driving breaks,
+daily and weekly driving limits, and daily and weekly rest shortfalls. Annex I
+section 3 also classifies the working-time rules, and those bands are not
+modelled: Article 4 weekly working time (SI at 56–60 h and VSI at 60 h and above
+once the 48-hour average's extension is consumed; SI at 65–70 h and VSI at 70 h
+and above against the 60-hour cap), Article 5(1) breaks (SI when the break taken
+is 10–20 min or 20–30 min, VSI at 10 min or 20 min and below) and Article 7(1)
+night work (SI at 11–13 h, VSI at 13 h and above). The working-time rules
+therefore keep the
+profile's flat `severityThresholds`, which margin the deficit instead of the
+hours worked or the break taken, so aggregate break findings stay minor and
+weekly-60-hour and night-work findings can be one tier too high (§12). Profiles
+Annex I does not govern (AETR, UK GB Domestic) keep the flat thresholds by
+design. Annex I states excess
 bands by a lower-inclusive bound on the value exceeded ("10h ≤ … < 11h" of daily
 driving), so `calculateSeverity` puts an excess exactly on a margin in that tier.
 It states rest bands by the rest actually taken ("7h ≤ … < 8h" of a 9-hour
@@ -673,8 +690,10 @@ break, and rest findings. Findings-table badges, KPI tiles, activity-timeline
 pins, and the Driver Infringement Acknowledgment Letter surface the MSI tier,
 and review assessments group by rule ID with an `occurrenceCount`. The MSI
 threshold for the daily driving limit is calibrated to the standard nine-hour
-limit rather than tracking whether an extension was taken; see §12 for the
-resulting simplification.
+limit rather than tracking whether an extension was taken, and the EU text
+conditions both MSI rows on taking no break or rest of at least 4,5 hours, which
+is likewise not modelled; the UK Annex as amended in 2026 dropped that condition
+for the daily-driving rows. See §12 for the resulting simplification.
 
 The night-work daily limit (Art. 7(1) of Directive 2002/15/EC, "in each
 24-hour period") applies when work falls inside the configured local night
@@ -686,10 +705,13 @@ legitimately jumps forward to the next real duty period once a cycle
 resolves (anchored to an actual legal reference point, the end of the
 previous qualifying rest), but night work has no equivalent "resets on X"
 concept, so a violation whose 24-hour span falls between two sparse anchors
-must still be checked directly. Checking every interval as an anchor
-collapses a run of consecutive, overlapping detections of the same
-underlying breach into one reported finding, the same way the weekly-rest
-evaluator does for overlapping two-week windows.
+must still be checked directly. Checking every interval as an anchor was meant
+to collapse a run of consecutive, overlapping detections of the same underlying
+breach into one reported finding, the same way the weekly-rest evaluator does
+for overlapping two-week windows; a qualifying daily rest ends that run, so a
+breach that a rest separates from the previous one is reported as its own duty
+period, while the anchors inside one continuous run still collapse to one
+finding.
 
 Availability is neither working time nor qualifying break or rest:
 [`Directive 2002/15/EC`, Article
@@ -724,7 +746,11 @@ state and the driver's residence country, plus at least four weekly rests
 including two regular rests in each applicable four-week window. The file does
 not reliably establish all of that context, so the pattern produces an
 `externalEvidenceRequired` assessment. The linked Article 8(6b) compensation
-timing is also an external review, not a fabricated violation.
+timing is also an external review, not a fabricated violation: the duty to take
+an equivalent rest en bloc before the end of the third week following the week
+in question is explicit, while the Annex I texts read for the EU profiles carry
+no compensation band (the UK's revised Annex I classifies the two consecutive
+reduced weekly rests case as serious).
 
 Article 8(8) vehicle/accommodation facts and Article 8(8a) employer-organised
 return opportunities within each four-week period — and before compensatory
@@ -1356,6 +1382,10 @@ verify dispatch independently of a display. Standalone packaging remains in
   a weekly rest. Periods under 15 minutes, periods still open when the records
   end, and every period under the AETR and GB domestic profiles produce no
   review item.
+  Annex I section 2 classifies the underlying failure — not using manual input
+  when required to do so, Article 34(3) of Regulation (EU) No 165/2014 — as a
+  very serious infringement, so evaluating such time as rest is a deliberate
+  driver-favourable under-enforcement rather than a legal reading of the data.
 - The Annex I Most Serious Infringement (MSI) band for the daily driving
   limit (§6) is calibrated to the standard nine-hour limit, not to whichever
   of the two permitted daily limits actually applied that day. Annex I's own
@@ -1364,7 +1394,19 @@ verify dispatch independently of a display. Standalone packaging remains in
   threshold shifts higher when the extended ten-hour limit legitimately
   applies. This app's fixed margin is therefore slightly conservative
   (over-flagging MSI) on days using the extended limit; it does not track
-  the "no break taken" condition.
+  the "no break taken" condition. The condition itself changed in the United
+  Kingdom's revised Annex I, which drops it for the daily-driving rows, so the
+  deviation concerns the EU profiles only.
+- The working-time severities of Directive 2002/15/EC (§6) do not use the
+  Annex I section 3 bands, which classify Article 4 weekly working time
+  (56–60 h serious and 60 h and above very serious once the 48-hour average's
+  extension is consumed; 65–70 h serious and 70 h and above very serious against
+  the 60-hour cap), Article 5(1) breaks (10–20 min or 20–30 min taken serious,
+  10 min or 20 min and below very serious) and Article 7(1) night work (11–13 h
+  serious, 13 h and above very serious). The aggregate break rules apply the flat
+  60/120-minute margins to a deficit that cannot exceed 45 minutes, so they are
+  always minor, and the weekly-60-hour and night-work rules can be one tier too
+  high.
 - Fortnightly weekly rest evaluation (§6) operates strictly on full calendar
   weeks bounded within the document coverage range (`fullWeeksWithinDocument`);
   partial calendar weeks at document start or end are excluded from the two-week
@@ -1387,11 +1429,15 @@ view, so a review should not report it as a defect; changing one is a product
 decision, and this list must be updated with it.
 
 - **Unrestricted file-system capability.** The webview's `fs` read, write,
-  rename, and remove permissions are granted on `**`. Tachograph files are
+  rename, stat, and remove permissions are granted on `**`. Tachograph files are
   opened from USB sticks, network drives, and any folder the user picks, and
   exports are written atomically next to their chosen destination, so path
   scoping would break real use. Tachograph reads still go through the native
-  reader's canonical-path, regular-file, extension, and 50 MB checks (§4).
+  reader's canonical-path, regular-file, extension, and 50 MB checks (§4). The
+  export path refuses a destination that is the opened source, comparing the
+  path text first and the file identity (`stat`) second, and reports a
+  diagnostic when the source's identity cannot be read at all rather than
+  skipping the check silently.
 - **Detailed local diagnostic logs.** `app.log` holds sanitized, typed events
   only, while `native-debug.log` keeps raw error detail (messages, stacks,
   paths) in release builds too, so a reported problem can be diagnosed. Both
@@ -1425,13 +1471,12 @@ decision, and this list must be updated with it.
   bound and rest-deficit bands exclude it, exactly as Annex I of Regulation
   (EU) 2016/403 words them, so exactly 8 hours of reduced daily rest is minor
   while 7h59 is serious (§6).
-- **Download deadlines count recorded-activity days.** Per Regulation (EU)
-  581/2010 the 28th or 90th counted day is still due today and the next one is
-  overdue. Without activity evidence through today, the tracker uses a
-  conservative calendar estimate measured from the download instant (not
-  rounded to the day), because it measures an elapsed period from a recorded
-  timestamp; calibration and licence dates, which are calendar dates, are
-  compared by day (§7).
+- **Download deadlines follow calendar days and memory capacity.** Per Regulation (EU)
+  No 581/2010 Art. 1(3), the maximum period within which data must be downloaded is
+  28 calendar days for driver cards and 90 calendar days for vehicle units. The 28th
+  or 90th calendar day is due and subsequent days are overdue. Days with recorded
+  activity are also monitored because card chip storage (Annex 1C) guarantees capacity
+  for at least 28 days of average driver activity before circular overwrite (§7).
 - **The audit bundle must match its report exactly.** The export is checked
   against the manifest the embedded report was built from; any change in
   between rejects with an "archive changed, try again" failure instead of

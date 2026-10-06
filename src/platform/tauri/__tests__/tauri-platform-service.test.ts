@@ -302,6 +302,31 @@ describe('TauriPlatformService', () => {
             expect(writeFileMock).not.toHaveBeenCalled();
         });
 
+        it('reports a source whose identity cannot be read and still saves, so a denied stat is never silent', async () => {
+            const sourcePath = '/Users/driver/tacho.ddd';
+            const destinationPath = '/Users/driver/report.html';
+            const denied = new Error('fs.stat not allowed. Permissions associated with this command: fs:allow-stat');
+            saveDialogMock.mockResolvedValue(destinationPath);
+            statMock.mockImplementation((path: string) =>
+                path === sourcePath ? Promise.reject(denied) : Promise.resolve({ dev: 2, ino: 99 }),
+            );
+            writeFileMock.mockResolvedValue(undefined);
+            renameMock.mockResolvedValue(undefined);
+
+            const result = await service.saveExport({
+                bytes: new Uint8Array([1, 2, 3]),
+                sourceToken: fixtureSourceToken(sourcePath),
+                suggestedName: 'report.html',
+            });
+
+            expect(result).toEqual({ status: 'saved' });
+            // The denied check reaches the diagnostic log instead of disappearing.
+            expect(invokeMock).toHaveBeenCalledWith(
+                'append_native_debug_log',
+                expect.objectContaining({ component: 'export-guard' }),
+            );
+        });
+
         it('saves to a genuinely different destination', async () => {
             const sourcePath = '/Users/driver/tacho.ddd';
             const destinationPath = '/Users/driver/report.html';
@@ -319,6 +344,11 @@ describe('TauriPlatformService', () => {
             });
 
             expect(result).toEqual({ status: 'saved' });
+            // A destination that does not exist yet is not the source, so no degraded-check diagnostic is due.
+            expect(invokeMock).not.toHaveBeenCalledWith(
+                'append_native_debug_log',
+                expect.objectContaining({ component: 'export-guard' }),
+            );
             // Written to temp file first, then atomically renamed to destination.
             const writtenPath = firstWriteFileCallPath();
             expect(writtenPath.startsWith(`${destinationPath}.`)).toBe(true);

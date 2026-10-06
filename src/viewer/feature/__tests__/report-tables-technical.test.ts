@@ -33,6 +33,7 @@ function conditionRecord(fields: ITechnicalRecordViewModel['fields']): ITechnica
         kind: 'specificCondition',
         record: createSpecificConditionTechnicalRecord({ conditionType: 'outOfScopeBegin', enteredAt, source: source(path) }),
         recordedAt: '18 Jun 2026, 10:00',
+        recordedAtTimestamp: enteredAt,
         source: source(path),
     };
 }

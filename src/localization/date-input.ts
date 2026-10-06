@@ -101,6 +101,10 @@ function parseOrderedDate(clean: string, order: DateComponentOrder, reference: n
             if (yearPart.length === 4) {
                 return buildUtcTimestamp(first, second, third);
             }
+            // A year-leading format keeps its own order, so the first part is the year even when it is abbreviated.
+            if (order === 'YMD') {
+                return buildUtcTimestamp(first < 100 ? first + currentCentury : first, second, third);
+            }
             const year = third < 100 ? third + currentCentury : third;
             if (order === 'MDY') {
                 if (first > 12 && second <= 12) {
@@ -108,11 +112,9 @@ function parseOrderedDate(clean: string, order: DateComponentOrder, reference: n
                 }
                 return buildUtcTimestamp(year, first, second);
             }
-            if (order === 'DMY') {
-                if (second > 12 && first <= 12) {
-                    return buildUtcTimestamp(year, first, second);
-                }
-                return buildUtcTimestamp(year, second, first);
+            // DMY is the only order left here: the first part is the day.
+            if (second > 12 && first <= 12) {
+                return buildUtcTimestamp(year, first, second);
             }
             return buildUtcTimestamp(year, second, first);
         }

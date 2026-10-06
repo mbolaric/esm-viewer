@@ -201,6 +201,8 @@ export interface ITechnicalRecordViewModel {
     readonly kind: TechnicalRecordKind;
     readonly record: TachographTechnicalRecord;
     readonly recordedAt: string | null;
+    // The raw instant behind `recordedAt`, so tables sort chronologically instead of by formatted text.
+    readonly recordedAtTimestamp: UtcTimestamp | null;
     readonly source: ISourceReference;
 }
 
@@ -347,6 +349,7 @@ function identificationRecord(
         kind,
         record,
         recordedAt: null,
+        recordedAtTimestamp: null,
         source: record.source,
     };
 }
@@ -384,6 +387,7 @@ function operationalRecord(
         kind,
         record,
         recordedAt: formatDateTime(recordedAt, localisation),
+        recordedAtTimestamp: recordedAt,
         source: record.source,
     };
 }

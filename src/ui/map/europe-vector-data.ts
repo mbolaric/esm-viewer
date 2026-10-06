@@ -64,6 +64,7 @@ export function getCountryCentroid(code: string): readonly [number, number] | nu
 const TACHOGRAPH_SIGN_TO_ISO_COUNTRY_CODE: Readonly<Record<string, string>> = {
     A: 'AT',
     B: 'BE',
+    BIH: 'BA',
     D: 'DE',
     E: 'ES',
     EST: 'EE',
@@ -73,10 +74,12 @@ const TACHOGRAPH_SIGN_TO_ISO_COUNTRY_CODE: Readonly<Record<string, string>> = {
     I: 'IT',
     IRL: 'IE',
     L: 'LU',
+    MNE: 'ME',
     N: 'NO',
     P: 'PT',
     S: 'SE',
     SLO: 'SI',
+    SRB: 'RS',
     UK: 'GB',
 };
 

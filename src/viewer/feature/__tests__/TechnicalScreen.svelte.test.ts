@@ -112,6 +112,7 @@ function viewModel(): ITechnicalSectionViewModel {
         kind: 'chip',
         record: chipRecord,
         recordedAt: null,
+        recordedAtTimestamp: null,
         source: source('/cardChipIdentification'),
     };
     const control: ITechnicalRecordViewModel = {
@@ -137,6 +138,7 @@ function viewModel(): ITechnicalSectionViewModel {
         kind: 'controlActivity',
         record: controlRecord,
         recordedAt: '18 Jun 2026, 10:00',
+        recordedAtTimestamp: timestamp(Date.UTC(2026, 5, 18, 10)),
         source: source('/controlActivityData'),
     };
     const condition: ITechnicalRecordViewModel = {
@@ -154,6 +156,7 @@ function viewModel(): ITechnicalSectionViewModel {
         kind: 'specificCondition',
         record: conditionRecord,
         recordedAt: null,
+        recordedAtTimestamp: null,
         source: source('/specificConditions/specificConditionRecords/0'),
     };
 
@@ -251,6 +254,62 @@ describe('TechnicalScreen', () => {
         expect(openSource).toHaveBeenCalledWith(source('/controlActivityData').path);
     });
 
+    it('sorts the recorded-time column chronologically instead of by formatted text', async () => {
+        function conditionRow(enteredAt: UtcTimestamp, display: string, path: string): ITechnicalRecordViewModel {
+            return {
+                category: 'operational',
+                fields: [displayField('specificConditionType', 'Out-of-scope period started')],
+                generation: 'g2v2',
+                kind: 'specificCondition',
+                record: createSpecificConditionTechnicalRecord({
+                    conditionType: 'outOfScopeBegin',
+                    enteredAt,
+                    source: source(path),
+                }),
+                recordedAt: display,
+                recordedAtTimestamp: enteredAt,
+                source: source(path),
+            };
+        }
+        render(
+            TechnicalScreen,
+            {
+                props: {
+                    documentKind: 'driverCard',
+                    filterText: createDocumentScopedValue(''),
+                    oncopy: vi.fn(() => Promise.resolve(true)),
+                    onopensource: vi.fn(),
+                    onselectrecord: vi.fn(),
+                    selectedRecord: null,
+                    viewModel: {
+                        ...viewModel(),
+                        identificationRecords: [],
+                        // Provided newest first, so a text sort and a chronological sort disagree in both directions.
+                        operationalRecords: [
+                            conditionRow(timestamp(Date.UTC(2026, 5, 18, 10)), '18 Jun 2026, 10:00', '/specificConditions/2026'),
+                            conditionRow(timestamp(Date.UTC(2025, 11, 31, 23)), '31 Dec 2025, 23:00', '/specificConditions/2025'),
+                        ],
+                    },
+                },
+            },
+            createViewerTestRenderOptions(),
+        );
+        const table = screen.getByRole('table', {
+            name: 'Recorded card downloads, current use, controls, and specific conditions',
+        });
+        const sortButton = within(table).getByRole('button', { name: 'Recorded time' });
+
+        await fireEvent.click(sortButton);
+        const ascendingRows = within(table).getAllByRole('row').slice(1);
+        expect(ascendingRows[0]?.textContent).toContain('31 Dec 2025');
+        expect(ascendingRows[1]?.textContent).toContain('18 Jun 2026');
+
+        await fireEvent.click(sortButton);
+        const descendingRows = within(table).getAllByRole('row').slice(1);
+        expect(descendingRows[0]?.textContent).toContain('18 Jun 2026');
+        expect(descendingRows[1]?.textContent).toContain('31 Dec 2025');
+    });
+
     it('renders explicit empty and presentation-error states', async () => {
         const commonProps = {
             documentKind: 'driverCard' as const,
@@ -337,6 +396,7 @@ describe('TechnicalScreen', () => {
             kind: 'vehicleUnitIdentification',
             record: identificationRecord,
             recordedAt: null,
+            recordedAtTimestamp: null,
             source: vehicleSource('/transferResParams/1/data/Calibration/identification'),
         };
         const calibration: ITechnicalRecordViewModel = {
@@ -355,6 +415,7 @@ describe('TechnicalScreen', () => {
             kind: 'vehicleUnitCalibration',
             record: calibrationRecord,
             recordedAt: '18 Jun 2026, 10:00',
+            recordedAtTimestamp: timestamp(Date.UTC(2026, 5, 18, 10)),
             source: vehicleSource('/transferResParams/1/data/Calibration/vuCalibrationRecordArray/records/0'),
         };
 

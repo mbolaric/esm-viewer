@@ -71,7 +71,7 @@ function normalizePathSeparators(path: string): string {
     return path.replace(/\\/gu, '/');
 }
 
-// Checks whether export destination matches opened document source via normalized path and stat.
+// Checks whether the export destination is the opened document source: the path text first, then the file identity.
 async function isSameFile(destinationPath: string, sourcePath: string): Promise<boolean> {
     // Non-string or undefined source tokens safely resolve to false (not same file).
     if (typeof destinationPath !== 'string' || typeof sourcePath !== 'string') {
@@ -82,17 +82,29 @@ async function isSameFile(destinationPath: string, sourcePath: string): Promise<
         return true;
     }
 
+    let sourceInfo;
     try {
-        const [destinationInfo, sourceInfo] = await Promise.all([stat(destinationPath), stat(sourcePath)]);
-        return (
-            destinationInfo.dev !== null &&
-            destinationInfo.ino !== null &&
-            destinationInfo.dev === sourceInfo.dev &&
-            destinationInfo.ino === sourceInfo.ino
-        );
-    } catch {
+        sourceInfo = await stat(sourcePath);
+    } catch (error) {
+        // Without the source's identity the comparison cannot run; the export stays usable, but the gap is reported.
+        logPlatformError('export-guard', error);
         return false;
     }
+
+    let destinationInfo;
+    try {
+        destinationInfo = await stat(destinationPath);
+    } catch {
+        // A destination that does not exist yet cannot be the source file, so this is not a degraded check.
+        return false;
+    }
+
+    return (
+        destinationInfo.dev !== null &&
+        destinationInfo.ino !== null &&
+        destinationInfo.dev === sourceInfo.dev &&
+        destinationInfo.ino === sourceInfo.ino
+    );
 }
 
 // Writes bytes to temporary file first then atomically renames to prevent partial writes.

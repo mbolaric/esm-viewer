@@ -66,6 +66,8 @@ describe('parseDateInputValue', () => {
     it('parses two-digit years into the current century', () => {
         expect(parsed('27.07.26', 'ddMMyyyy')).toBe(Date.UTC(2026, 6, 27));
         expect(parsed('270726', 'ddMMyyyy')).toBe(Date.UTC(2026, 6, 27));
+        expect(parsed('07/27/26', 'MMddyyyy')).toBe(Date.UTC(2026, 6, 27));
+        expect(parsed('26-01-05', 'yyyyMMdd')).toBe(Date.UTC(2026, 0, 5));
     });
 
     it('parses medium dates with short month names', () => {
@@ -129,6 +131,7 @@ describe('parseUtcDateTimeInputValue', () => {
         expect(parsedDateTime('27.07.2026 08:42')).toBe(Date.UTC(2026, 6, 27, 8, 42));
         expect(parsedDateTime('07/27/2026 08:42:30', 'MMddyyyy')).toBe(Date.UTC(2026, 6, 27, 8, 42, 30));
         expect(parsedDateTime('2026-07-27 08:42', 'yyyyMMdd')).toBe(Date.UTC(2026, 6, 27, 8, 42));
+        expect(parsedDateTime('26-01-05 08:42', 'yyyyMMdd')).toBe(Date.UTC(2026, 0, 5, 8, 42));
         expect(parsedDateTime('Jul 27, 2026 08:42:30', 'mediumDate')).toBe(Date.UTC(2026, 6, 27, 8, 42, 30));
     });
 

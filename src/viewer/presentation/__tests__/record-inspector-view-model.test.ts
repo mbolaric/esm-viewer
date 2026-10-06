@@ -478,6 +478,7 @@ function technicalRow(record: TachographTechnicalRecord): ITechnicalRecordViewMo
         kind: 'chip',
         record,
         recordedAt: null,
+        recordedAtTimestamp: null,
         source: record.source,
     };
 }
