@@ -65,8 +65,8 @@
         translationService,
     }: IProps = $props();
 
-    function handlePrint(html: string): Promise<void> {
-        return exportController.print(html);
+    function handlePrint(pdfRequest: IPdfDocumentRequest): Promise<void> {
+        return exportController.print(pdfRequest);
     }
 
     function handleSaveHtml(html: string, suggestedName: string): Promise<void> {

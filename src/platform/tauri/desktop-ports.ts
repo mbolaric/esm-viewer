@@ -161,9 +161,8 @@ export function createPdfPort(service: TauriPlatformService, errorService: IErro
         isSupported() {
             return service.isPdfSupported();
         },
-        async print(html: string) {
-            // Opens native print dialog or rejects to trigger DOM print fallback.
-            await service.printHtmlDocument(html);
+        async print(request) {
+            await service.printPdfDocument(request);
         },
     };
 }

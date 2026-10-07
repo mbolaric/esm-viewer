@@ -29,6 +29,13 @@ fn esm_parser_commit() -> String {
 }
 
 fn main() {
+    if std::env::var("CARGO_CFG_TARGET_OS").expect("Cargo must provide the target OS") == "linux" {
+        pkg_config::Config::new().atleast_version("0.82").statik(false).probe("poppler-glib").expect(
+            "Linux PDF printing requires poppler-glib >= 0.82 development files and pkg-config. \
+             Install libpoppler-glib-dev on Debian/Ubuntu or poppler-glib-devel on Fedora.",
+        );
+    }
+
     tauri_build::build();
 
     println!("cargo:rustc-env=ESM_PARSER_VERSION={}", esm_parser_version());

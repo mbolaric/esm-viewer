@@ -25,7 +25,7 @@ function utc(v: number): UtcTimestamp {
 interface IRenderLetterDialogProps {
     model: IInfringementLetterViewModel;
     onclose: () => void;
-    onprint: (html: string) => void | Promise<void>;
+    onprint: (pdfRequest: IPdfDocumentRequest) => void | Promise<void>;
     onsaveHtml?: (html: string, suggestedName: string) => void;
     onsavePdf?: (suggestedName: string, pdfRequest: IPdfDocumentRequest) => void;
 }
@@ -127,13 +127,16 @@ describe('DriverInfringementLetterDialog', () => {
         await fireEvent.click(printBtn);
 
         expect(onprint).toHaveBeenCalledOnce();
-        expect(onprint.mock.calls[0]?.[0]).toContain('Driver Infringement Acknowledgment Letter');
+        expect(onprint.mock.calls[0]?.[0]).toMatchObject({
+            kind: 'infringementLetter',
+            title: 'Driver Infringement Acknowledgment Letter',
+        });
     });
 
     it('shows a busy status while the print callback is pending, like the export buttons', async () => {
         const onclose = vi.fn();
         let resolvePrint: (() => void) | undefined;
-        const onprint = vi.fn<(html: string) => Promise<void>>(
+        const onprint = vi.fn<(pdfRequest: IPdfDocumentRequest) => Promise<void>>(
             () =>
                 new Promise<void>((resolve) => {
                     resolvePrint = resolve;
@@ -177,6 +180,8 @@ describe('DriverInfringementLetterDialog', () => {
         const savePdfBtn = screen.getByRole('button', { name: 'Save Letter PDF' });
         await fireEvent.click(savePdfBtn);
         expect(onsavePdf).toHaveBeenCalledOnce();
+        await fireEvent.click(screen.getByRole('button', { name: 'Print Letter' }));
+        expect(onprint).toHaveBeenCalledExactlyOnceWith(onsavePdf.mock.calls[0]?.[1]);
         expect(onsavePdf.mock.calls[0]?.[0]).toBe('Infringement_Letter_Mustermann_Max.pdf');
         const pdfRequest = onsavePdf.mock.calls[0]?.[1];
         if (pdfRequest?.kind !== 'infringementLetter') {
@@ -185,9 +190,9 @@ describe('DriverInfringementLetterDialog', () => {
         expect(pdfRequest.footerNotice).toContain('not a certified legal assessment');
     });
 
-    it('uses the edited company details and driver explanation in the exported HTML', async () => {
+    it('prints the edited company details and driver explanation through the PDF request', async () => {
         const onclose = vi.fn();
-        const onprint = vi.fn<(html: string) => void>();
+        const onprint = vi.fn<(pdfRequest: IPdfDocumentRequest) => void>();
 
         renderLetterDialog({
             model: { ...mockModel, company: { ...mockModel.company, companyName: '' } },
@@ -207,14 +212,13 @@ describe('DriverInfringementLetterDialog', () => {
         const printBtn = screen.getByRole('button', { name: 'Print Letter' });
         await fireEvent.click(printBtn);
 
-        const firstPrintCall = onprint.mock.calls[0];
-        const html = firstPrintCall?.[0];
-        if (html === undefined) {
-            throw new TypeError('The letter print callback must receive HTML.');
-        }
-        expect(html).toContain('Acme Fleet Logistics GmbH');
-        expect(html).toContain('Detour due to road closure.');
-        expect(html).not.toContain('Trans-Euro Spedition GmbH');
+        expect(onprint).toHaveBeenCalledExactlyOnceWith(
+            expect.objectContaining({
+                kind: 'infringementLetter',
+                companyName: 'Acme Fleet Logistics GmbH',
+                driverComments: 'Detour due to road closure.',
+            }),
+        );
     });
 
     it('uses localized labels for the PDF date/VIN fields instead of hardcoded English (REPORT-04)', async () => {
@@ -236,6 +240,8 @@ describe('DriverInfringementLetterDialog', () => {
         await fireEvent.click(savePdfBtn);
 
         expect(onsavePdf).toHaveBeenCalledOnce();
+        await fireEvent.click(screen.getByRole('button', { name: 'Schreiben drucken' }));
+        expect(onprint).toHaveBeenCalledExactlyOnceWith(onsavePdf.mock.calls[0]?.[1]);
         const pdfRequest = onsavePdf.mock.calls[0]?.[1];
         if (pdfRequest?.kind !== 'infringementLetter') {
             throw new TypeError('The letter dialog must request an infringement-letter PDF.');

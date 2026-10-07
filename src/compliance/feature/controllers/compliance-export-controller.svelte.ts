@@ -1,4 +1,5 @@
-import type { ExportFailureCode, IPdfDocumentRequest } from '#contracts';
+import { ERROR_CODES, type ExportFailureCode, type IPdfDocumentRequest } from '#contracts';
+import type { IErrorService } from '#error-reporting';
 import type { IViewerExportPort, IViewerPdfPort } from '#viewer-application';
 import type { AttestationReason, IComplianceTranslationService } from '#compliance';
 import type { ToastController } from '#ui';
@@ -9,6 +10,7 @@ import { translateExportFailure } from '#localization';
 import { printDocument, saveDocumentHtml, saveDocumentPdf } from '../helpers/print-helper.js';
 
 export interface IComplianceExportControllerDependencies {
+    readonly errorService: IErrorService;
     readonly exportPort: IViewerExportPort;
     readonly pdfPort: IViewerPdfPort;
     readonly toastController: ToastController;
@@ -17,6 +19,7 @@ export interface IComplianceExportControllerDependencies {
 
 // Manages dialog open state and save/print orchestration for infringement letters and attestation forms.
 export class ComplianceExportController {
+    private readonly _errorService: IErrorService;
     private readonly _exportPort: IViewerExportPort;
     private readonly _pdfPort: IViewerPdfPort;
     private readonly _toastController: ToastController;
@@ -27,6 +30,7 @@ export class ComplianceExportController {
     #_error = $state<ExportFailureCode | null>(null);
 
     public constructor(dependencies: IComplianceExportControllerDependencies) {
+        this._errorService = dependencies.errorService;
         this._exportPort = dependencies.exportPort;
         this._pdfPort = dependencies.pdfPort;
         this._toastController = dependencies.toastController;
@@ -88,8 +92,14 @@ export class ComplianceExportController {
         }
     }
 
-    public async print(html: string): Promise<void> {
-        await printDocument(html, this._pdfPort);
+    public async print(request: IPdfDocumentRequest): Promise<void> {
+        this.#_error = null;
+        try {
+            await printDocument(request, this._pdfPort);
+        } catch {
+            this.#_error = 'exportFailed';
+            void this._errorService.report({ code: ERROR_CODES.documentPrintFailed, severity: 'error', source: 'desktop' });
+        }
     }
 
     public async savePdf(

@@ -30,7 +30,7 @@
         model: IAttestationFormViewModel;
         onchangeReason: (reason: AttestationReason) => void;
         onclose: () => void;
-        onprint: (html: string) => Promise<void> | void;
+        onprint: (pdfRequest: IPdfDocumentRequest) => Promise<void> | void;
         onsaveHtml?: (html: string, suggestedName: string) => void;
         onsavePdf?: (suggestedName: string, pdfRequest: IPdfDocumentRequest) => void;
         settingsStore: IKeyValueStore;
@@ -141,9 +141,10 @@
         undersigned: translationService.translate('compliance.attestation.undersigned'),
     });
 
+    const pdfRequest = $derived(createAttestationFormPdfRequest(exportModel, attestationLabels, localisationService.locale));
+
     async function handlePrint(): Promise<void> {
-        const html = generateAttestationFormHtml(exportModel, attestationLabels, localisationService.locale);
-        await onprint(html);
+        await onprint(pdfRequest);
     }
 
     async function handleSaveHtml(): Promise<void> {
@@ -164,7 +165,6 @@
             translationService.translate('compliance.fileName.driverFallback'),
             '.pdf',
         );
-        const pdfRequest = createAttestationFormPdfRequest(exportModel, attestationLabels, localisationService.locale);
         await onsavePdf?.(suggestedName, pdfRequest);
     }
 </script>

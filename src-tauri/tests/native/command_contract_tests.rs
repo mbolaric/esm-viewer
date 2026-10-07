@@ -375,12 +375,15 @@ fn window_command_dispatch_accepts_fullscreen_and_rejects_unknown_actions() {
 #[test]
 fn print_dispatch_validates_arguments_without_opening_native_ui() {
     let fixture = NativeFixture::new(false);
-    assert!(fixture.json("print_html_document", json!({})).unwrap_err().as_str().unwrap().contains("missing required key html"));
-    #[cfg(not(target_os = "macos"))]
-    assert_eq!(
-        fixture.json("print_html_document", json!({"html": "<!doctype html><title>Synthetic</title>"})),
-        Err(json!("Native printing is not supported on this platform yet; the renderer falls back to DOM printing."))
-    );
+    assert!(fixture
+        .json("print_pdf_document", json!({}))
+        .unwrap_err()
+        .as_str()
+        .unwrap()
+        .contains("missing required key request"));
+    for request in [json!(null), json!({"kind": "unknown"}), json!({"kind": "attestationForm", "companyName": 7})] {
+        assert!(fixture.json("print_pdf_document", json!({"request": request})).is_err());
+    }
 }
 
 #[test]

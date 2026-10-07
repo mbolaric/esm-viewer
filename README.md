@@ -56,7 +56,9 @@ platform before building.
 On **macOS**, install Xcode or its Command Line Tools. Xcode 26 or later is needed
 to bundle the layered macOS icon; older build tools use the flat icon.
 
-On **Linux**, install the native development dependencies:
+On **Linux**, PDF printing requires Poppler's GLib development package
+(Poppler `0.82` or later) and `pkg-config` in addition to Tauri's prerequisites.
+Install the native development dependencies for your distribution:
 
 **Debian / Ubuntu**
 
@@ -64,14 +66,15 @@ On **Linux**, install the native development dependencies:
 sudo apt update
 sudo apt install libwebkit2gtk-4.1-dev build-essential curl wget file \
     libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev \
-    libdbus-1-dev pkg-config
+    libdbus-1-dev libpoppler-glib-dev pkg-config
 ```
 
 **Fedora**
 
 ```bash
 sudo dnf install webkit2gtk4.1-devel openssl-devel curl wget file \
-    libappindicator-gtk3-devel librsvg2-devel dbus-devel pkgconf-pkg-config
+    libappindicator-gtk3-devel librsvg2-devel dbus-devel \
+    poppler-glib-devel pkgconf-pkg-config
 ```
 
 ### Setup and run

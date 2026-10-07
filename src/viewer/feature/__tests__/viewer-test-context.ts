@@ -121,6 +121,7 @@ export function createViewerTestContext(
     const toastController = new ToastController();
     const complianceProfileController = new ComplianceProfileController();
     const complianceExportController = new ComplianceExportController({
+        errorService,
         exportPort,
         pdfPort,
         toastController,

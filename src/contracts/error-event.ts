@@ -4,6 +4,7 @@ import { hasExactKeys, isUnknownRecord } from './unknown-value.js';
 export const ERROR_CODES = {
     chartRenderFailed: 'viewer.chart-render-failed',
     dragDropListenerFailed: 'desktop.drag-drop-listener-failed',
+    documentPrintFailed: 'desktop.document-print-failed',
     exportSaveFailed: 'desktop.export-save-failed',
     invalidErrorReport: 'desktop.invalid-error-report',
     menuBuildFailed: 'desktop.menu-build-failed',
@@ -29,6 +30,7 @@ type SimpleErrorCode = Exclude<ErrorCode, typeof ERROR_CODES.translationMissingK
 const SIMPLE_EVENTS = {
     [ERROR_CODES.chartRenderFailed]: { code: ERROR_CODES.chartRenderFailed, severity: 'error', source: 'viewer' },
     [ERROR_CODES.dragDropListenerFailed]: { code: ERROR_CODES.dragDropListenerFailed, severity: 'error', source: 'desktop' },
+    [ERROR_CODES.documentPrintFailed]: { code: ERROR_CODES.documentPrintFailed, severity: 'error', source: 'desktop' },
     [ERROR_CODES.exportSaveFailed]: { code: ERROR_CODES.exportSaveFailed, severity: 'error', source: 'desktop' },
     [ERROR_CODES.invalidErrorReport]: { code: ERROR_CODES.invalidErrorReport, severity: 'warning', source: 'desktop' },
     [ERROR_CODES.menuBuildFailed]: { code: ERROR_CODES.menuBuildFailed, severity: 'error', source: 'desktop' },

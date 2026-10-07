@@ -1,52 +1,8 @@
 import type { IPdfDocumentRequest } from '#contracts';
 import type { IViewerExportPort, IViewerExportSource, IViewerPdfPort, ViewerExportOutcome } from '#viewer-application';
 
-// Triggers native print panel via Rust backend, falling back to DOM printing on unsupported hosts.
-export async function printDocument(html: string, pdfPort: IViewerPdfPort): Promise<void> {
-    try {
-        await pdfPort.print(html);
-    } catch {
-        // Native print is unavailable on this host: fall back to DOM printing.
-        printHtmlContent(html);
-    }
-}
-
-function printHtmlContent(html: string): void {
-    if (typeof document === 'undefined') {
-        return;
-    }
-
-    // Full-viewport off-screen iframe preserves @page print styles without collapsing page width.
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.top = '0';
-    iframe.style.left = '-10000px';
-    iframe.style.width = '100vw';
-    iframe.style.height = '100vh';
-    iframe.style.border = '0';
-    iframe.style.opacity = '0.01';
-    iframe.style.pointerEvents = 'none';
-
-    iframe.onload = () => {
-        setTimeout(() => {
-            try {
-                const iframeWin = iframe.contentWindow;
-                if (iframeWin !== null) {
-                    iframeWin.focus();
-                    iframeWin.print();
-                }
-            } catch {
-                // Ignore if print was blocked by host
-            } finally {
-                setTimeout(() => {
-                    iframe.remove();
-                }, 2000);
-            }
-        }, 200);
-    };
-
-    document.body.appendChild(iframe);
-    iframe.srcdoc = html;
+export async function printDocument(request: IPdfDocumentRequest, pdfPort: IViewerPdfPort): Promise<void> {
+    await pdfPort.print(request);
 }
 
 export async function saveDocumentHtml(

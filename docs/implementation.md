@@ -995,6 +995,55 @@ translated request fields, and a letter without a company name leaves the
 heading empty rather than inventing one. Company details are remembered through the viewer's
 `IKeyValueStore`.
 
+Both Print buttons send the same derived `IPdfDocumentRequest` used by Save PDF
+through `IViewerPdfPort.print(request)` to `print_pdf_document`. Rust generates
+PDF bytes using the existing `pdf_engine::render_pdf` on the blocking pool and
+prints that PDF. Fonts, borders, margins, content, and pagination therefore
+come from the PDF renderer. Toolbar document exports have no Print action and
+are unchanged. HTML exports remain standalone HTML; there is no HTML print
+fallback or print iframe, and the navigation guard rejects `about:srcdoc`.
+
+Linux uses GTK's native print panel and Poppler's GLib PDF renderer on the main
+thread, drawing vector pages into Cairo with no additional page margins.
+Linux builds discover `poppler-glib >= 0.82` through `pkg-config` in `build.rs`,
+using Cargo's target OS so Windows/macOS cross-builds do not probe Linux libraries.
+The minimum version provides `poppler_document_new_from_bytes` for in-memory PDFs.
+Build machines require `libpoppler-glib-dev` on Debian/Ubuntu or
+`poppler-glib-devel` on Fedora, together with `pkg-config`; the local build
+instructions, validation CI, and Linux release packaging install them.
+The linker records the discovered library's SONAME, currently `libpoppler-glib.so.8`,
+provided at runtime by `libpoppler-glib8` (or `libpoppler-glib8t64`) on Debian/Ubuntu
+and `poppler-glib` on RPM distributions. Bundle dependencies declare these runtime
+packages, and native linkage makes the library discoverable for AppImage bundling.
+Existing binaries still require the ABI against which they were built; a future
+ABI change requires rebuilding, compatibility testing, and updating package dependencies.
+GTK's Rust crate is already used by Tauri. macOS uses the system PDFKit renderer
+through `objc2-pdf-kit` API bindings and AppKit's native print panel on the main
+thread. Windows opens its native print panel on Tauri's main UI thread, which
+uses a single-threaded COM apartment. System `Windows.Data.Pdf`, WinRT imaging,
+and GDI spooling run on a blocking worker in a multithreaded COM apartment,
+rendering one page at a time at 300 DPI. Only the selected printer's owned GDI
+device context and page range cross to the worker; dialog settings are released
+on the UI thread. Windows printing is raster output; the document layout
+and physical dimensions remain those of the PDF. No PDF SDK or frontend PDF
+package is bundled. These dependencies and costs are recorded in
+`docs/adr/0001-pdf-backed-printing.md`.
+
+A4 is the default paper. Whole PDF pages retain their physical size on matching
+paper, with smaller selected paper scaling down proportionally; printer
+hardware can still limit the printable area. Windows accounts for hardware
+origin offsets so they do not become extra document margins. Print dialog
+page ranges and copies are handled by each native print system. PDF bytes and
+page buffers stay in memory, and native resources are released when printing
+or cancellation completes. The IPC response must decode as `null` completion.
+Export actions remain busy until the native print operation finishes or is
+cancelled. A print failure keeps the dialog open with the translated export
+error and reports only `desktop.document-print-failed` through `IErrorService`,
+without document content or native error details. Windows additionally records
+an application-owned operation identifier and numeric HRESULT or Win32 code in
+the local native debug log; OS error messages, document contents, paths, and
+printer names are excluded.
+
 The regulatory correctness of this engine is an engineering self-review
 baseline; independent qualified regulatory review and a validation corpus
 have not been done — treat evaluator output as engineering-verified, not
@@ -1493,12 +1542,6 @@ verify dispatch independently of a display. Standalone packaging remains in
   applications are unsigned by design and always report `unsupported`.
 - Release installers (§3) are built but not code-signed or notarized on any
   platform yet.
-- The hidden print webview (§5) has no navigation policy of its own: unlike the
-  main window it is created directly with WebKit, so it has neither an
-  `on_navigation` hook nor the application CSP. Its content is HTML the
-  application generates and escapes itself, and it is discarded after the print
-  operation, so this stays defence in depth rather than an exposure; adding a
-  delegate would mean implementing a WebKit navigation delegate natively.
 
 ## 13. Deliberate design decisions
 
@@ -1532,13 +1575,12 @@ decision, and this list must be updated with it.
   with `guardUnavailable` instead of being mistaken for a proven-different
   destination. Only a not-found filesystem result permits treating a destination
   as absent.
-- **The print webview releases its AppKit handles only on the main thread.** The
-  hidden `WKWebView` and its window are handed between main-thread closures as
-  raw retained pointers (`print_engine.rs`). The holder consumes them exactly
-  once, and its destructor releases them when it runs on the main thread; on a
-  failure path that abandoned the holder on another thread it deliberately leaks
-  the two objects, because releasing an AppKit object from the wrong thread is
-  worse than a bounded leak on a print attempt that already failed.
+- **Native PDF printing owns resources on the required thread.** PDFKit and
+  AppKit objects are created, printed, and released in one main-thread
+  autorelease pool. GTK and Poppler objects stay on the Linux main thread.
+  Windows releases WinRT, printer settings, device contexts, and page buffers
+  on the blocking worker; a failed page aborts the spool job so it cannot
+  silently submit incomplete output. Print data stays in memory.
 - **Detailed local diagnostic logs.** `app.log` holds sanitized, typed events
   only, while `native-debug.log` keeps raw error detail (messages, stacks,
   paths) in release builds too, so a reported problem can be diagnosed. Both

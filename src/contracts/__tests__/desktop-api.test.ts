@@ -286,6 +286,7 @@ describe('desktop API decoders', () => {
         { code: ERROR_CODES.nativeThemeSyncFailed, severity: 'warning', source: 'desktop' },
         { code: ERROR_CODES.signatureVerificationFailed, severity: 'error', source: 'viewer' },
         { code: ERROR_CODES.dragDropListenerFailed, severity: 'error', source: 'desktop' },
+        { code: ERROR_CODES.documentPrintFailed, severity: 'error', source: 'desktop' },
         {
             code: ERROR_CODES.translationMissingKey,
             context: { key: 'valid.key' },

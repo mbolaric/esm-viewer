@@ -43,6 +43,14 @@
         ],
         "macOS": {
             "signingIdentity": "-"
+        },
+        "linux": {
+            "deb": {
+                "depends": ["libpoppler-glib8 | libpoppler-glib8t64"]
+            },
+            "rpm": {
+                "depends": ["poppler-glib"]
+            }
         }
     }
 }

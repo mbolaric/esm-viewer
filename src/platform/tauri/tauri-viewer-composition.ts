@@ -131,6 +131,7 @@ export async function createTauriViewerContext(
     const toastController = new ToastController();
     const complianceProfileController = new ComplianceProfileController();
     const complianceExportController = new ComplianceExportController({
+        errorService,
         exportPort,
         pdfPort,
         toastController,

@@ -17,6 +17,14 @@ fn accepts_the_packaged_app_windows_and_android_hosts() {
 }
 
 #[test]
+fn rejects_internal_documents_that_are_no_longer_needed_for_native_pdf_printing() {
+    assert!(!is_allowed_navigation_url(&url("about:srcdoc")));
+    assert!(!is_allowed_navigation_url(&url("about:blank")));
+    assert!(!is_allowed_navigation_url(&url("about:srcdoc?url=https://example.com")));
+    assert!(!is_allowed_navigation_url(&url("about:srcdoc#external")));
+}
+
+#[test]
 fn rejects_an_unrelated_https_host_even_with_a_tauri_looking_path() {
     assert!(!is_allowed_navigation_url(&url("https://evil.example/tauri.localhost")));
 }

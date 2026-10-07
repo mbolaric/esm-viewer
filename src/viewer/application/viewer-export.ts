@@ -32,6 +32,6 @@ export type ViewerPdfOutcome =
 export interface IViewerPdfPort {
     generatePdf(request: IPdfDocumentRequest): Promise<ViewerPdfOutcome>;
     isSupported(): boolean;
-    // Opens native print dialog for the HTML document; rejects if unavailable.
-    print(html: string): Promise<void>;
+    // Prints the same native PDF layout as generatePdf; resolves after printing or cancellation.
+    print(request: IPdfDocumentRequest): Promise<void>;
 }

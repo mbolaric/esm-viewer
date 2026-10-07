@@ -30,7 +30,7 @@ macro_rules! with_viewer_commands {
             $crate::viewer_commands::open_devtools,
             $crate::viewer_commands::execute_window_command,
             $crate::pdf_engine::commands::generate_pdf_document,
-            $crate::print_engine::print_html_document,
+            $crate::print_engine::print_pdf_document,
             $crate::logger::report_error_event,
             $crate::logger::read_error_logs,
             $crate::logger::append_native_debug_log

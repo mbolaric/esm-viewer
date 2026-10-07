@@ -26,6 +26,7 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
 
 import {
     DEFAULT_VIEWER_PREFERENCES,
+    type IFactualReportPdfRequest,
     isReopenToken,
     isSourceToken,
     type IViewerPreferences,
@@ -89,6 +90,32 @@ class MockStorage implements Storage {
 describe('TauriPlatformService', () => {
     // Shared service instance reused across tests; mocks are reconfigured per-test.
     let service: TauriPlatformService;
+
+    const printRequest: IFactualReportPdfRequest = {
+        footerNotice: '',
+        headerFields: [],
+        kind: 'factualReport',
+        locale: 'en',
+        orientation: 'portrait',
+        sections: [],
+        subtitle: '',
+        summaryItems: [],
+        summaryTitle: '',
+        title: 'Synthetic PDF',
+    };
+
+    it('prints the typed PDF request through the native command and decodes completion', async () => {
+        invokeMock.mockResolvedValueOnce(null);
+        await expect(service.printPdfDocument(printRequest)).resolves.toBeUndefined();
+        expect(invokeMock).toHaveBeenCalledExactlyOnceWith('print_pdf_document', { request: printRequest });
+    });
+
+    it('rejects an invalid native print response or a failed print command', async () => {
+        invokeMock.mockResolvedValueOnce({ status: 'printed' });
+        await expect(service.printPdfDocument(printRequest)).rejects.toThrow('Invalid native print response.');
+        invokeMock.mockRejectedValueOnce(new Error('Native print failed'));
+        await expect(service.printPdfDocument(printRequest)).rejects.toThrow('Native print failed');
+    });
 
     beforeEach(() => {
         globalThis.localStorage = new MockStorage();

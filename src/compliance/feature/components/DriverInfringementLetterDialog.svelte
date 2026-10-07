@@ -24,7 +24,7 @@
         localisationService: ILocalisationService<UtcTimestamp, DurationMilliseconds>;
         model: IInfringementLetterViewModel;
         onclose: () => void;
-        onprint: (html: string) => Promise<void> | void;
+        onprint: (pdfRequest: IPdfDocumentRequest) => Promise<void> | void;
         onsaveHtml?: (html: string, suggestedName: string) => void;
         onsavePdf?: (suggestedName: string, pdfRequest: IPdfDocumentRequest) => void;
         settingsStore: IKeyValueStore;
@@ -102,9 +102,20 @@
         vin: translationService.translate('compliance.letter.vin'),
     });
 
+    const pdfRequest = $derived(
+        createInfringementLetterPdfRequest(
+            exportModel,
+            letterLabels,
+            severityLabel,
+            translationService.translate('compliance.letter.companyHeading'),
+            letterLabels.date,
+            letterLabels.vin,
+            localisationService.locale,
+        ),
+    );
+
     async function handlePrint(): Promise<void> {
-        const html = generateInfringementLetterHtml(exportModel, letterLabels, localisationService.locale);
-        await onprint(html);
+        await onprint(pdfRequest);
     }
 
     async function handleSaveHtml(): Promise<void> {
@@ -124,15 +135,6 @@
             model.driverName,
             translationService.translate('compliance.fileName.driverFallback'),
             '.pdf',
-        );
-        const pdfRequest = createInfringementLetterPdfRequest(
-            exportModel,
-            letterLabels,
-            severityLabel,
-            translationService.translate('compliance.letter.companyHeading'),
-            letterLabels.date,
-            letterLabels.vin,
-            localisationService.locale,
         );
         await onsavePdf?.(suggestedName, pdfRequest);
     }

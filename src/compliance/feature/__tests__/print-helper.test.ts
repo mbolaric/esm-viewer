@@ -120,22 +120,24 @@ describe('Compliance print-helper', () => {
         expect(saveMock).not.toHaveBeenCalled();
     });
 
-    it('prefers the native print panel and never touches PDF generation', async () => {
+    it('sends the PDF export request to native printing and keeps generation in Rust', async () => {
         const printMock = vi.fn<IViewerPdfPort['print']>(() => Promise.resolve());
         const generatePdfMock = vi.fn<IViewerPdfPort['generatePdf']>();
         const pdfPort = createPdfPort(generatePdfMock, printMock);
+        const request = createTestAttestationRequest();
 
-        await printDocument('<html><body>Print me</body></html>', pdfPort);
+        await printDocument(request, pdfPort);
 
-        expect(printMock).toHaveBeenCalledWith('<html><body>Print me</body></html>');
+        expect(printMock).toHaveBeenCalledExactlyOnceWith(request);
         expect(generatePdfMock).not.toHaveBeenCalled();
     });
 
-    it('falls back to DOM printing when the native print path is unavailable', async () => {
-        const printMock = vi.fn<IViewerPdfPort['print']>(() => Promise.reject(new Error('unavailable')));
-        const pdfPort = createPdfPort(() => Promise.resolve({ code: 'exportFailed', status: 'failed' }), printMock);
+    it('propagates a native printing failure for the dialog to report', async () => {
+        const pdfPort = createPdfPort(
+            () => Promise.resolve({ code: 'exportFailed', status: 'failed' }),
+            () => Promise.reject(new Error('Native printing unavailable')),
+        );
 
-        await expect(printDocument('<html><body>Print me</body></html>', pdfPort)).resolves.toBeUndefined();
-        expect(printMock).toHaveBeenCalledOnce();
+        await expect(printDocument(createTestAttestationRequest(), pdfPort)).rejects.toThrow('Native printing unavailable');
     });
 });

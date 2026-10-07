@@ -387,9 +387,15 @@ export class TauriPlatformService {
         return generateNativeDocument('generate_pdf_document', decodePdfDocumentRequest(request), 'pdf-generation');
     }
 
-    public async printHtmlDocument(html: string): Promise<void> {
-        // Opens native print dialog via Rust backend; rejects if unavailable.
-        await invoke('print_html_document', { html });
+    public async printPdfDocument(request: IPdfDocumentRequest): Promise<void> {
+        const decoded = decodePdfDocumentRequest(request);
+        if (!decoded.ok) {
+            throw new TypeError('Invalid PDF print request.');
+        }
+        const response: unknown = await invoke('print_pdf_document', { request: decoded.value });
+        if (response !== null) {
+            throw new TypeError('Invalid native print response.');
+        }
     }
 
     public async saveExport(request: ISaveExportRequest): Promise<SaveExportResult> {

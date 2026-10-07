@@ -3,6 +3,7 @@
 mod attestation;
 pub mod commands;
 mod document;
+pub use document::{render_pdf, PdfDocumentRequest};
 mod fonts;
 mod hyphenation;
 mod infringement;

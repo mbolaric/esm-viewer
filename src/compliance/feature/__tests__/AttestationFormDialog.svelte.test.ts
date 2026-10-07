@@ -19,7 +19,7 @@ interface IRenderAttestationDialogProps {
     model: IAttestationFormViewModel;
     onchangeReason: (reason: AttestationReason) => void;
     onclose: () => void;
-    onprint: (html: string) => void | Promise<void>;
+    onprint: (pdfRequest: IPdfDocumentRequest) => void | Promise<void>;
     onsaveHtml?: (html: string, suggestedName: string) => void;
     onsavePdf?: (suggestedName: string, pdfRequest: IPdfDocumentRequest) => void;
 }
@@ -85,7 +85,7 @@ describe('AttestationFormDialog', () => {
         await fireEvent.click(printBtn);
 
         expect(onprint).toHaveBeenCalledOnce();
-        expect(onprint.mock.calls[0]?.[0]).toContain('ATTESTATION OF ACTIVITIES');
+        expect(onprint.mock.calls[0]?.[0]).toMatchObject({ kind: 'attestationForm', title: 'ATTESTATION OF ACTIVITIES (1)' });
     });
 
     it('triggers onsaveHtml and onsavePdf callbacks', async () => {
@@ -112,12 +112,14 @@ describe('AttestationFormDialog', () => {
         const savePdfBtn = screen.getByRole('button', { name: 'Save Attestation PDF' });
         await fireEvent.click(savePdfBtn);
         expect(onsavePdf).toHaveBeenCalledOnce();
+        await fireEvent.click(screen.getByRole('button', { name: 'Print Attestation' }));
+        expect(onprint).toHaveBeenCalledExactlyOnceWith(onsavePdf.mock.calls[0]?.[1]);
         expect(onsavePdf.mock.calls[0]?.[0]).toBe('EU_Attestation_Schmidt_Hans.pdf');
     });
 
-    it('uses the edited company details in the exported attestation HTML', async () => {
+    it('prints the edited company details through the PDF request', async () => {
         const onclose = vi.fn();
-        const onprint = vi.fn<(html: string) => void>();
+        const onprint = vi.fn<(pdfRequest: IPdfDocumentRequest) => void>();
         const onchangeReason = vi.fn();
 
         renderAttestationDialog({
@@ -135,13 +137,12 @@ describe('AttestationFormDialog', () => {
         const printBtn = screen.getByRole('button', { name: 'Print Attestation' });
         await fireEvent.click(printBtn);
 
-        const firstPrintCall = onprint.mock.calls[0];
-        const html = firstPrintCall?.[0];
-        if (html === undefined) {
-            throw new TypeError('The attestation print callback must receive HTML.');
-        }
-        expect(html).toContain('Acme Transport S.A.');
-        expect(html).not.toContain('EuroTrans Logistics');
+        expect(onprint).toHaveBeenCalledExactlyOnceWith(
+            expect.objectContaining({
+                kind: 'attestationForm',
+                companyName: 'Acme Transport S.A.',
+            }),
+        );
     });
 
     it('updates the on-screen preview immediately when driver fields are edited (REPORT-05)', async () => {
@@ -214,7 +215,7 @@ describe('AttestationFormDialog', () => {
     it('shows a busy status while the print callback is pending, like the export buttons', async () => {
         const onclose = vi.fn();
         let resolvePrint: (() => void) | undefined;
-        const onprint = vi.fn<(html: string) => Promise<void>>(
+        const onprint = vi.fn<(pdfRequest: IPdfDocumentRequest) => Promise<void>>(
             () =>
                 new Promise<void>((resolve) => {
                     resolvePrint = resolve;
