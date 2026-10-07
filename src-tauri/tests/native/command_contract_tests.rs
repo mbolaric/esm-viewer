@@ -224,6 +224,33 @@ fn verification_dispatch_validates_arguments_and_preserves_failure_dtos() {
 }
 
 #[test]
+fn export_guard_dispatch_rejects_access_failures_without_exposing_paths() {
+    let fixture = NativeFixture::new(false);
+    assert_eq!(
+        fixture.json(
+            "export_destination_is_source",
+            json!({
+                "sourcePath": "opaque-drop-token",
+                "destinationPath": fixture.directory.to_str().expect("fixture path must be UTF-8"),
+                "sourceSha256": "a".repeat(64)
+            })
+        ),
+        Err(json!("Export destination could not be checked"))
+    );
+    assert_eq!(
+        fixture.json(
+            "export_destination_is_source",
+            json!({
+                "sourcePath": "opaque-drop-token",
+                "destinationPath": fixture.directory.join("report.html").to_str().expect("fixture path must be UTF-8"),
+                "sourceSha256": "a".repeat(64)
+            })
+        ),
+        Ok(json!(false))
+    );
+}
+
+#[test]
 fn guarded_file_read_dispatch_returns_raw_bytes_and_typed_not_found_rejection() {
     let fixture = NativeFixture::new(false);
     let bytes = [0, 1, 127, 128, 255];

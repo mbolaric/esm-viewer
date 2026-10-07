@@ -139,7 +139,7 @@ pub async fn read_ddd_file(file_path: String) -> Result<tauri::ipc::Response, Re
 }
 
 // Guards an export: the renderer asks before writing, and the comparison happens here where both paths can be
-// canonicalised and compared by file identity, so no permission or path spelling decides the answer.
+// canonicalised and compared by file identity. Access failures must refuse the export.
 #[tauri::command]
 pub async fn export_destination_is_source(
     source_path: String,
@@ -147,7 +147,8 @@ pub async fn export_destination_is_source(
     source_sha256: Option<String>,
 ) -> Result<bool, String> {
     run_blocking(move || -> Result<bool, String> {
-        Ok(export_guard::is_same_existing_file(&source_path, &destination_path, source_sha256.as_deref()))
+        export_guard::is_same_existing_file(&source_path, &destination_path, source_sha256.as_deref())
+            .map_err(|_| "Export destination could not be checked".to_string())
     })
     .await
 }

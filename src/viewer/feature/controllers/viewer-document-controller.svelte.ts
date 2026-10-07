@@ -263,9 +263,12 @@ export class ViewerDocumentController {
                 return;
             case 'ready': {
                 await this.syncAroundLifecycle(() => this._lifecycle.openCandidate(candidate.operation));
+                const opened = await candidate.operation.completion;
 
                 const current = this.snapshot.current;
-                if (this.snapshot.status === 'ready' && current !== null) {
+                if (opened.ok && this.snapshot.status === 'ready' && current === opened.value.document) {
+                    this._removedComparisonKeys.delete(documentComparisonKey(current));
+                    this.synchronizeComparison();
                     if (this._dependencies.preferencesController.snapshot.preferences.verificationAutoRun) {
                         void this.verifyDocument();
                     }
@@ -375,12 +378,6 @@ export class ViewerDocumentController {
     private synchronizeSelection(document: OpenedTachographDocument | null): void {
         if (document === this._selectionDocument) {
             return;
-        }
-
-        // Opening a file again restores the history entry that removing it suppressed.
-        const nextKey = document === null ? null : documentComparisonKey(document);
-        if (nextKey !== null && nextKey !== this._selectionDocument?.source.sha256) {
-            this._removedComparisonKeys.delete(nextKey);
         }
 
         this.#_verifying = document !== null && this._verifyingDocument === document;

@@ -52,6 +52,42 @@ function sample(intervals: readonly IRecordedActivityInterval[]): readonly ICont
 }
 
 describe('sampleContinuousDrivingByDay', () => {
+    it('does not carry an earlier peak past a rest that ends at the next recorded midnight', () => {
+        const day5Midnight = day1Midnight + 4 * 24 * hour;
+        const days = sampleContinuousDrivingByDay(
+            [day1Midnight, day5Midnight],
+            [
+                interval('driving', day1Midnight + 6 * hour, day1Midnight + 11 * hour),
+                interval('breakOrRest', day1Midnight + 11 * hour, day5Midnight),
+                interval('driving', day5Midnight, day5Midnight + hour),
+            ],
+            EU_561_2006_STANDARD,
+        );
+
+        expect(days).toEqual([
+            { midnightUtc: day1Midnight, peakMs: 5 * hour, valueMs: 5 * hour },
+            { midnightUtc: day5Midnight, peakMs: hour, valueMs: hour },
+        ]);
+    });
+
+    it('gives conflicting generation rows the same peak after a qualifying break resets the stint', () => {
+        const days = sampleContinuousDrivingByDay(
+            [day1Midnight, day1Midnight, day2Midnight],
+            [
+                interval('driving', day1Midnight + 6 * hour, day1Midnight + 11 * hour),
+                interval('breakOrRest', day1Midnight + 11 * hour, day1Midnight + 12 * hour),
+                interval('driving', day2Midnight + 6 * hour, day2Midnight + 7 * hour),
+            ],
+            EU_561_2006_STANDARD,
+        );
+
+        expect(days).toEqual([
+            { midnightUtc: day1Midnight, peakMs: 5 * hour, valueMs: 0 },
+            { midnightUtc: day1Midnight, peakMs: 5 * hour, valueMs: 0 },
+            { midnightUtc: day2Midnight, peakMs: hour, valueMs: hour },
+        ]);
+    });
+
     it('keeps one stint across midnight and reports each day its own share', () => {
         const days = sample([interval('driving', day1Midnight + 22 * hour, day2Midnight + 3 * hour)]);
 

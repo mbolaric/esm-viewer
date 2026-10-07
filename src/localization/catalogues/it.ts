@@ -520,9 +520,9 @@ export const it = {
     'guide.regulations.dailyRest':
         'Riposo giornaliero: riposo giornaliero regolare di almeno 11 ore (o frazionato 3 h + 9 h); riposo giornaliero ridotto di almeno 9 ore (fino a 3 volte tra i periodi di riposo settimanale).',
     'guide.regulations.downloadBasis':
-        'Come si contano i giorni: le carte del conducente devono essere scaricate entro un termine massimo di 28 giorni di calendario e le unità di bordo entro 90 giorni ai sensi del Regolamento (UE) n. 581/2010. I giorni con attività registrata vengono inoltre monitorati per evitare la sovrascrittura della memoria prima della scadenza di calendario.',
+        'Come si contano i giorni: il considerando 3 del Regolamento (UE) n. 581/2010 conta solo i giorni con attività registrata ai fini dei periodi di scaricamento di 28 e 90 giorni. L’articolo 1(4) richiede inoltre di effettuare gli scaricamenti evitando qualsiasi perdita di dati. ESM Viewer spiega questi limiti, ma non calcola le scadenze di scaricamento né monitora la sovrascrittura della memoria.',
     'guide.regulations.driverCardDeadline':
-        'Carte del conducente: devono essere scaricate e archiviate almeno una volta ogni 28 giorni.',
+        'Carte del conducente: periodo massimo di scaricamento di 28 giorni con attività registrata.',
     'guide.regulations.ec561Title': 'Regolamento (CE) n. 561/2006 (Tempi di guida e riposo)',
     'guide.regulations.eu581Title': 'Regolamento (UE) n. 581/2010 (Scadenze di scaricamento)',
     'guide.regulations.ferryTrain':
@@ -577,7 +577,7 @@ export const it = {
         'Altre norme: i rilievi sull’orario di lavoro con il profilo della direttiva 2002/15/CE usano le fasce della sezione 3 di quello stesso allegato I (orario settimanale, pausa effettivamente fruita e lavoro notturno), mentre la media di 48 ore mantiene un semplice margine oltre il limite. I profili AETR e UK usano margini semplici in ogni caso. Le anomalie sono sempre della gravità più alta. La gravità è il calcolo proprio del viewer, non una classificazione ufficiale.',
     'guide.regulations.severityTitle': 'Gravità dei rilievi',
     'guide.regulations.vehicleUnitDeadline':
-        'Unità di bordo (UB): devono essere scaricate e archiviate almeno una volta ogni 90 giorni.',
+        'Unità di bordo (UB): periodo massimo di scaricamento di 90 giorni con attività registrata.',
     'guide.regulations.weekBoundary':
         'Settimana: una settimana va dal lunedì 00:00 alla domenica 24:00 UTC. La guida e il tempo di lavoro che superano la mezzanotte della domenica vengono conteggiati in ogni settimana in cui rientrano.',
     'guide.regulations.weeklyDriving':

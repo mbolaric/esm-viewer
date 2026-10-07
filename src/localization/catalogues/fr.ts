@@ -520,9 +520,9 @@ export const fr = {
     'guide.regulations.dailyRest':
         'Repos journalier : repos journalier normal d’au moins 11 heures (ou fractionné 3 h + 9 h) ; repos journalier réduit d’au moins 9 heures (jusqu’à 3 fois entre les périodes de repos hebdomadaire).',
     'guide.regulations.downloadBasis':
-        'Décompte des jours : les cartes de conducteur doivent être téléchargées dans un délai calendaire maximal de 28 jours et les unités embarquées dans un délai de 90 jours conformément au règlement (UE) n° 581/2010. Les jours d’activité enregistrée sont également surveillés afin d’éviter l’écrasement de la mémoire avant l’échéance légale.',
+        'Décompte des jours : le considérant 3 du règlement (UE) n° 581/2010 ne compte que les jours avec une activité enregistrée dans les périodes de téléchargement de 28 et 90 jours. L’article 1(4) exige également que les téléchargements évitent toute perte de données. ESM Viewer explique ces limites, mais ne calcule pas les échéances de téléchargement et ne surveille pas l’écrasement de la mémoire.',
     'guide.regulations.driverCardDeadline':
-        'Cartes de conducteur : doivent être téléchargées et archivées au moins une fois tous les 28 jours.',
+        'Cartes de conducteur : période maximale de téléchargement de 28 jours avec une activité enregistrée.',
     'guide.regulations.ec561Title': 'Règlement (CE) n° 561/2006 (Temps de conduite et de repos)',
     'guide.regulations.eu581Title': 'Règlement (UE) n° 581/2010 (Échéances de téléchargement)',
     'guide.regulations.ferryTrain':
@@ -577,7 +577,7 @@ export const fr = {
         'Autres règles : les constatations sur le temps de travail avec le profil de la directive 2002/15/CE utilisent les bandes de la section 3 de cette même annexe I (temps de travail hebdomadaire, pause effectivement prise et travail de nuit), tandis que la moyenne de 48 heures conserve une simple marge au-dessus de la limite. Les profils AETR et UK utilisent des marges simples en toutes circonstances. Les anomalies sont toujours de la gravité la plus élevée. La gravité est le calcul propre du viewer, pas une classification officielle.',
     'guide.regulations.severityTitle': 'Gravité des constatations',
     'guide.regulations.vehicleUnitDeadline':
-        'Unités embarquées (UE) : doivent être téléchargées et archivées au moins une fois tous les 90 jours.',
+        'Unités embarquées (UE) : période maximale de téléchargement de 90 jours avec une activité enregistrée.',
     'guide.regulations.weekBoundary':
         'Semaine : une semaine va du lundi 00:00 au dimanche 24:00 UTC. La conduite et le temps de travail qui passent minuit le dimanche comptent dans chaque semaine où ils se situent.',
     'guide.regulations.weeklyDriving':

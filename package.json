@@ -1,7 +1,7 @@
 {
     "name": "esm-viewer",
     "productName": "ESM Viewer",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "private": true,
     "description": "A local-first desktop viewer for digital tachograph files.",
     "homepage": "https://github.com/mbolaric/esm-viewer",

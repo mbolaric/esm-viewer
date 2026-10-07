@@ -148,10 +148,6 @@ describe('UserGuideDialog', () => {
         expect(screen.getByText(/Serious, Very Serious or Most Serious/u)).toBeTruthy();
         expect(screen.getByText(/^Two-week weekly rest: Only complete UTC calendar weeks/u)).toBeTruthy();
         expect(screen.getByText(/^Daily-driving severity: On a permitted ten-hour day/u)).toBeTruthy();
-        expect(
-            screen.getByText(
-                /^How days are counted: Driver cards must be downloaded within a maximum calendar period of 28 days/u,
-            ),
-        ).toBeTruthy();
+        expect(screen.getByText(/^How days are counted:.*counts only days with recorded activity/u)).toBeTruthy();
     });
 });

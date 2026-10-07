@@ -665,8 +665,8 @@ export const de = {
     'guide.regulations.dailyRest':
         'Tägliche Ruhezeit: regelmäßige tägliche Ruhezeit von mindestens 11 Stunden (oder aufgeteilt in 3 + 9 Stunden); reduzierte tägliche Ruhezeit von mindestens 9 Stunden (höchstens dreimal zwischen zwei wöchentlichen Ruhezeiten).',
     'guide.regulations.downloadBasis':
-        'Zählweise der Tage: Fahrerkarten müssen gemäß Verordnung (EU) Nr. 581/2010 nach spätestens 28 Kalendertagen und Fahrzeugeinheiten nach spätestens 90 Tagen ausgelesen werden. Tage mit aufgezeichneter Aktivität werden zusätzlich überwacht, um ein Überschreiben des Kartenspeichers vor der Kalenderfrist zu verhindern.',
-    'guide.regulations.driverCardDeadline': 'Fahrerkarten: Müssen spätestens alle 28 Tage ausgelesen und archiviert werden.',
+        'Zählweise der Tage: Nach Erwägungsgrund 3 der Verordnung (EU) Nr. 581/2010 zählen für die Auslesezeiträume von 28 und 90 Tagen nur Tage mit aufgezeichneter Aktivität. Artikel 1(4) verlangt außerdem, dass beim Auslesen kein Datenverlust entsteht. ESM Viewer erläutert diese Grenzen, berechnet aber keine Auslesefristen und überwacht kein Überschreiben des Speichers.',
+    'guide.regulations.driverCardDeadline': 'Fahrerkarten: Maximaler Auslesezeitraum von 28 Tagen mit aufgezeichneter Aktivität.',
     'guide.regulations.ec561Title': 'Verordnung (EG) Nr. 561/2006 (Lenk- und Ruhezeiten)',
     'guide.regulations.eu581Title': 'Verordnung (EU) Nr. 581/2010 (Auslesefristen)',
     'guide.regulations.ferryTrain':
@@ -720,7 +720,7 @@ export const de = {
         'Übrige Vorschriften: Feststellungen zur Arbeitszeit im Profil der Richtlinie 2002/15/EG verwenden die Bänder in Abschnitt 3 desselben Anhangs I (wöchentliche Arbeitszeit, genommene Pause und Nachtarbeit); der 48-Stunden-Durchschnitt behält einen einfachen Abstand zum Grenzwert. Die Profile AETR und UK verwenden durchgehend einfache Abstände. Anomalien sind immer schwerste Verstöße. Der Schweregrad ist die eigene Berechnung des Viewers, keine amtliche Einstufung.',
     'guide.regulations.severityTitle': 'Schweregrad der Feststellungen',
     'guide.regulations.vehicleUnitDeadline':
-        'Fahrzeugeinheiten (Massenspeicher): Müssen spätestens alle 90 Tage ausgelesen und archiviert werden.',
+        'Fahrzeugeinheiten (Massenspeicher): Maximaler Auslesezeitraum von 90 Tagen mit aufgezeichneter Aktivität.',
     'guide.regulations.weekBoundary':
         'Woche: Eine Woche dauert von Montag 00:00 Uhr bis Sonntag 24:00 Uhr (UTC). Lenk- und Arbeitszeit, die über Mitternacht am Sonntag hinausgeht, wird in jeder Woche gezählt, in die sie fällt.',
     'guide.regulations.weeklyDriving':

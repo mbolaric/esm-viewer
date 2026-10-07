@@ -474,7 +474,9 @@ the existing preferences store (`localStorage` in the current Tauri host,
   start), with per-cell "differs" highlighting, remove/reopen/
   clear-all actions, and export of the comparison itself to HTML or PDF.
   Removing an entry keeps it out of the history until that file is opened
-  again, so a removal survives every later re-synchronisation of the session;
+  successfully again, including reopening the current file without closing it.
+  A removal survives later re-synchronisation, integrity updates and failed or
+  cancelled opens;
   clear-all empties the history and the open document returns as the first
   entry.
   Rendered with the fixed-viewport desktop data grid pattern (`fillHeight` on
@@ -762,8 +764,12 @@ itself lives once, in `continuous-driving.ts`: `walkContinuousDriving` applies
 the 45-minute, 15 + 30 and credited co-driver availability resets and is what
 `evaluateBreakInfringements` reports from, and `sampleContinuousDrivingByDay`
 reads the same walk to give each UTC day its closing value and peak. The
-Activities notice therefore presents the evaluation's own rule machine instead
-of a second copy of it, and unrecorded time, midnight-spanning breaks and
+sample is computed once per midnight and reused for conflicting generation
+rows that display the same day, including when a later break resets its closing
+value. Updates at or before a requested midnight establish its opening value,
+so a completed rest across missing days cannot carry an earlier peak into it.
+The Activities notice therefore presents the evaluation's own rule
+machine instead of a second copy of it, and unrecorded time, midnight-spanning breaks and
 missing days cannot make the notice disagree with the findings beside it.
 
 The night-work daily limit (Art. 7(1) of Directive 2002/15/EC, "in each
@@ -1510,18 +1516,22 @@ decision, and this list must be updated with it.
   compares the path text, and the native `export_destination_is_source` command
   (`export_guard.rs`) canonicalises both paths, falls back to the platform file
   identity, and finally compares the destination's bytes against the SHA-256 of
-  the opened document. That last comparison is what protects a document the user
-  dropped into the window: the webview receives no path for a dropped file, so
+  the opened document. Windows uses the stable Win32 file-handle API to compare
+  volume and file identifiers; Unix uses device and inode identifiers. Digest
+  reads are bounded by the native 50 MB source limit. That last comparison is
+  what protects a document the user dropped into the window: the webview receives no path for a dropped file, so
   the renderer registers an opaque token and only the digest identifies the
   source. It also means an export refuses to overwrite a byte-identical copy of
   an opened tachograph file, which is intended — writing export output over
   tachograph data is what the guard exists to stop. No webview permission is
   involved, which is why the `fs` grant list no longer needs `stat`.
   The guard has three outcomes: same file, a proven different file, or
-  unavailable. Only the second may be written to — an IPC failure or a
-  non-boolean answer is reported to the diagnostic log and the export is refused
+  unavailable. Only the second may be written to — a filesystem access or read
+  failure, an IPC failure or a non-boolean answer is reported to the diagnostic
+  log and the export is refused
   with `guardUnavailable` instead of being mistaken for a proven-different
-  destination.
+  destination. Only a not-found filesystem result permits treating a destination
+  as absent.
 - **The print webview releases its AppKit handles only on the main thread.** The
   hidden `WKWebView` and its window are handed between main-thread closures as
   raw retained pointers (`print_engine.rs`). The holder consumes them exactly
@@ -1562,12 +1572,13 @@ decision, and this list must be updated with it.
   bound and rest-deficit bands exclude it, exactly as Annex I of Regulation
   (EU) 2016/403 words them, so exactly 8 hours of reduced daily rest is minor
   while 7h59 is serious (§6).
-- **Download deadlines follow calendar days and memory capacity.** Per Regulation (EU)
-  No 581/2010 Art. 1(3), the maximum period within which data must be downloaded is
-  28 calendar days for driver cards and 90 calendar days for vehicle units. The 28th
-  or 90th calendar day is due and subsequent days are overdue. Days with recorded
-  activity are also monitored because card chip storage (Annex 1C) guarantees capacity
-  for at least 28 days of average driver activity before circular overwrite (§7).
+- **Download periods count days with recorded activity.** Regulation (EU)
+  No 581/2010 Art. 1(3) sets maximum download periods of 28 days for driver cards
+  and 90 days for vehicle units; Recital 3 states that only days with recorded
+  activity count. Article 1(4) also requires downloads to avoid any loss of data.
+  The User Guide explains these limits in every supported locale. The viewer
+  does not calculate download due dates or monitor memory overwrite.
+  [Official regulation](https://eur-lex.europa.eu/legal-content/EN/TXT/PDF/?uri=CELEX%3A32010R0581).
 - **The audit bundle must match its report exactly.** The export is checked
   against the manifest the embedded report was built from; any change in
   between rejects with an "archive changed, try again" failure instead of

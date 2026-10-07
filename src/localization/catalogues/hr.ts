@@ -513,8 +513,9 @@ export const hr = {
     'guide.regulations.dailyRest':
         'Dnevno razdoblje odmora: redovno dnevno razdoblje odmora od najmanje 11 sati (ili u dva dijela: 3 h + 9 h); skraćeno dnevno razdoblje odmora od najmanje 9 sati (do 3 puta između tjednih razdoblja odmora).',
     'guide.regulations.downloadBasis':
-        'Način brojanja dana: vozačke kartice moraju se preuzeti u maksimalnom kalendarskom roku od 28 dana, a jedinice u vozilu u roku od 90 dana prema Uredbi (EU) br. 581/2010. Dani sa zabilježenom aktivnošću također se prate kako bi se spriječilo prepisivanje memorije prije kalendarskog roka.',
-    'guide.regulations.driverCardDeadline': 'Vozačke kartice: moraju se preuzimati i arhivirati najmanje jednom svakih 28 dana.',
+        'Način brojanja dana: prema uvodnoj izjavi 3 Uredbe (EU) br. 581/2010 u razdoblja preuzimanja od 28 i 90 dana računaju se samo dani sa zabilježenom aktivnošću. Članak 1(4) također zahtijeva preuzimanje bez gubitka podataka. ESM Viewer objašnjava ta ograničenja, ali ne izračunava rokove preuzimanja niti prati prepisivanje memorije.',
+    'guide.regulations.driverCardDeadline':
+        'Vozačke kartice: najdulje razdoblje preuzimanja je 28 dana sa zabilježenom aktivnošću.',
     'guide.regulations.ec561Title': 'Uredba (EZ) br. 561/2006 (Vrijeme vožnje i odmora)',
     'guide.regulations.eu581Title': 'Uredba (EU) br. 581/2010 (Rokovi preuzimanja podataka)',
     'guide.regulations.ferryTrain':
@@ -566,7 +567,7 @@ export const hr = {
         'Ostala pravila: nalazi o radnom vremenu u profilu Direktive 2002/15/EZ koriste raspone iz odjeljka 3 istog Priloga I. (tjedno radno vrijeme, uzeta pauza i noćni rad), dok prosjek od 48 sati zadržava jednostavnu razliku u odnosu na ograničenje. Profili AETR i UK koriste jednostavne razlike u svim slučajevima. Anomalije su uvijek najteža povreda. Težina je izračun viewera, a ne službena klasifikacija.',
     'guide.regulations.severityTitle': 'Težina nalaza',
     'guide.regulations.vehicleUnitDeadline':
-        'Vozilne jedinice (VJ): moraju se preuzimati i arhivirati najmanje jednom svakih 90 dana.',
+        'Jedinice u vozilu (VU): najdulje razdoblje preuzimanja je 90 dana sa zabilježenom aktivnošću.',
     'guide.regulations.weekBoundary':
         'Tjedan: tjedan traje od ponedjeljka u 00:00 do nedjelje u 24:00 UTC. Vožnja i radno vrijeme koji prelaze ponoć u nedjelju računaju se u svaki tjedan u kojem se nalaze.',
     'guide.regulations.weeklyDriving':

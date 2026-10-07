@@ -505,8 +505,8 @@ export const en = {
     'guide.regulations.dailyRest':
         'Daily rest: Regular daily rest of at least 11 hours (or split 3h + 9h); reduced daily rest of at least 9 hours (up to 3 times between weekly rest periods).',
     'guide.regulations.downloadBasis':
-        'How days are counted: Driver cards must be downloaded within a maximum calendar period of 28 days, and vehicle units within 90 days, under Regulation (EU) No 581/2010. Recorded activity days are also monitored to prevent memory overwrite before the calendar deadline.',
-    'guide.regulations.driverCardDeadline': 'Driver cards: Must be downloaded and archived at least once every 28 days.',
+        'How days are counted: Regulation (EU) No 581/2010, recital 3, counts only days with recorded activity toward the 28-day and 90-day download periods. Article 1(4) also requires downloads to avoid any loss of data. ESM Viewer explains these limits but does not calculate download due dates or monitor memory overwrite.',
+    'guide.regulations.driverCardDeadline': 'Driver cards: Maximum download period of 28 days with recorded activity.',
     'guide.regulations.ec561Title': 'Regulation (EC) No 561/2006 (Driving & Rest Times)',
     'guide.regulations.eu581Title': 'Regulation (EU) No 581/2010 (Download Deadlines)',
     'guide.regulations.ferryTrain':
@@ -558,7 +558,7 @@ export const en = {
     'guide.regulations.severityOther':
         'Other rules: Working time findings under the Directive 2002/15/EC profile use the bands in section 3 of that same Annex I (weekly working time, the break taken, and night work), while the 48-hour average keeps a simple margin over the limit. The AETR and UK profiles use simple margins throughout. Anomalies are always Most Serious. Severity is the viewer’s own calculation, not an official classification.',
     'guide.regulations.severityTitle': 'Severity of findings',
-    'guide.regulations.vehicleUnitDeadline': 'Vehicle units (VU): Must be downloaded and archived at least once every 90 days.',
+    'guide.regulations.vehicleUnitDeadline': 'Vehicle units (VU): Maximum download period of 90 days with recorded activity.',
     'guide.regulations.weekBoundary':
         'Weeks: A week runs from Monday 00:00 to Sunday 24:00 UTC. Driving and working time that crosses midnight on Sunday counts in each week it lies in.',
     'guide.regulations.weeklyDriving':

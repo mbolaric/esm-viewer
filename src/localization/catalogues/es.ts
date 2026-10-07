@@ -520,9 +520,9 @@ export const es = {
     'guide.regulations.dailyRest':
         'Descanso diario: descanso diario normal de al menos 11 horas (o fraccionado 3 h + 9 h); descanso diario reducido de al menos 9 horas (hasta 3 veces entre períodos de descanso semanal).',
     'guide.regulations.downloadBasis':
-        'Cómo se cuentan los días: las tarjetas de conductor deben descargarse en un plazo máximo de 28 días naturales y las unidades intravehiculares en 90 días naturales conforme al Reglamento (UE) n.º 581/2010. Los días con actividad registrada también se supervisan para evitar la sobreescritura de memoria antes del plazo legal.',
+        'Cómo se cuentan los días: el considerando 3 del Reglamento (UE) n.º 581/2010 cuenta solo los días con actividad registrada para los períodos de descarga de 28 y 90 días. El artículo 1(4) también exige que las descargas eviten cualquier pérdida de datos. ESM Viewer explica estos límites, pero no calcula las fechas de vencimiento de las descargas ni supervisa la sobreescritura de memoria.',
     'guide.regulations.driverCardDeadline':
-        'Tarjetas de conductor: deben descargarse y archivarse al menos una vez cada 28 días.',
+        'Tarjetas de conductor: período máximo de descarga de 28 días con actividad registrada.',
     'guide.regulations.ec561Title': 'Reglamento (CE) n.º 561/2006 (Tiempos de conducción y descanso)',
     'guide.regulations.eu581Title': 'Reglamento (UE) n.º 581/2010 (Plazos de descarga)',
     'guide.regulations.ferryTrain':
@@ -577,7 +577,7 @@ export const es = {
         'Otras normas: los hallazgos sobre tiempo de trabajo con el perfil de la Directiva 2002/15/CE usan las bandas de la sección 3 de ese mismo anexo I (tiempo de trabajo semanal, pausa efectivamente tomada y trabajo nocturno); la media de 48 horas mantiene un margen simple sobre el límite. Los perfiles AETR y UK usan márgenes simples en todos los casos. Las anomalías son siempre de la gravedad más alta. La gravedad es el cálculo propio del visor, no una clasificación oficial.',
     'guide.regulations.severityTitle': 'Gravedad de los hallazgos',
     'guide.regulations.vehicleUnitDeadline':
-        'Unidades instaladas en el vehículo (UI): deben descargarse y archivarse al menos una vez cada 90 días.',
+        'Unidades instaladas en el vehículo (UI): período máximo de descarga de 90 días con actividad registrada.',
     'guide.regulations.weekBoundary':
         'Semana: una semana va desde el lunes 00:00 hasta el domingo 24:00 UTC. La conducción y el tiempo de trabajo que pasan la medianoche del domingo cuentan en cada semana en la que se encuentran.',
     'guide.regulations.weeklyDriving':

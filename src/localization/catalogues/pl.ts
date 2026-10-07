@@ -513,8 +513,9 @@ export const pl = {
     'guide.regulations.dailyRest':
         'Dzienny okres odpoczynku: regularny dzienny okres odpoczynku trwający co najmniej 11 godzin (lub w dwóch częściach: 3 godz. + 9 godz.); skrócony dzienny okres odpoczynku trwający co najmniej 9 godzin (do 3 razy między tygodniowymi okresami odpoczynku).',
     'guide.regulations.downloadBasis':
-        'Sposób liczenia dni: karty kierowcy muszą być pobierane w maksymalnym terminie 28 dni kalendarzowych, a tachografy (VU) w terminie 90 dni zgodnie z rozporządzeniem (UE) nr 581/2010. Dni z zarejestrowaną aktywnością są dodatkowo monitorowane, aby zapobiec nadpisaniu pamięci przed upływem terminu kalendarzowego.',
-    'guide.regulations.driverCardDeadline': 'Karty kierowców: muszą być pobierane i archiwizowane co najmniej raz na 28 dni.',
+        'Sposób liczenia dni: zgodnie z motywem 3 rozporządzenia (UE) nr 581/2010 w okresach pobierania danych wynoszących 28 i 90 dni liczy się tylko dni z zarejestrowaną aktywnością. Artykuł 1(4) wymaga również pobierania danych bez ich utraty. ESM Viewer wyjaśnia te limity, ale nie oblicza terminów pobierania danych ani nie monitoruje nadpisywania pamięci.',
+    'guide.regulations.driverCardDeadline':
+        'Karty kierowców: maksymalny okres pobierania danych to 28 dni z zarejestrowaną aktywnością.',
     'guide.regulations.ec561Title': 'Rozporządzenie (WE) nr 561/2006 (Czas jazdy i odpoczynku)',
     'guide.regulations.eu581Title': 'Rozporządzenie (UE) nr 581/2010 (Terminy pobierania danych)',
     'guide.regulations.ferryTrain':
@@ -568,7 +569,7 @@ export const pl = {
         'Pozostałe przepisy: ustalenia dotyczące czasu pracy w profilu dyrektywy 2002/15/WE używają progów z sekcji 3 tego samego załącznika I (tygodniowy czas pracy, faktycznie wykorzystana przerwa i praca w porze nocnej), natomiast średnia 48 godzin zachowuje prosty margines ponad limit. Profile AETR i UK stosują proste marginesy w każdym przypadku. Anomalie są zawsze najpoważniejsze. Dotkliwość to własne obliczenie viewera, a nie oficjalna klasyfikacja.',
     'guide.regulations.severityTitle': 'Dotkliwość ustaleń',
     'guide.regulations.vehicleUnitDeadline':
-        'Jednostki pokładowe (JP): muszą być pobierane i archiwizowane co najmniej raz na 90 dni.',
+        'Jednostki pokładowe (JP): maksymalny okres pobierania danych to 90 dni z zarejestrowaną aktywnością.',
     'guide.regulations.weekBoundary':
         'Tydzień: tydzień trwa od poniedziałku od 00:00 do niedzieli do 24:00 UTC. Czas prowadzenia pojazdu i czas pracy przekraczające północ w niedzielę liczą się w każdym tygodniu, w którym się mieszczą.',
     'guide.regulations.weeklyDriving':

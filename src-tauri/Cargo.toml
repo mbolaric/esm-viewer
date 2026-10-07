@@ -1,6 +1,6 @@
 [package]
 name = "esm-viewer"
-version = "0.1.0"
+version = "0.2.0"
 description = "A local-first desktop viewer for digital tachograph files."
 authors = ["Milan Bolaric"]
 edition = "2024"

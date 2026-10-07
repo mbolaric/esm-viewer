@@ -124,7 +124,12 @@ export function sampleContinuousDrivingByDay(
 
     let observationIndex = 0;
     let valueMs = 0;
+    const samplesByMidnight = new Map<number, IContinuousDrivingDaySample>();
     return midnights.map((midnightUtc) => {
+        const existing = samplesByMidnight.get(midnightUtc);
+        if (existing !== undefined) {
+            return existing;
+        }
         const dayEnd = midnightUtc + MILLISECONDS_PER_DAY;
         let peakMs = valueMs;
         for (;;) {
@@ -133,9 +138,12 @@ export function sampleContinuousDrivingByDay(
                 break;
             }
             valueMs = observation.valueMs;
-            peakMs = Math.max(peakMs, observation.valueMs);
+            // Skipped dates can leave earlier resets unread; these establish the opening value, not this day's peak.
+            peakMs = observation.at <= midnightUtc ? valueMs : Math.max(peakMs, valueMs);
             observationIndex += 1;
         }
-        return { midnightUtc, peakMs, valueMs };
+        const sample = { midnightUtc, peakMs, valueMs };
+        samplesByMidnight.set(midnightUtc, sample);
+        return sample;
     });
 }
