@@ -27,6 +27,13 @@ function dependencyVersions(value: unknown): Readonly<Record<string, string>> {
     return versions;
 }
 
+export function decodePackageVersion(value: unknown): string {
+    if (!isRecord(value) || typeof value['version'] !== 'string' || value['version'].trim().length === 0) {
+        throw new TypeError('A package must declare a non-empty version.');
+    }
+    return value['version'];
+}
+
 export function decodePackageManifest(value: unknown): IPackageManifest {
     if (!isRecord(value) || typeof value['name'] !== 'string' || value['name'].length === 0) {
         throw new TypeError('A package manifest must declare its name.');

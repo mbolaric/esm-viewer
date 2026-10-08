@@ -53,6 +53,9 @@ jobs:
             - name: Install frozen dependency graph
               run: pnpm install --frozen-lockfile
 
+            - name: Verify release versions and build policy
+              run: pnpm exec vitest run apps/viewer/__tests__/build-policy.test.ts --project node
+
             - name: Prepare macOS icon compiler
               if: startsWith(matrix.platform, 'macos')
               run: |

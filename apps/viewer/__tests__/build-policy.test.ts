@@ -5,15 +5,31 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { createViewerRendererConfig, viewerCodeSplittingGroups } from '../../../renderer.config.js';
-import { decodePackageManifest } from '../../../tools/dependencies/package-manifest.js';
+import { decodePackageManifest, decodePackageVersion } from '../../../tools/dependencies/package-manifest.js';
 import { decodeTauriConfiguration } from '../../../tools/quality/tauri-configuration.js';
 
 describe('standalone build policy', () => {
+    it('keeps installer, frontend and native versions aligned with release tags', () => {
+        const manifest: unknown = JSON.parse(readFileSync(new URL('../../../package.json', import.meta.url), 'utf8'));
+        const tauri: unknown = JSON.parse(readFileSync(new URL('../../../src-tauri/tauri.conf.json', import.meta.url), 'utf8'));
+        const version = decodePackageVersion(manifest);
+        expect(decodePackageVersion(tauri)).toBe(version);
+
+        const cargo = readFileSync(new URL('../../../src-tauri/Cargo.toml', import.meta.url), 'utf8');
+        const packageSection = cargo.split(/^\[/mu).find((section) => section.startsWith('package]'));
+        expect(packageSection?.match(/^version\s*=\s*"([^"]+)"/mu)?.[1]).toBe(version);
+
+        if (process.env['GITHUB_REF_TYPE'] === 'tag') {
+            expect(process.env['GITHUB_REF_NAME']).toBe(`v${version}`);
+        }
+    });
+
     it('keeps release packaging build profiles aligned with artifact discovery', () => {
         const workflow = readFileSync(new URL('../../../.github/workflows/release.yml', import.meta.url), 'utf8');
         expect(workflow).toContain("includeDebug: ${{ matrix.build_type == 'debug' }}");
         expect(workflow).toContain("includeRelease: ${{ matrix.build_type == 'release' }}");
         expect(workflow).toContain("args: ${{ matrix.build_type == 'debug' && '--features devtools' || '' }}");
+        expect(workflow).toContain('run: pnpm exec vitest run apps/viewer/__tests__/build-policy.test.ts --project node');
     });
 
     it('consumes the public renderer preset with independently owned paths and singleton runtimes', () => {
