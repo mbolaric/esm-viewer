@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { createBrowserKeyValueStore } from '../browser-key-value-store.js';
 
@@ -49,10 +49,25 @@ describe('createBrowserKeyValueStore', () => {
     it('never throws when storage is unavailable', () => {
         const store = createBrowserKeyValueStore(throwingStorage);
 
+        expect(store.readItem?.('key')).toEqual({ error: 'ioFailure', ok: false });
         expect(store.getItem('key')).toBeNull();
         expect(store.setItem('key', 'value')).toBe(false);
         expect(() => {
             store.removeItem('key');
         }).not.toThrow();
+    });
+
+    it('distinguishes missing values from a failed storage read', () => {
+        const storage = new MemoryStorage();
+        const store = createBrowserKeyValueStore(() => storage);
+
+        expect(store.readItem?.('key')).toEqual({ ok: true, value: null });
+        store.setItem('key', 'value');
+        expect(store.readItem?.('key')).toEqual({ ok: true, value: 'value' });
+        vi.spyOn(storage, 'getItem').mockImplementationOnce(() => {
+            throw new Error('Synthetic storage read failure.');
+        });
+        expect(store.readItem?.('key')).toEqual({ error: 'ioFailure', ok: false });
+        expect(store.readItem?.('key')).toEqual({ ok: true, value: 'value' });
     });
 });

@@ -281,6 +281,53 @@ describe('ViewerDocumentController', () => {
         await harness.controller.dispose();
     });
 
+    it('keeps a replacement opening when verification of the current document finishes', async () => {
+        const pendingCertificate = Promise.withResolvers<Result<ArrayBuffer, IntegrityFailureCode>>();
+        let verifyCalled = 0;
+        const harness = createViewerDocumentHarness({
+            loadErcRootCertificateMock: () => pendingCertificate.promise,
+            preferencesAutoRun: true,
+            verifyMock: successfulVerifyMock(() => {
+                verifyCalled += 1;
+            }),
+        });
+        const firstOpening = harness.controller.open();
+        await waitFor(() => {
+            expect(harness.parserRequestCount()).toBe(1);
+        });
+        harness.completeLatestParser(harness.successfulParserResult());
+        await firstOpening;
+        expect(harness.controller.verifying).toBe(true);
+
+        const replacementOpening = harness.controller.open();
+        await waitFor(() => {
+            expect(harness.parserRequestCount()).toBe(2);
+        });
+        const openingSnapshot = harness.controller.snapshot;
+        pendingCertificate.resolve({ ok: true, value: new ArrayBuffer(10) });
+        await waitFor(() => {
+            expect(harness.controller.snapshot.current?.integrity.status).toBe('valid');
+            expect(harness.controller.verifying).toBe(false);
+        });
+
+        expect(harness.controller.snapshot).toMatchObject({
+            candidateDisplayName: openingSnapshot.candidateDisplayName,
+            error: openingSnapshot.error,
+            status: 'opening',
+        });
+        expect(harness.controller.snapshot.current?.source).toBe(openingSnapshot.current?.source);
+        expect(verifyCalled).toBe(1);
+
+        harness.completeLatestParser(harness.successfulParserResult());
+        await replacementOpening;
+        await waitFor(() => {
+            expect(harness.controller.snapshot.status).toBe('ready');
+            expect(verifyCalled).toBe(2);
+            expect(harness.controller.verifying).toBe(false);
+        });
+        await harness.controller.dispose();
+    });
+
     it('verifies a newly opened document while an older verification is still running', async () => {
         let verifyCalled = 0;
         const pendingCertificates: ((result: Result<ArrayBuffer, IntegrityFailureCode>) => void)[] = [];

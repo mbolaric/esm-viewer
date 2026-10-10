@@ -79,10 +79,13 @@ export function isVuVerifyResult(value: unknown): value is VuVerifyResult {
 }
 
 export function decodeParserVuVerification(
-    value: VuVerifyResult,
+    value: unknown,
     generation: VerificationGeneration,
     sourcePaths: IParserVuVerificationSourcePaths,
 ): Result<VerifiedIntegrityAssessment | IIntegrityChainVerified, ParserVuVerificationDecodeError> {
+    if (!isVuVerifyResult(value)) {
+        return err('invalidVerificationResult');
+    }
     if (!isBoundaryRecord(value) || value.status === 'Unsigned') {
         return err('verificationResultOutsideBounds');
     }

@@ -113,7 +113,7 @@ function nationAlphaCodes(): ParserNationAlphaCodes {
 
 const nations = nationAlphaCodes();
 
-function decode(value: SerializedTachographData): ReturnType<typeof decodeParserDocument> {
+function decode(value: unknown): ReturnType<typeof decodeParserDocument> {
     return decodeParserDocument(value, nations);
 }
 
@@ -1385,6 +1385,22 @@ describe('decodeParserDocument', () => {
             error: 'invalidVehicleUnitContent',
             ok: false,
         });
+    });
+
+    it.each([undefined, null, 'not a document', [], {}, { kind: 'unknown', data: {} }, { kind: 'vuGen2', data: null }])(
+        'rejects unknown responses outside the document envelope %#',
+        (value) => {
+            expect(decode(value)).toEqual({ error: 'parserResultOutsideBounds', ok: false });
+        },
+    );
+
+    it.each([undefined, null, 'not a header', {}])('rejects missing or invalid headers without throwing %#', (header) => {
+        expect(
+            decode({
+                data: { dataFiles: [], ...(header === undefined ? {} : { header }), transferResParams: [] },
+                kind: 'vuGen2',
+            }),
+        ).toEqual({ error: 'invalidHeader', ok: false });
     });
 
     it('rejects typed parser data that violates the bounded JSON contract', () => {

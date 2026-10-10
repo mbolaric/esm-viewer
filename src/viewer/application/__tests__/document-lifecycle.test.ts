@@ -1,5 +1,5 @@
-import { classifyParseError, decodeFileMetadata, type FileDisplayName } from '#contracts';
-import { isUtcTimestamp } from '#viewer-domain';
+import { classifyParseError, decodeFileMetadata, err, type FileDisplayName } from '#contracts';
+import { isUtcTimestamp, type IntegrityAssessment } from '#viewer-domain';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -23,6 +23,11 @@ interface ISessionHarness {
     readonly disposeCount: () => number;
     readonly session: IOpenedDocumentSession;
 }
+
+const failedIntegrity: IntegrityAssessment = {
+    code: 'verificationFailed',
+    status: 'failed',
+};
 
 function openedDocument(displayName: string, digestCharacter: string): OpenedTachographDocument {
     const metadata = decodeFileMetadata({
@@ -97,6 +102,116 @@ async function openSession(controller: DocumentLifecycleController, sessionHarne
 }
 
 describe('DocumentLifecycleController', () => {
+    it('ignores an integrity update when no document is open', () => {
+        const controller = new DocumentLifecycleController();
+        const snapshot = controller.snapshot;
+
+        expect(controller.updateIntegrity(failedIntegrity)).toBe(false);
+        expect(controller.snapshot).toBe(snapshot);
+    });
+
+    it('updates a ready document without mutating the previous document or snapshot', async () => {
+        const controller = new DocumentLifecycleController();
+        const current = session(openedDocument('current.ddd', 'a'));
+        await openSession(controller, current);
+        const snapshot = controller.snapshot;
+        const document = current.session.document;
+        const integrity = document.integrity;
+
+        expect(controller.updateIntegrity(failedIntegrity)).toBe(true);
+        expect(controller.snapshot).toEqual({
+            ...snapshot,
+            current: { ...document, integrity: failedIntegrity },
+        });
+        expect(controller.snapshot.current).toBe(current.session.document);
+        expect(controller.snapshot.current).not.toBe(document);
+        expect(snapshot.current).toBe(document);
+        expect(document.integrity).toBe(integrity);
+    });
+
+    it.each(['completed', 'failed', 'cancelled'] as const)(
+        'preserves opening state during an integrity update until the replacement is %s',
+        async (outcome) => {
+            const controller = new DocumentLifecycleController();
+            const current = session(openedDocument('current.ddd', 'a'));
+            const replacement = session(openedDocument('replacement.ddd', 'b'));
+            await openSession(controller, current);
+            const replacementOperation = operation(replacement.session.document.source.displayName);
+            const completion = controller.openCandidate(replacementOperation.operation);
+            const openingSnapshot = controller.snapshot;
+
+            expect(controller.updateIntegrity(failedIntegrity)).toBe(true);
+            expect(controller.snapshot).toEqual({
+                ...openingSnapshot,
+                current: { ...openingSnapshot.current, integrity: failedIntegrity },
+            });
+            expect(current.session.document.integrity).toBe(failedIntegrity);
+
+            if (outcome === 'cancelled') {
+                expect(controller.cancelCandidate()).toBe(true);
+            }
+            const error = classifyParseError('malformedData');
+            replacementOperation.complete(outcome === 'failed' ? err(error) : { ok: true, value: replacement.session });
+            await completion;
+
+            expect(controller.snapshot).toEqual({
+                candidateDisplayName: outcome === 'failed' ? replacement.session.document.source.displayName : null,
+                current: outcome === 'completed' ? replacement.session.document : current.session.document,
+                error: outcome === 'failed' ? error : null,
+                status: outcome === 'failed' ? 'failed' : 'ready',
+            });
+            expect(controller.snapshot.current?.integrity).toBe(
+                outcome === 'completed' ? replacement.session.document.integrity : failedIntegrity,
+            );
+            expect(current.disposeCount()).toBe(outcome === 'completed' ? 1 : 0);
+            expect(replacement.disposeCount()).toBe(outcome === 'cancelled' ? 1 : 0);
+        },
+    );
+
+    it.each(['replacement', 'acquisition'] as const)(
+        'preserves a failed %s and its error when integrity changes',
+        async (failureSource) => {
+            const controller = new DocumentLifecycleController();
+            const current = session(openedDocument('current.ddd', 'a'));
+            await openSession(controller, current);
+            const error = classifyParseError('fileReadFailed');
+            if (failureSource === 'replacement') {
+                const replacement = operation(openedDocument('failed.ddd', 'b').source.displayName);
+                const completion = controller.openCandidate(replacement.operation);
+                replacement.complete(err(error));
+                await completion;
+            } else {
+                controller.reportOpenFailure(error);
+            }
+            const failedSnapshot = controller.snapshot;
+
+            expect(controller.updateIntegrity(failedIntegrity)).toBe(true);
+            expect(controller.snapshot).toEqual({
+                ...failedSnapshot,
+                current: current.session.document,
+            });
+            expect(controller.snapshot.current?.integrity).toBe(failedIntegrity);
+            expect(controller.dismissFailure()).toBe(true);
+            expect(controller.snapshot).toMatchObject({ current: current.session.document, error: null, status: 'ready' });
+        },
+    );
+
+    it('preserves a cleanup error attached to a ready document when integrity changes', async () => {
+        const controller = new DocumentLifecycleController();
+        const previous = session(openedDocument('previous.ddd', 'a'));
+        const current = session(openedDocument('current.ddd', 'b'));
+        const error = classifyParseError('documentCleanupFailed');
+        previous.session.dispose = () => Promise.resolve(err(error));
+        await openSession(controller, previous);
+        await openSession(controller, current);
+        const snapshot = controller.snapshot;
+        expect(snapshot).toMatchObject({ error, status: 'ready' });
+
+        expect(controller.updateIntegrity(failedIntegrity)).toBe(true);
+        expect(controller.snapshot).toEqual({ ...snapshot, current: current.session.document });
+        expect(controller.snapshot.current?.integrity).toBe(failedIntegrity);
+    });
+
     it('opens and atomically replaces documents while disposing the prior session', async () => {
         const controller = new DocumentLifecycleController();
         const first = session(openedDocument('first.ddd', 'a'));

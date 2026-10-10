@@ -53,11 +53,14 @@ export function isVerifyResult(value: unknown): value is VerifyResult {
 }
 
 export function decodeParserVerification(
-    value: VerifyResult,
+    value: unknown,
     generation: VerificationGeneration,
     dataFiles: IJsonRecord,
     dataFileSourcePaths: ParserDataFileSourcePaths,
 ): Result<IParserVerificationEvidence, ParserVerificationDecodeError> {
+    if (!isVerifyResult(value)) {
+        return err('invalidVerificationResult');
+    }
     if (!isBoundaryRecord(value)) {
         return err('verificationResultOutsideBounds');
     }

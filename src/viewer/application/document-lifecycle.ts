@@ -114,7 +114,12 @@ export class DocumentLifecycleController implements IDocumentLifecycleController
             integrity,
         };
         this._currentSession.document = updatedDocument;
-        this._snapshot = settledSnapshot(updatedDocument);
+        this._snapshot = createSnapshot(
+            this._snapshot.status,
+            updatedDocument,
+            this._snapshot.candidateDisplayName,
+            this._snapshot.error,
+        );
         return true;
     }
 

@@ -125,6 +125,7 @@ export {
     jsonStoredValueCodec,
     stringStoredValueCodec,
     type IKeyValueStore,
+    type KeyValueReadResult,
     type IStoredValue,
     type IStoredValueCodec,
 } from './key-value-store.js';

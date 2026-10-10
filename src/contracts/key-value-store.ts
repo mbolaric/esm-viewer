@@ -1,8 +1,14 @@
+import type { Result } from './result.js';
+
+export type KeyValueReadResult = Result<string | null, 'ioFailure'>;
+
 // Synchronous, best-effort persistence for small per-user settings. Implementations never throw: a read from an
 // unavailable store returns null and a write to it is dropped, so a settings failure can never break a workflow.
 // `setItem` returns false for a dropped write so callers that promise persistence can report the failure.
 export interface IKeyValueStore {
     getItem(key: string): string | null;
+    // Hosts can expose read failures without changing existing best-effort consumers.
+    readItem?(key: string): KeyValueReadResult;
     removeItem(key: string): void;
     setItem(key: string, value: string): boolean;
 }

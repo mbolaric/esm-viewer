@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { open as openDialog, save as saveDialog, type OpenDialogOptions } from '@tauri-apps/plugin-dialog';
 import { remove, rename, writeFile } from '@tauri-apps/plugin-fs';
 import {
+    arrayOf,
     decodeBinaryPayload,
     decodeReadTachographFileFailure,
     decodePdfDocumentRequest,
@@ -11,11 +12,14 @@ import {
     type CopyTextToClipboardResult,
     decodeViewerPreferences,
     DEFAULT_VIEWER_PREFERENCES,
+    type DesktopOperationFailureCode,
+    err,
     type IOpenTachographPathRequest,
     type IPdfDocumentRequest,
     type IReleaseSourceRequest,
     type ISaveExportRequest,
     type IViewerPreferences,
+    type KeyValueReadResult,
     isFileDisplayName,
     isReopenToken,
     isSourceToken,
@@ -23,6 +27,7 @@ import {
     MAXIMUM_OPEN_FILE_BYTES,
     type LoadPreferencesResult,
     type OpenTachographFileResult,
+    ok,
     type RegisterExportSourceResult,
     type ReleaseSourceResult,
     type Result,
@@ -155,30 +160,11 @@ export class TauriPlatformService {
 
     public constructor(keyValueStore: IKeyValueStore = createBrowserKeyValueStore()) {
         this._keyValueStore = keyValueStore;
-        try {
-            const stored = this._keyValueStore.getItem(PREFERENCES_STORAGE_KEY);
-            if (typeof stored === 'string' && stored.length > 0) {
-                const parsed: unknown = JSON.parse(stored);
-                const decoded = decodeViewerPreferences(parsed);
-                if (decoded.ok && decoded.value.recentFilePathsEnabled) {
-                    this._recentFilePathsEnabled = true;
-                    this.loadRecentDirectoryState();
-                }
-            }
-        } catch {
-            // Safe fallback
-        }
+        this.readPreferences();
     }
 
-    // Restores _lastDirectory from storage if recent-directory tracking is enabled.
-    private loadRecentDirectoryState(): void {
-        if (!this._recentFilePathsEnabled) {
-            return;
-        }
-        const lastDir = this._keyValueStore.getItem(LAST_DIRECTORY_STORAGE_KEY);
-        if (typeof lastDir === 'string' && lastDir.length > 0) {
-            this._lastDirectory = lastDir;
-        }
+    private readStorageItem(key: string): KeyValueReadResult {
+        return this._keyValueStore.readItem?.(key) ?? ok(this._keyValueStore.getItem(key));
     }
 
     // Remembers directory of path for next dialog if tracking is enabled.
@@ -218,7 +204,17 @@ export class TauriPlatformService {
         };
     }
 
-    public async selectTachographPaths(options?: { readonly multiple?: boolean }): Promise<readonly string[] | null> {
+    public async selectTachographPaths(options?: Pick<OpenDialogOptions, 'multiple'>): Promise<readonly string[] | null> {
+        const result = await this.selectTachographPathsResult(options);
+        if (!result.ok) {
+            throw new Error('The native tachograph file dialog failed.', { cause: result.error });
+        }
+        return result.value;
+    }
+
+    public async selectTachographPathsResult(
+        options?: Pick<OpenDialogOptions, 'multiple'>,
+    ): Promise<Result<readonly string[] | null, DesktopOperationFailureCode>> {
         try {
             const selected: unknown = await openDialog({
                 ...(await this.tachographDialogOptions()),
@@ -226,30 +222,37 @@ export class TauriPlatformService {
             });
 
             if (selected === null) {
-                return null;
+                return ok(null);
             }
 
-            const paths: readonly string[] = Array.isArray(selected)
-                ? (selected as readonly unknown[]).filter((item): item is string => typeof item === 'string' && item.length > 0)
-                : typeof selected === 'string' && selected.length > 0
-                  ? [selected]
-                  : [];
-            if (paths.length === 0) {
-                return null;
+            const paths: readonly unknown[] = Array.isArray(selected) ? selected : [selected];
+            if (
+                paths.length === 0 ||
+                (options?.multiple !== true && paths.length !== 1) ||
+                !arrayOf(isReopenToken, paths.length)(paths)
+            ) {
+                return err('invalidResponse');
             }
             const first = paths[0];
             if (first !== undefined) {
                 this.rememberSelectedDirectory(first);
             }
 
-            return paths;
+            return ok(paths);
         } catch {
-            return null;
+            return err('ioFailure');
         }
     }
 
     public async openTachographFile(): Promise<OpenTachographFileResult> {
-        const paths = await this.selectTachographPaths({ multiple: false });
+        let paths: readonly string[] | null;
+        try {
+            paths = await this.selectTachographPaths({ multiple: false });
+        } catch (error) {
+            return error instanceof Error && error.cause === 'invalidResponse'
+                ? { code: 'invalidResponse', status: 'failed' }
+                : IO_FAILURE;
+        }
         if (paths === null || paths.length === 0) {
             return { status: 'cancelled' };
         }
@@ -308,25 +311,45 @@ export class TauriPlatformService {
 
     public async loadPreferences(): Promise<LoadPreferencesResult> {
         await Promise.resolve();
+        return this.readPreferences();
+    }
+
+    private readPreferences(): LoadPreferencesResult {
+        this._recentFilePathsEnabled = false;
+        this._lastDirectory = undefined;
         try {
-            const stored = this._keyValueStore.getItem(PREFERENCES_STORAGE_KEY);
-            if (typeof stored !== 'string' || stored.length === 0) {
+            const stored = this.readStorageItem(PREFERENCES_STORAGE_KEY);
+            if (!stored.ok) {
+                return IO_FAILURE;
+            }
+            if (stored.value === null) {
                 return { preferences: DEFAULT_VIEWER_PREFERENCES, status: 'loaded' };
             }
-            const parsed: unknown = JSON.parse(stored);
-            const decoded = decodeViewerPreferences(parsed);
-            if (decoded.ok) {
-                this._recentFilePathsEnabled = decoded.value.recentFilePathsEnabled;
-                if (this._recentFilePathsEnabled) {
-                    this.loadRecentDirectoryState();
-                } else {
-                    this.clearRecentDirectory();
-                }
-                return { preferences: decoded.value, status: 'loaded' };
+            let parsed: unknown;
+            try {
+                parsed = JSON.parse(stored.value);
+            } catch {
+                return { code: 'invalidPreferences', status: 'failed' };
             }
-            return { preferences: DEFAULT_VIEWER_PREFERENCES, status: 'loaded' };
+            const decoded = decodeViewerPreferences(parsed);
+            if (!decoded.ok) {
+                return { code: 'invalidPreferences', status: 'failed' };
+            }
+            if (decoded.value.recentFilePathsEnabled) {
+                const directory = this.readStorageItem(LAST_DIRECTORY_STORAGE_KEY);
+                if (!directory.ok) {
+                    return IO_FAILURE;
+                }
+                if (directory.value !== null && directory.value.length > 0) {
+                    this._lastDirectory = directory.value;
+                }
+            } else {
+                this.clearRecentDirectory();
+            }
+            this._recentFilePathsEnabled = decoded.value.recentFilePathsEnabled;
+            return { preferences: decoded.value, status: 'loaded' };
         } catch {
-            return { preferences: DEFAULT_VIEWER_PREFERENCES, status: 'loaded' };
+            return IO_FAILURE;
         }
     }
 

@@ -29,6 +29,18 @@ function recordItem(trepId: VUTransferResponseParameterID, position: number, sta
 }
 
 describe('decodeParserVuVerification', () => {
+    it.each([undefined, null, [], { result: [], status: 'unexpected' }, { result: {}, status: 'Valid' }])(
+        'rejects unknown responses outside the VU verification envelope %#',
+        (value) => {
+            expect(
+                decodeParserVuVerification(value, 'g2', {
+                    memberStateCertificate: '/certificates/memberState',
+                    vuCertificate: '/certificates/vu',
+                }),
+            ).toEqual({ error: 'invalidVerificationResult', ok: false });
+        },
+    );
+
     it('decodes certificate-chain-only verification and preserves chainVerified status', () => {
         const sourcePaths = {
             memberStateCertificate: '/transferResParams/0/data/Control/memberStateCertificateRaw',

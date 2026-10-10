@@ -612,7 +612,7 @@ function decodeVehicleUnitDocument(
     });
 }
 
-export function isSerializedTachographData(value: unknown): value is SerializedTachographData {
+export function isSerializedTachographData(value: unknown): value is SerializedTachographData & { readonly data: IJsonRecord } {
     if (!isUnknownRecord(value)) {
         return false;
     }
@@ -621,13 +621,13 @@ export function isSerializedTachographData(value: unknown): value is SerializedT
 }
 
 export function decodeParserDocument(
-    value: SerializedTachographData,
+    value: unknown,
     nationAlphaCodes: ParserNationAlphaCodes,
 ): Result<ParsedParserDocument, ParserDocumentDecodeError> {
-    if (!isBoundaryRecord(value.data)) {
+    if (!isSerializedTachographData(value)) {
         return err('parserResultOutsideBounds');
     }
-    if (!headerMatchesVariant(value.data.header, value.kind)) {
+    if (!isUnknownRecord(value.data.header) || !headerMatchesVariant(value.data.header, value.kind)) {
         return err('invalidHeader');
     }
 

@@ -1,15 +1,21 @@
-import type { IKeyValueStore } from '#contracts';
+import { err, ok, type IKeyValueStore, type KeyValueReadResult } from '#contracts';
 
 // Web storage can be missing or throw (quota, disabled storage), so every access is contained here once.
 export function createBrowserKeyValueStore(storage: () => Storage = () => globalThis.localStorage): IKeyValueStore {
+    const readItem = (key: string): KeyValueReadResult => {
+        try {
+            return ok(storage().getItem(key));
+        } catch {
+            return err('ioFailure');
+        }
+    };
+
     return {
         getItem: (key) => {
-            try {
-                return storage().getItem(key);
-            } catch {
-                return null;
-            }
+            const result = readItem(key);
+            return result.ok ? result.value : null;
         },
+        readItem,
         removeItem: (key) => {
             try {
                 storage().removeItem(key);

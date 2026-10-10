@@ -14,6 +14,23 @@ function item(cardFileId: CardFileID, status: VerifyStatus): VerifyItem {
 }
 
 describe('decodeParserVerification', () => {
+    it.each([null, 'not a report', {}, { result: [], status: 'unknown' }, { result: null, status: 'Valid' }])(
+        'rejects unknown responses outside the verification envelope %#',
+        (value) => {
+            expect(decodeParserVerification(value, 'g1', {}, {})).toEqual({
+                error: 'invalidVerificationResult',
+                ok: false,
+            });
+        },
+    );
+
+    it('retains the JSON budget check after accepting the outer verification shape', () => {
+        expect(decodeParserVerification({ extra: 'x'.repeat(1_048_577), result: [], status: 'Unsigned' }, 'g1', {}, {})).toEqual({
+            error: 'verificationResultOutsideBounds',
+            ok: false,
+        });
+    });
+
     it('normalizes every valid and invalid item and preserves aggregate status', () => {
         const dataFiles = {
             EventsData: { data: [1] },

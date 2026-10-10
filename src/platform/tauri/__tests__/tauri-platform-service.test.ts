@@ -25,14 +25,21 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
 }));
 
 import {
+    classifyParseError,
+    createMemoryKeyValueStore,
     DEFAULT_VIEWER_PREFERENCES,
+    err,
     type IFactualReportPdfRequest,
+    type IKeyValueStore,
     isReopenToken,
     isSourceToken,
     type IViewerPreferences,
     type ReopenToken,
     type SourceToken,
 } from '#contracts';
+import { createBrowserKeyValueStore } from '../browser-key-value-store.js';
+import { createPreferencesStore } from '../desktop-ports.js';
+import { TauriTachographFilePicker } from '../tauri-file-pickers.js';
 import { TauriPlatformService } from '../tauri-platform-service.js';
 
 const DIGEST = 'a'.repeat(64);
@@ -139,6 +146,169 @@ describe('TauriPlatformService', () => {
             preferences: DEFAULT_VIEWER_PREFERENCES,
             status: 'loaded',
         });
+    });
+
+    it.each(['', '{broken', 'null', '{}', JSON.stringify({ ...DEFAULT_VIEWER_PREFERENCES, version: 2 })])(
+        'reports invalid stored preferences without overwriting them %#',
+        async (stored) => {
+            localStorage.setItem('esm_viewer_preferences', stored);
+
+            expect(await service.loadPreferences()).toEqual({ code: 'invalidPreferences', status: 'failed' });
+            expect(await createPreferencesStore(service).load()).toEqual(err('preferencesLoadFailed'));
+            expect(localStorage.getItem('esm_viewer_preferences')).toBe(stored);
+        },
+    );
+
+    it('reports blocked browser storage reads and recovers when storage becomes available', async () => {
+        const storage = new MockStorage();
+        const keyValueStore = createBrowserKeyValueStore(() => storage);
+        const preferencesService = new TauriPlatformService(keyValueStore);
+        const read = vi.spyOn(storage, 'getItem').mockImplementationOnce(() => {
+            throw new Error('Synthetic storage failure.');
+        });
+
+        expect(await preferencesService.loadPreferences()).toEqual({ code: 'ioFailure', status: 'failed' });
+        expect(read).toHaveBeenCalledWith('esm_viewer_preferences');
+        expect(await preferencesService.loadPreferences()).toEqual({ preferences: DEFAULT_VIEWER_PREFERENCES, status: 'loaded' });
+    });
+
+    it('keeps legacy best-effort storage implementations compatible', async () => {
+        const store: IKeyValueStore = {
+            getItem: () => JSON.stringify(DEFAULT_VIEWER_PREFERENCES),
+            removeItem: () => undefined,
+            setItem: () => true,
+        };
+        expect(await new TauriPlatformService(store).loadPreferences()).toEqual({
+            preferences: DEFAULT_VIEWER_PREFERENCES,
+            status: 'loaded',
+        });
+    });
+
+    it('contains an unexpected legacy storage exception without claiming a successful load', async () => {
+        const store = createMemoryKeyValueStore();
+        vi.spyOn(store, 'getItem').mockImplementation(() => {
+            throw new Error('Synthetic legacy storage exception.');
+        });
+
+        expect(await new TauriPlatformService(store).loadPreferences()).toEqual({ code: 'ioFailure', status: 'failed' });
+    });
+
+    it('discards directory memory when a previously valid preference load fails', async () => {
+        await service.savePreferences({ ...DEFAULT_VIEWER_PREFERENCES, recentFilePathsEnabled: true });
+        localStorage.setItem('esm_viewer_last_directory', '/synthetic/recent');
+        await service.loadPreferences();
+        localStorage.setItem('esm_viewer_preferences', '{broken');
+        expect(await service.loadPreferences()).toEqual({ code: 'invalidPreferences', status: 'failed' });
+        openDialogMock.mockResolvedValueOnce(null);
+
+        expect(await service.openTachographFile()).toEqual({ status: 'cancelled' });
+        expect(openDialogMock.mock.lastCall?.[0]).not.toHaveProperty('defaultPath');
+    });
+
+    it('reports a directory-state read failure rather than enabling incomplete preferences', async () => {
+        const storage = new MockStorage();
+        storage.setItem(
+            'esm_viewer_preferences',
+            JSON.stringify({ ...DEFAULT_VIEWER_PREFERENCES, recentFilePathsEnabled: true }),
+        );
+        storage.setItem('esm_viewer_last_directory', '/synthetic/recent');
+        const preferencesService = new TauriPlatformService(createBrowserKeyValueStore(() => storage));
+        const read = vi.spyOn(storage, 'getItem');
+        read.mockReturnValueOnce(JSON.stringify({ ...DEFAULT_VIEWER_PREFERENCES, recentFilePathsEnabled: true }));
+        read.mockImplementationOnce(() => {
+            throw new Error('Synthetic directory storage failure.');
+        });
+
+        expect(await preferencesService.loadPreferences()).toEqual({ code: 'ioFailure', status: 'failed' });
+        openDialogMock.mockResolvedValueOnce(null);
+        await preferencesService.openTachographFile();
+        expect(openDialogMock.mock.lastCall?.[0]).not.toHaveProperty('defaultPath');
+    });
+
+    it('distinguishes native dialog cancellation from exceptions', async () => {
+        openDialogMock.mockResolvedValueOnce(null);
+        expect(await service.selectTachographPathsResult()).toEqual({ ok: true, value: null });
+        openDialogMock.mockResolvedValueOnce(null);
+        expect(await service.selectTachographPaths()).toBeNull();
+        openDialogMock.mockResolvedValueOnce(null);
+        expect(await service.openTachographFile()).toEqual({ status: 'cancelled' });
+
+        openDialogMock.mockRejectedValue(new Error('Synthetic dialog failure.'));
+        expect(await service.selectTachographPathsResult()).toEqual(err('ioFailure'));
+        await expect(service.selectTachographPaths()).rejects.toMatchObject({ cause: 'ioFailure' });
+        expect(await service.openTachographFile()).toEqual({ code: 'ioFailure', status: 'failed' });
+        expect(await new TauriTachographFilePicker(service).open()).toEqual({
+            error: classifyParseError('fileReadFailed'),
+            status: 'failed',
+        });
+        expect(invokeMock).not.toHaveBeenCalledWith('read_ddd_file', expect.anything());
+    });
+
+    it.each([
+        undefined,
+        '',
+        [],
+        {},
+        [null],
+        new Array<unknown>(1),
+        ['/synthetic/card.ddd', 42],
+        ['/synthetic/first.ddd', '/synthetic/second.ddd'],
+    ])('rejects an invalid single-file dialog response without reporting cancellation %#', async (selected) => {
+        openDialogMock.mockResolvedValue(selected);
+
+        expect(await service.selectTachographPathsResult()).toEqual(err('invalidResponse'));
+        expect(await service.openTachographFile()).toEqual({ code: 'invalidResponse', status: 'failed' });
+        expect(invokeMock).not.toHaveBeenCalledWith('read_ddd_file', expect.anything());
+    });
+
+    it('rejects the entire multiple-file selection when any path is invalid', async () => {
+        openDialogMock.mockResolvedValueOnce(['/synthetic/card.ddd', null]);
+        expect(await service.selectTachographPathsResult({ multiple: true })).toEqual(err('invalidResponse'));
+        expect(localStorage.getItem('esm_viewer_last_directory')).toBeNull();
+    });
+
+    it('preserves valid single and multiple selection and remembered directory behavior', async () => {
+        await service.savePreferences({ ...DEFAULT_VIEWER_PREFERENCES, recentFilePathsEnabled: true });
+        invokeMock.mockResolvedValue(['ddd', 'tgd']);
+        openDialogMock.mockResolvedValueOnce('/synthetic/download/card.ddd');
+        expect(await service.selectTachographPaths()).toEqual(['/synthetic/download/card.ddd']);
+
+        const paths = ['/synthetic/first.ddd', '/synthetic/second.tgd'];
+        openDialogMock.mockResolvedValueOnce(paths);
+        expect(await service.selectTachographPathsResult({ multiple: true })).toEqual({ ok: true, value: paths });
+        expect(openDialogMock.mock.lastCall?.[0]).toEqual({
+            defaultPath: '/synthetic/download',
+            filters: [{ extensions: ['ddd', 'DDD', 'tgd', 'TGD'], name: 'Tachograph Files' }],
+            multiple: true,
+        });
+        expect(localStorage.getItem('esm_viewer_last_directory')).toBe('/synthetic');
+    });
+
+    it('opens the selected file through native binary reading after successful selection', async () => {
+        openDialogMock.mockResolvedValueOnce('/synthetic/card.ddd');
+        invokeMock.mockImplementation((command: string) =>
+            Promise.resolve(command === 'get_supported_tachograph_extensions' ? ['ddd'] : Uint8Array.from([1, 2]).buffer),
+        );
+
+        expect(await service.openTachographFile()).toEqual({
+            file: {
+                bytes: Uint8Array.from([1, 2]),
+                displayName: 'card.ddd',
+                reopenToken: '/synthetic/card.ddd',
+                sourceToken: '/synthetic/card.ddd',
+            },
+            status: 'opened',
+        });
+        expect(invokeMock).toHaveBeenCalledWith('read_ddd_file', { filePath: '/synthetic/card.ddd' });
+    });
+
+    it('preserves host overrides of the original path-selection method when opening a file', async () => {
+        const select = vi.spyOn(service, 'selectTachographPaths').mockResolvedValue(['/synthetic/host.ddd']);
+        invokeMock.mockResolvedValue(Uint8Array.from([1]).buffer);
+
+        expect(await service.openTachographFile()).toMatchObject({ file: { displayName: 'host.ddd' }, status: 'opened' });
+        expect(select).toHaveBeenCalledWith({ multiple: false });
+        expect(openDialogMock).not.toHaveBeenCalled();
     });
 
     it('saves and loads preferences properly', async () => {
