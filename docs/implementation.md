@@ -58,6 +58,55 @@ descriptors. Its Viewer workspace uses `applicationMode="embedded"`; global
 dialogs run separately through `ViewerApplicationDialogs`. Direct standalone
 `ViewerRoot` consumers retain the default, self-contained dialog adapter.
 
+`docs/site/` contains the English static product website for GitHub Pages. It
+explains shipped Viewer features, desktop privacy, supported downloads, installer
+limitations and reporting. Its download area presents three platform columns for
+Windows x64, macOS Apple Silicon and Linux x64, with primary Setup EXE, DMG and
+AppImage downloads plus MSI, DEB and RPM alternatives. The columns sit in a
+compact, centred band; primary buttons use rounded, compact
+two-line platform/package labels and a shared decorative download icon.
+Native disclosures use pointer cursors on their text and markers, padded clickable
+headers and accent hover/focus feedback. They provide
+installation steps, signing/notarization warnings and privacy-safe support.
+Header and FAQ links expose this help before installation and land on the
+download heading so the section title stays visible. A dark footer groups
+Product, Get started and Project links beside the brand line, with a licence
+note and back-to-top link in its bottom bar. The website build
+resolves the latest published stable GitHub release and validates production
+asset URLs through the application-independent `tools/releases` helper.
+It excludes debug/unfinished assets and rejects drafts, prereleases, invalid
+metadata and ambiguous matches. Missing formats are visibly unavailable; an API
+failure or release without any matching installer fails the build.
+Direct links and the release tag are embedded into static HTML without a client
+API call or exposed build token. Source previews label their Releases fallback.
+Its opening hero and screenshot gallery show the
+unchanged production renderer with synthetic test-port records: Activities in the
+opening hero, and distinct Compliance and Raw data views in the gallery.
+No personal downloads, native parsing or signature verification are used for these
+images; a diagram illustrates the offline workflow. Inferred gaps,
+external-evidence qualifications and the not-checked signature status remain
+visible; full-size image links accompany descriptive
+captions and alt text. Planned Cases features are not advertised as shipped.
+`pnpm site:build` stages only site assets plus the existing app icon and shared
+foundation/token styles in `dist/site`, using relative URLs for local preview and
+project-subpath hosting. Direct source previews use the existing repository
+foundation stylesheet and a bundled logo; the build rewrites the stylesheet URL
+to its staged location. Website typography and spacing use its own token scale;
+the skip link remains hidden until keyboard focus, and mobile menu navigation
+restores focus and aligns the destination after closing. The build appends a content version to the site
+stylesheet and script URLs so browsers load changed assets. The page has no uploads, analytics, remote assets or
+client API calls; JavaScript only enhances mobile navigation, and core content and
+links remain available without it. `.github/workflows/pages.yml` builds a standalone
+Pages artifact without parser submodules or dependency installation. It requires
+build-time internet access for release metadata, not browser or desktop runtime
+API calls. Stable-release publication automatically refreshes the site using
+`master` source; drafts and prereleases do not deploy. Deployment uses the
+`github-pages` environment and is restricted to `master` or stable-release events
+building that source. Required environment reviewers can add a deployment
+approval gate. The repository owner
+must enable Pages with GitHub Actions; creating this website does not itself
+publish a deployment or change the desktop application's runtime network policy.
+
 The native launcher registers the Viewer command inventory through
 `with_viewer_commands!` in one invoke handler. It owns the Tauri builder,
 product identity, plugins, capabilities, and window/navigation setup.
@@ -65,6 +114,12 @@ The shared PDF engine renders factual reports,
 attestations, and infringement letters. Viewer plugins are dialog and filesystem.
 Small settings use IKeyValueStore/createStoredValue; IPC is decoded from unknown,
 and parser data is normalized before UI use.
+`IKeyValueStore` retains its best-effort `getItem`/`setItem`/`removeItem`
+contract and optionally supplies `readItem`, returning a typed success
+(including `null` for a missing value) or `ioFailure`. The browser adapter
+implements that read method so preference loading distinguishes blocked storage
+from first-run absence. Existing host stores without it remain compatible,
+with their original best-effort read semantics.
 
 
 ## 3. Native application (Tauri 2.0)
@@ -131,6 +186,14 @@ manual dispatch): native jobs on `ubuntu-24.04` (Linux x64),
 `windows-latest` (Windows x64), and `macos-26` (macOS arm64 only; no Intel
 build) each run `tauri-action` and publish a draft GitHub Release. Each platform
 has separate release and debug matrix entries.
+Before packaging, every job runs the standalone build-policy tests. The versions
+in `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json` must
+match; a tag-triggered or manually dispatched tag build also requires the tag to
+be exactly `v` followed by that version. Tauri's configured version determines
+installer filenames and platform metadata; the release name alone does not change
+them. Change all three version declarations before creating a release tag.
+Rerunning an existing Actions run uses its original tagged sources, so a corrected
+release requires a tag pointing to the corrected commit.
 `includeRelease` and `includeDebug` select exactly one profile per job, aligning
 the build and artifact lookup under `target/release` or `target/debug`. The action
 adds `--debug` for debug jobs; only those jobs receive `--features devtools`.
@@ -173,12 +236,22 @@ verifiable data files, verification evaluates the member-state and VU
 certificate chain alone, yielding the narrower `chainVerified` status (§5.1)
 rather than full `valid`/`partiallyValid`/`invalid`.
 
-`src/viewer/parser/` is the sole owner of this boundary: `client.ts` talks
-to the native parser; `decoders/` turns raw parser results into typed
+`src/platform/tauri/` owns native parser invocation and native response
+envelopes. `src/viewer/parser/client.ts` exposes the platform-independent
+parser integration: `decoders/` turns raw parser results into typed
 documents; `normalizers/` (plus `card/` and `vehicle-unit/` subfolders)
 convert decoded records into the app's own readonly domain types (plain
 TypeScript `readonly` types, not runtime `Object.freeze`); `certs/` holds
 the pinned ERCA public keys used for signature-chain verification.
+Document and verification decoders accept `unknown` and own their outer-shape
+and bounded-JSON checks; callers do not need a separate guard pass.
+The document's full-tree JSON budget check runs once before normalization,
+while generation, domain-value, and source-evidence checks remain in place.
+The public guards remain available for integration consumers. Nation-code
+metadata is decoded and cached per native parser adapter instance, sharing
+an in-flight request across concurrent parses. Invalid metadata or a failed
+native request clears the cache so a later parse retries; successful metadata
+is reused for the lifetime of that instance.
 Vehicle-unit record lists are validated by one pair of decoders in
 `vehicle-unit/vehicle-unit-record-array.ts`: `decodeVehicleUnitCountedRecords`
 for Gen1 lists (a separate count field that must equal the array length) and
@@ -212,6 +285,11 @@ verification (`chainVerified`, §5.1).
 Verification progress belongs to the currently opened document. Opening a
 second file while an earlier signature check is running starts its own check;
 the earlier result cannot update the new document or clear its progress state.
+An integrity update changes only the retained current document, not the load
+lifecycle: it preserves a pending replacement's `opening` status and candidate
+name, as well as existing open or cleanup errors. Cancelling or failing a
+replacement retains the current document's updated assessment; a successful
+replacement uses the new document's own assessment.
 
 Run `pnpm parser:sync-types` after updating the `vendor/esm-parser`
 submodule pin to resync the generated WASM/native boundary declarations.
@@ -577,6 +655,11 @@ translated in all seven catalogues and rebuilt when the selected language change
   already-remembered files, not just future ones. Existing preferences saved
   with the former combined toggle migrate that choice to both settings.
   Appearance: density (comfortable/compact, with a live preview panel).
+  Missing preferences use defaults without a load warning. Malformed or invalid
+  stored preferences return `invalidPreferences`; unavailable storage or a failed
+  remembered-directory read returns `ioFailure`. Composition keeps safe defaults
+  and exposes the existing translated load warning in either failure case,
+  without overwriting stored settings or retaining stale directory memory.
 - **About** (`AboutDialog.svelte`): app/runtime/platform version info, the
   pinned parser commit, GPL source/license disclosure, and a
   copy-diagnostics action.
@@ -1250,6 +1333,13 @@ are unified via the generic `EmptyState` component (`#ui/EmptyState.svelte`).
 Native file selection is consolidated in `TauriPlatformService.selectTachographPaths`,
 which provides typed single- and multiple-file tachograph dialogs with directory memory
 and validation.
+`selectTachographPathsResult` provides a typed `Result`: only a native `null`
+response means cancellation; dialog exceptions return `ioFailure`, and empty,
+malformed, partially invalid or wrong-cardinality selections return
+`invalidResponse`. `openTachographFile` carries failures into the existing
+file-acquisition error flow instead of treating them as cancellation.
+The original `selectTachographPaths` array-or-null API remains available for
+host callers, rejecting failures with a sanitized error and typed cause.
 Startup splash branding and HTML are generated through `renderStartupSplash` and
 `IAppModel` in `#shell`, injected by a minimal Vite `transformIndexHtml` plugin in
 `apps/viewer`. In-app brand marks (command bar, welcome screen, About dialog)

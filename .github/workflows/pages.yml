@@ -1,0 +1,76 @@
+name: Product Website
+
+on:
+    push:
+        branches:
+            - master
+        paths:
+            - 'docs/site/**'
+            - 'src/ui/styles/**'
+            - 'src-tauri/icons/128x128@2x.png'
+            - 'tools/clean.ts'
+            - 'tools/cli/**'
+            - 'tools/releases/**'
+            - 'package.json'
+            - '.node-version'
+            - '.github/workflows/pages.yml'
+    workflow_dispatch:
+    release:
+        types:
+            - published
+
+permissions:
+    contents: read
+
+concurrency:
+    group: github-pages
+    cancel-in-progress: false
+
+jobs:
+    build:
+        name: Build product website
+        if: github.event_name != 'release' || github.event.release.prerelease == false
+        runs-on: ubuntu-24.04
+        timeout-minutes: 5
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@v7
+              with:
+                  persist-credentials: false
+                  ref: ${{ github.event_name == 'release' && 'master' || github.ref }}
+
+            - name: Set up Node.js
+              uses: actions/setup-node@v7
+              with:
+                  node-version-file: .node-version
+                  package-manager-cache: false
+
+            - name: Configure Pages
+              uses: actions/configure-pages@v5
+
+            - name: Build static website
+              env:
+                  GITHUB_TOKEN: ${{ github.token }}
+              run: node docs/site/build.mjs
+
+            - name: Upload product website
+              uses: actions/upload-pages-artifact@v4
+              with:
+                  path: dist/site
+
+    deploy:
+        name: Publish to GitHub Pages
+        if: github.ref == 'refs/heads/master' || (github.event_name == 'release' && github.event.release.prerelease == false)
+        needs: build
+        runs-on: ubuntu-24.04
+        timeout-minutes: 5
+        permissions:
+            pages: write
+            id-token: write
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        steps:
+            - name: Deploy product website
+              id: deployment
+              uses: actions/deploy-pages@v4

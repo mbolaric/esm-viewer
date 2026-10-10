@@ -64,7 +64,8 @@
         "test:rust": "cargo test --manifest-path src-tauri/Cargo.toml",
         "tauri:build": "tauri build",
         "tauri:build:debug": "tauri build --debug --features devtools",
-        "tauri:dev": "tauri dev --features devtools"
+        "tauri:dev": "tauri dev --features devtools",
+        "site:build": "node --experimental-strip-types tools/clean.ts --directory dist/site && node docs/site/build.mjs"
     },
     "dependencies": {
         "@lucide/svelte": "1.50.0",

@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en" data-theme="light" data-density="comfortable" data-preferences-ready>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="color-scheme" content="light" />
+        <title>ESM Viewer — Understand your tachograph files. Offline.</title>
+        <meta
+            name="description"
+            content="Inspect digital tachograph files, verify signatures, review driving and rest records, and export reports. A free, open-source desktop app for Windows, macOS and Linux."
+        />
+        <link rel="canonical" href="https://mbolaric.github.io/esm-viewer/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="ESM Viewer — Your tachograph files. A clearer picture." />
+        <meta
+            property="og:description"
+            content="A free, open-source desktop viewer for digital tachograph files. Inspect, verify and report, entirely on your own computer."
+        />
+        <meta property="og:url" content="https://mbolaric.github.io/esm-viewer/" />
+        <meta property="og:image" content="https://mbolaric.github.io/esm-viewer/assets/icon.png" />
+        <meta name="twitter:card" content="summary" />
+        <link rel="icon" type="image/png" href="./assets/icon.png" />
+        <link rel="stylesheet" href="../../src/ui/styles/foundation.css" />
+        <link rel="stylesheet" href="./assets/site.css" />
+        <script src="./assets/site.js" defer></script>
+    </head>
+    <body>
+        <a class="site-skip" href="#main">Skip to content</a>
+        <header class="site-header">
+            <div class="site-container header-inner">
+                <a class="site-brand" href="#top" aria-label="ESM Viewer home"
+                    ><img src="./assets/icon.png" width="34" height="34" alt="" /><span>ESM Viewer</span></a
+                >
+                <button class="mobile-menu" id="menu-toggle" aria-expanded="false" aria-controls="site-navigation" hidden>
+                    Menu <span aria-hidden="true">☰</span>
+                </button>
+                <nav id="site-navigation" aria-label="Main navigation">
+                    <a href="#features">Features</a><a href="#screenshots">Screenshots</a><a href="#privacy">Privacy</a
+                    ><a href="#installation">Installation</a
+                    ><a class="source-link" href="https://github.com/mbolaric/esm-viewer"
+                        >GitHub <span aria-hidden="true">↗</span></a
+                    ><a class="site-button small-button" href="#download">Get the app <span aria-hidden="true">↓</span></a>
+                </nav>
+            </div>
+        </header>
+        <main id="main" tabindex="-1">
+            <section class="hero" id="top" aria-labelledby="hero-title">
+                <div class="site-container hero-grid">
+                    <div class="hero-copy">
+                        <span class="hero-tag"
+                            ><span class="live-dot" aria-hidden="true"></span> OPEN SOURCE. WORKS OFFLINE.</span
+                        >
+                        <h1 id="hero-title">Your tachograph files.<br /><span>A clearer picture.</span></h1>
+                        <p class="hero-description">
+                            Turn a digital tachograph download into records you can understand. Inspect activities, verify
+                            signatures and review driving and rest time—all on your own computer.
+                        </p>
+                        <div class="hero-actions">
+                            <a class="site-button" href="#download">Download ESM Viewer <span aria-hidden="true">↓</span></a
+                            ><a class="site-text-link" href="#features">Explore the features <span aria-hidden="true">→</span></a>
+                        </div>
+                        <p class="hero-platforms">Windows · macOS · Linux <span aria-hidden="true">/</span> Free under GPL v3</p>
+                    </div>
+                    <figure class="product-preview">
+                        <a
+                            class="hero-screenshot"
+                            href="./assets/images/activities.png"
+                            aria-label="Open the actual Activities view at full size"
+                        >
+                            <img
+                                src="./assets/images/activities.png"
+                                width="1440"
+                                height="1050"
+                                fetchpriority="high"
+                                decoding="async"
+                                alt="Actual ESM Viewer Activities screen with a recorded activity timeline, unknown gaps and source-linked records from the synthetic-driver.ddd test fixture."
+                            />
+                        </a>
+                        <figcaption>
+                            Actual ESM Viewer · synthetic records.
+                            <a href="./assets/images/activities.png">View full size →</a>
+                        </figcaption>
+                    </figure>
+                </div>
+            </section>
+            <div class="format-strip">
+                <div class="site-container format-inner">
+                    <span>BUILT FOR TACHOGRAPH DOWNLOADS</span>
+                    <p>
+                        <code>.DDD</code><code>.TGD</code><code>.V1B</code><code>.C1B</code><code>.ESM</code><span>+ more</span>
+                    </p>
+                    <span>Driver cards · Workshop cards · Vehicle units</span>
+                </div>
+            </div>
+            <section class="site-section" id="features" aria-labelledby="features-title">
+                <div class="site-container">
+                    <div class="section-heading">
+                        <div>
+                            <span class="site-eyebrow">SEE WHAT THE RECORDS SAY</span>
+                            <h2 id="features-title">From a download<br />to useful evidence.</h2>
+                        </div>
+                        <p>
+                            Follow a recorded day, inspect a technical event or prepare a report. Keep the source behind each
+                            value within reach.
+                        </p>
+                    </div>
+                    <div class="feature-grid">
+                        <article class="feature-card">
+                            <span class="feature-number">01 / INSPECT</span>
+                            <h3>Understand the working day</h3>
+                            <p>
+                                Explore activity timelines, duty shifts, calendars and presence heatmaps. See driving, work,
+                                availability, rest and gaps in context.
+                            </p>
+                            <span class="feature-detail">Activities · Journeys · UTC day views</span>
+                        </article>
+                        <article class="feature-card">
+                            <span class="feature-number">02 / FOLLOW</span>
+                            <h3>See places and movement</h3>
+                            <p>
+                                Inspect recorded GNSS positions, borders and loading operations with offline maps. View detailed
+                                speed where the download contains it.
+                            </p>
+                            <span class="feature-detail">Positions · Border crossings · Speed</span>
+                        </article>
+                        <article class="feature-card">
+                            <span class="feature-number">03 / VERIFY</span>
+                            <h3>Check the evidence integrity</h3>
+                            <p>
+                                Verify supported card and vehicle-unit signatures. Full-data, certificate-only and unsupported
+                                verification are shown distinctly.
+                            </p>
+                            <span class="feature-detail">Signatures · Certificates · Clear scope</span>
+                        </article>
+                        <article class="feature-card">
+                            <span class="feature-number">04 / REVIEW</span>
+                            <h3>Review driving and rest rules</h3>
+                            <p>
+                                Examine calculated findings under selectable EU, AETR and GB Domestic profiles, with measured
+                                values, references and limitations.
+                            </p>
+                            <span class="feature-detail">Driving · Breaks · Rest · Working time</span>
+                        </article>
+                        <article class="feature-card">
+                            <span class="feature-number">05 / INVESTIGATE</span>
+                            <h3>Reach the underlying records</h3>
+                            <p>
+                                Inspect events, faults and technical data, compare session downloads, and follow source references
+                                into the decoded JSON tree.
+                            </p>
+                            <span class="feature-detail">Events &amp; faults · Technical data · Sources</span>
+                        </article>
+                        <article class="feature-card">
+                            <span class="feature-number">06 / SHARE</span>
+                            <h3>Keep a useful record</h3>
+                            <p>
+                                Export HTML, JSON and PDF reports. Print reports and prepare infringement acknowledgement letters
+                                or activities attestation forms.
+                            </p>
+                            <span class="feature-detail">PDF · Printing · Document preparation</span>
+                        </article>
+                    </div>
+                    <p class="qualification">
+                        Compliance findings support a review. They are not a certified legal assessment; incomplete records and
+                        external-evidence requirements remain explicit.
+                    </p>
+                </div>
+            </section>
+            <section class="site-section screenshot-section" id="screenshots" aria-labelledby="screenshots-title">
+                <div class="site-container">
+                    <div class="section-heading">
+                        <div>
+                            <span class="site-eyebrow">INSIDE ESM VIEWER</span>
+                            <h2 id="screenshots-title">The real interface.<br />Safe example data.</h2>
+                        </div>
+                        <p>
+                            These are actual Viewer screens using synthetic test records. Select an image to see it at full size.
+                            No personal tachograph data is shown.
+                        </p>
+                    </div>
+                    <div class="screenshot-grid">
+                        <figure class="screenshot-card">
+                            <a href="./assets/images/compliance.png" aria-label="View the Compliance screenshot at full size">
+                                <img
+                                    src="./assets/images/compliance.png"
+                                    width="1440"
+                                    height="1050"
+                                    loading="lazy"
+                                    decoding="async"
+                                    alt="Actual Compliance view showing a calculated continuous-driving finding, rule-profile filters, measured and allowed durations, and an external-evidence review for synthetic test records."
+                                />
+                            </a>
+                            <figcaption>
+                                <span class="screenshot-label">ACTUAL APP · SYNTHETIC RECORDS</span>
+                                <h3>Review a calculated finding</h3>
+                                <p>
+                                    Inspect measured values, legal references and the evidence still needed. This example is
+                                    calculated by the app's rule engine.
+                                </p>
+                            </figcaption>
+                        </figure>
+                        <figure class="screenshot-card">
+                            <a href="./assets/images/raw-data.png" aria-label="View the source-record screenshot at full size">
+                                <img
+                                    src="./assets/images/raw-data.png"
+                                    width="1440"
+                                    height="1050"
+                                    loading="lazy"
+                                    decoding="async"
+                                    alt="Actual Raw data view showing the canonical source pointer /activities/1/start, its exact synthetic UTC timestamp and the surrounding decoded activity record."
+                                />
+                            </a>
+                            <figcaption>
+                                <span class="screenshot-label">ACTUAL APP · SYNTHETIC RECORDS</span>
+                                <h3>Reach the source record</h3>
+                                <p>
+                                    Follow a source reference into the decoded tree. Inspect the original field value, its UTC
+                                    timestamp and its canonical path.
+                                </p>
+                            </figcaption>
+                        </figure>
+                    </div>
+                </div>
+            </section>
+            <section class="privacy-section" id="privacy" aria-labelledby="privacy-title">
+                <div class="site-container privacy-grid">
+                    <div>
+                        <span class="site-eyebrow">PRIVATE BY DESIGN</span>
+                        <h2 id="privacy-title">Your files stay<br />on your machine.</h2>
+                        <p>
+                            Tachograph records contain personal information. ESM Viewer processes them locally, with no telemetry,
+                            cloud account or runtime network calls.
+                        </p>
+                        <ul class="privacy-list">
+                            <li>Original downloads are never modified.</li>
+                            <li>Inspection and verification work offline.</li>
+                            <li>You choose when and where to export a report.</li>
+                        </ul>
+                    </div>
+                    <div class="privacy-diagram">
+                        <span class="privacy-diagram-label">ON YOUR COMPUTER</span>
+                        <ol>
+                            <li>
+                                <span class="privacy-step" aria-hidden="true">01</span>
+                                <div><strong>Open a download</strong><span>Driver card or vehicle-unit file</span></div>
+                            </li>
+                            <li>
+                                <span class="privacy-step" aria-hidden="true">02</span>
+                                <div>
+                                    <strong>Inspect and review</strong><span>Local records, calculations and signatures</span>
+                                </div>
+                            </li>
+                            <li>
+                                <span class="privacy-step" aria-hidden="true">03</span>
+                                <div>
+                                    <strong>Export what you need</strong><span>A report saved to a location you choose</span>
+                                </div>
+                            </li>
+                        </ol>
+                        <p>No file upload. No cloud processing.</p>
+                    </div>
+                </div>
+            </section>
+            <section class="site-section getting-started" aria-labelledby="start-title">
+                <div class="site-container">
+                    <div class="section-heading">
+                        <div>
+                            <span class="site-eyebrow">A SIMPLE PLACE TO START</span>
+                            <h2 id="start-title">Open. Inspect. Report.</h2>
+                        </div>
+                        <p>A native desktop application with familiar file controls, keyboard navigation and an in-app guide.</p>
+                    </div>
+                    <ol class="start-grid">
+                        <li>
+                            <span>1</span>
+                            <h3>Choose a file</h3>
+                            <p>Use File → Open or drop a download into the window. Supported files can be up to 50 MB.</p>
+                        </li>
+                        <li>
+                            <span>2</span>
+                            <h3>Find the context</h3>
+                            <p>
+                                Follow activities, inspect events, check signatures and read the scope of any calculated finding.
+                            </p>
+                        </li>
+                        <li>
+                            <span>3</span>
+                            <h3>Keep the result</h3>
+                            <p>Save a report in the format you need. Press F1 whenever you need the built-in User Guide.</p>
+                        </li>
+                    </ol>
+                    <div class="interface-note">
+                        <span>Make it comfortable.</span>
+                        <p>Light, dark and system themes · Compact or comfortable density · Seven interface languages</p>
+                    </div>
+                </div>
+            </section>
+            <section class="download-section" id="download" aria-labelledby="download-title">
+                <div class="site-container">
+                    <div class="download-heading" id="installation">
+                        <div>
+                            <h2 id="download-title">Download ESM Viewer</h2>
+                            <p>Free, open source and entirely offline. Choose the package for your computer.</p>
+                            <p id="release-status">
+                                Source preview: package links open GitHub Releases. Build the site for direct installer downloads.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="download-grid">
+                        <article class="download-platform" id="install-windows" aria-labelledby="install-windows-title">
+                            <span class="platform-symbol" aria-hidden="true">▦</span>
+                            <h3 id="install-windows-title">Windows</h3>
+                            <p class="platform-architecture">x64</p>
+                            <a
+                                class="site-button package-primary"
+                                data-release-asset="windows-exe"
+                                href="https://github.com/mbolaric/esm-viewer/releases"
+                                ><span class="package-label"
+                                    >Download for Windows<span class="package-format">Setup · .exe</span></span
+                                ><img class="package-icon" src="./assets/download.svg" width="24" height="24" alt=""
+                            /></a>
+                            <div class="package-options">
+                                <span>Windows Installer</span>
+                                <a data-release-asset="windows-msi" href="https://github.com/mbolaric/esm-viewer/releases"
+                                    >.msi <span class="sr-only">for Windows x64</span></a
+                                >
+                            </div>
+                            <details class="installation-help">
+                                <summary>Windows installation help</summary>
+                                <ol>
+                                    <li>
+                                        Run the Setup installer and follow its prompts. Use .msi for Windows Installer-based
+                                        deployment.
+                                    </li>
+                                    <li>Open ESM Viewer from the Start menu.</li>
+                                </ol>
+                                <p>
+                                    The installer is unsigned. If Windows shows a protection warning, verify the download came
+                                    from this project's release before proceeding. On managed computers, ask your administrator;
+                                    do not disable Windows protection.
+                                </p>
+                            </details>
+                        </article>
+                        <article class="download-platform" id="install-macos" aria-labelledby="install-macos-title">
+                            <span class="platform-symbol" aria-hidden="true">⌘</span>
+                            <h3 id="install-macos-title">macOS</h3>
+                            <p class="platform-architecture">Apple Silicon</p>
+                            <a
+                                class="site-button package-primary"
+                                data-release-asset="macos-dmg"
+                                href="https://github.com/mbolaric/esm-viewer/releases"
+                                ><span class="package-label"
+                                    >Download for macOS<span class="package-format">Disk image · .dmg</span></span
+                                ><img class="package-icon" src="./assets/download.svg" width="24" height="24" alt=""
+                            /></a>
+                            <div class="package-options"><span>Intel builds are not available.</span></div>
+                            <details class="installation-help">
+                                <summary>macOS installation help</summary>
+                                <ol>
+                                    <li>Open the disk image and drag ESM Viewer to Applications.</li>
+                                    <li>Open ESM Viewer from Applications.</li>
+                                </ol>
+                                <p>
+                                    The app is not notarized, so macOS may block its first launch. After verifying the source,
+                                    review System Settings → Privacy &amp; Security for an app-specific Open Anyway option. If
+                                    unavailable or restricted by your organisation, ask your administrator. Do not disable
+                                    Gatekeeper.
+                                </p>
+                            </details>
+                        </article>
+                        <article class="download-platform" id="install-linux" aria-labelledby="install-linux-title">
+                            <span class="platform-symbol" aria-hidden="true">&gt;_</span>
+                            <h3 id="install-linux-title">Linux</h3>
+                            <p class="platform-architecture">x64</p>
+                            <a
+                                class="site-button package-primary"
+                                data-release-asset="linux-appimage"
+                                href="https://github.com/mbolaric/esm-viewer/releases"
+                                ><span class="package-label">Download for Linux<span class="package-format">AppImage</span></span
+                                ><img class="package-icon" src="./assets/download.svg" width="24" height="24" alt=""
+                            /></a>
+                            <div class="package-options">
+                                <span>Debian / Ubuntu</span>
+                                <a data-release-asset="linux-deb" href="https://github.com/mbolaric/esm-viewer/releases"
+                                    >.deb <span class="sr-only">for Linux x64</span></a
+                                >
+                                <span>Fedora / RPM-based</span>
+                                <a data-release-asset="linux-rpm" href="https://github.com/mbolaric/esm-viewer/releases"
+                                    >.rpm <span class="sr-only">for Linux x64</span></a
+                                >
+                            </div>
+                            <details class="installation-help">
+                                <summary>Linux installation help</summary>
+                                <ol>
+                                    <li>For AppImage, allow the file to run as a program in its properties, then open it.</li>
+                                    <li>For .deb or .rpm, use your distribution's package installer to handle dependencies.</li>
+                                </ol>
+                                <p>
+                                    Built on Ubuntu 24.04. Compatibility depends on your distribution and system libraries;
+                                    AppImage does not support every system. If it will not start, try your distribution's package
+                                    and check the release notes.
+                                </p>
+                            </details>
+                        </article>
+                    </div>
+                    <p class="install-note">
+                        Installers are unsigned; macOS builds are not notarized. Your OS may show a warning. Expand your
+                        platform's installation help before proceeding.
+                    </p>
+                    <details class="installation-help first-open-help">
+                        <summary>After installation or if you need help</summary>
+                        <p>
+                            Open a download with File → Open or drop it into the window. Press F1 for the in-app User Guide. When
+                            browsing Releases, choose production packages without <code>debug</code> in the filename; source
+                            archives are not installers. If installation fails,
+                            <a href="https://github.com/mbolaric/esm-viewer/issues">report an installation issue</a>
+                            with your OS version, package filename and error message. Do not attach personal tachograph data.
+                        </p>
+                    </details>
+                    <p class="source-option">
+                        <a href="https://github.com/mbolaric/esm-viewer/releases">All releases</a>
+                        ·
+                        <a href="https://github.com/mbolaric/esm-viewer#build-from-source">Build from source</a>
+                    </p>
+                </div>
+            </section>
+            <section class="site-section questions-section" id="questions" aria-labelledby="questions-title">
+                <div class="site-container questions-grid">
+                    <div>
+                        <span class="site-eyebrow">A FEW PRACTICAL QUESTIONS</span>
+                        <h2 id="questions-title">Before you<br />open a file.</h2>
+                        <p>
+                            Need help getting started? <a href="#installation">Read the installation instructions</a>. The in-app
+                            User Guide covers inspection, verification, compliance and privacy.
+                        </p>
+                        <a class="site-text-link" href="https://github.com/mbolaric/esm-viewer/issues"
+                            >Ask a question on GitHub <span aria-hidden="true">↗</span></a
+                        >
+                    </div>
+                    <div class="faq-list">
+                        <details>
+                            <summary>Which downloads can I open?</summary>
+                            <p>
+                                Driver-card, workshop-card and vehicle-unit downloads across Gen1, Gen2v1 and Gen2v2. Supported
+                                extensions include .DDD, .ESM, .V1B, .C1B, .TGD, .TLG, .V1C and .C1C. The limit is 50 MB per file.
+                                Available records and verification scope depend on the file.
+                            </p>
+                        </details>
+                        <details>
+                            <summary>Do I need an internet connection?</summary>
+                            <p>
+                                The desktop application works offline. It makes no runtime network calls and does not upload your
+                                downloads. An internet connection is needed to download an installer or visit the project's GitHub
+                                pages.
+                            </p>
+                        </details>
+                        <details>
+                            <summary>Does a finding prove a legal infringement?</summary>
+                            <p>
+                                No. Results are software calculations under the selected rule profile, not a certified legal
+                                assessment. Missing records, rule assumptions and requirements needing external evidence must be
+                                considered by the reviewer.
+                            </p>
+                        </details>
+                        <details>
+                            <summary>Why might a map or speed view be empty?</summary>
+                            <p>
+                                A view can only show the records available in a download. Driver cards may contain sparse
+                                positions and no detailed speed samples. Missing records are not replaced with a reconstructed
+                                route or inferred speed.
+                            </p>
+                        </details>
+                        <details>
+                            <summary>Which languages are available?</summary>
+                            <p>
+                                The desktop interface supports English, German, French, Italian, Polish, Spanish and Croatian.
+                                Themes, density and display time-zone preferences help adapt the interface to your work.
+                            </p>
+                        </details>
+                        <details>
+                            <summary>Can I inspect the source code?</summary>
+                            <p>
+                                Yes. ESM Viewer is published under GNU GPL version 3 only. You can inspect the source, report
+                                issues, contribute improvements or build the desktop application yourself.
+                            </p>
+                            <a href="https://github.com/mbolaric/esm-viewer">Browse the repository →</a>
+                        </details>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <footer class="site-footer">
+            <div class="site-container">
+                <div class="footer-main">
+                    <div class="footer-about">
+                        <a class="site-brand" href="#top"
+                            ><img src="./assets/icon.png" width="28" height="28" alt="" /><span>ESM Viewer</span></a
+                        >
+                        <p>Digital tachograph records, understood locally.</p>
+                    </div>
+                    <nav class="footer-links" aria-label="Footer">
+                        <div>
+                            <h2>Product</h2>
+                            <ul>
+                                <li><a href="#features">Features</a></li>
+                                <li><a href="#screenshots">Screenshots</a></li>
+                                <li><a href="#privacy">Privacy</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h2>Get started</h2>
+                            <ul>
+                                <li><a href="#download">Download</a></li>
+                                <li><a href="#installation">Installation</a></li>
+                                <li><a href="https://github.com/mbolaric/esm-viewer/releases">All releases</a></li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h2>Project</h2>
+                            <ul>
+                                <li><a href="https://github.com/mbolaric/esm-viewer">Source code</a></li>
+                                <li><a href="https://github.com/mbolaric/esm-viewer/issues">Report an issue</a></li>
+                                <li>
+                                    <a href="https://github.com/mbolaric/esm-viewer/blob/master/LICENSE">GPL-3.0-only licence</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </nav>
+                </div>
+                <div class="footer-bottom">
+                    <p>Free and open source under GPL-3.0-only.</p>
+                    <a href="#top">Back to top <span aria-hidden="true">↑</span></a>
+                </div>
+            </div>
+        </footer>
+    </body>
+</html>

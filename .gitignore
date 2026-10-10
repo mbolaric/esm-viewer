@@ -33,4 +33,6 @@ src-tauri/gen/
 .claude/
 .agents/
 .codex/
+.impeccable/
 graphify-out/
+docs/ux-proposal/

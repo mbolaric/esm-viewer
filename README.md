@@ -105,6 +105,7 @@ modules, and `src-tauri` provides the native backend.
 
 | Command | Purpose |
 | --- | --- |
+| `pnpm site:build` | Build the standalone product website in `dist/site` |
 | `pnpm dev:tauri:renderer` | Start the renderer dev server only |
 | `pnpm build` | Build production renderer assets in `apps/viewer/dist` |
 | `pnpm check` | Check TypeScript, Svelte, and Rust; run Clippy |
