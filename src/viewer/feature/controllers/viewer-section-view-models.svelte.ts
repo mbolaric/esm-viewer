@@ -13,7 +13,7 @@ import {
     createLocationSectionViewModel,
     createRawDataExplorerViewModel,
     createRecordInspectorViewModel,
-    createSpeedSectionViewModel,
+    prepareSpeedSectionViewModel,
     createTechnicalSectionViewModel,
     type IActivitySectionViewModel,
     type IAssociationSectionViewModel,
@@ -26,6 +26,7 @@ import {
     type IRecordInspectorViewModel,
     type ISpeedSectionViewModel,
     type ITechnicalSectionViewModel,
+    type SpeedSectionViewModelSelector,
 } from '#viewer-presentation';
 
 import type { IViewerContext } from '../viewer-context.js';
@@ -46,6 +47,7 @@ export class ViewerSectionViewModels {
     #_location: ILocationSectionViewModel | null;
     #_technical: ITechnicalSectionViewModel | null;
     #_selectedSpeedRecord: IDetailedSpeedSample | null;
+    #_speedSelector: SpeedSectionViewModelSelector | null;
     #_speed: ISpeedSectionViewModel | null;
     #_rawDataExplorer: IRawDataExplorerViewModel | null;
     #_integrityDetail: IIntegrityDetailViewModel | null;
@@ -106,15 +108,24 @@ export class ViewerSectionViewModels {
             const record = this.#_context.documentController.selectionSnapshot?.selectedRecord ?? null;
             return record !== null && 'speedKilometresPerHour' in record ? record : null;
         });
-        this.#_speed = $derived.by(() => {
+        this.#_speedSelector = $derived.by(() => {
             const current = this.visibleDocument('speed');
-            return current === null
+            if (current === null) {
+                return null;
+            }
+            const request = {
+                end: this.#_session.speedRangeEnd.value,
+                start: this.#_session.speedRangeStart.value,
+            };
+            return prepareSpeedSectionViewModel(current, this.#_context.localisationService, request);
+        });
+        this.#_speed = $derived.by(() => {
+            const select = this.#_speedSelector;
+            return select === null
                 ? null
-                : createSpeedSectionViewModel(current, this.#_context.localisationService, {
-                      end: this.#_session.speedRangeEnd.value,
+                : select({
                       pageIndex: this.#_session.speedPage.value,
                       preferredSample: this.#_selectedSpeedRecord,
-                      start: this.#_session.speedRangeStart.value,
                   });
         });
         this.#_rawDataExplorer = $derived.by(() => {

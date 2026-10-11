@@ -8,6 +8,7 @@ export const ERROR_CODES = {
     exportSaveFailed: 'desktop.export-save-failed',
     invalidErrorReport: 'desktop.invalid-error-report',
     menuBuildFailed: 'desktop.menu-build-failed',
+    menuStateSyncFailed: 'desktop.menu-state-sync-failed',
     nativeThemeSyncFailed: 'desktop.native-theme-sync-failed',
     nativeWindowCommandFailed: 'desktop.native-window-command-failed',
     pdfGenerationFailed: 'desktop.pdf-generation-failed',
@@ -34,6 +35,7 @@ const SIMPLE_EVENTS = {
     [ERROR_CODES.exportSaveFailed]: { code: ERROR_CODES.exportSaveFailed, severity: 'error', source: 'desktop' },
     [ERROR_CODES.invalidErrorReport]: { code: ERROR_CODES.invalidErrorReport, severity: 'warning', source: 'desktop' },
     [ERROR_CODES.menuBuildFailed]: { code: ERROR_CODES.menuBuildFailed, severity: 'error', source: 'desktop' },
+    [ERROR_CODES.menuStateSyncFailed]: { code: ERROR_CODES.menuStateSyncFailed, severity: 'error', source: 'desktop' },
     [ERROR_CODES.nativeThemeSyncFailed]: { code: ERROR_CODES.nativeThemeSyncFailed, severity: 'warning', source: 'desktop' },
     [ERROR_CODES.nativeWindowCommandFailed]: {
         code: ERROR_CODES.nativeWindowCommandFailed,

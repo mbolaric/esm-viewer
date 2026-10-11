@@ -48,6 +48,10 @@ export interface IDetailedSpeedProjectionRequest {
     readonly start: UtcTimestamp | null;
 }
 
+export type DetailedSpeedProjectionSelector = (
+    request: Pick<IDetailedSpeedProjectionRequest, 'pageIndex' | 'preferredSample'>,
+) => IDocumentDetailedSpeedProjection;
+
 export interface IDetailedSpeedChartSample {
     readonly pageIndex: number;
     readonly sample: IDetailedSpeedSample;
@@ -484,16 +488,11 @@ function detailedSpeedBucketExtrema(
     return [earlier, later];
 }
 
-function downsampleDetailedSpeed(
-    samples: readonly IDetailedSpeedSample[],
-    preferredSample: IDetailedSpeedSample | null,
-): readonly IDetailedSpeedSample[] {
-    if (samples.length <= detailedSpeedChartSampleLimit) {
+function downsampleDetailedSpeed(samples: readonly IDetailedSpeedSample[], sampleLimit: number): readonly IDetailedSpeedSample[] {
+    if (samples.length <= sampleLimit) {
         return samples;
     }
 
-    const preservePreferred = preferredSample !== null && samples.includes(preferredSample);
-    const baseLimit = preservePreferred ? detailedSpeedChartSampleLimit - 1 : detailedSpeedChartSampleLimit;
     const first = samples[0];
     const last = samples.at(-1);
     if (first === undefined || last === undefined) {
@@ -502,7 +501,7 @@ function downsampleDetailedSpeed(
 
     const reduced: IDetailedSpeedSample[] = [first];
     const interiorLength = samples.length - 2;
-    const bucketCount = Math.max(1, Math.floor((baseLimit - 2) / 2));
+    const bucketCount = Math.max(1, Math.floor((sampleLimit - 2) / 2));
     for (let bucketIndex = 0; bucketIndex < bucketCount; bucketIndex += 1) {
         const startIndex = 1 + Math.floor((bucketIndex * interiorLength) / bucketCount);
         const endIndex = 1 + Math.floor(((bucketIndex + 1) * interiorLength) / bucketCount);
@@ -510,24 +509,19 @@ function downsampleDetailedSpeed(
     }
     reduced.push(last);
 
-    if (preservePreferred && !reduced.includes(preferredSample)) {
-        reduced.push(preferredSample);
-    }
-
     const uniqueSamples = Array.from(new Set(reduced)).sort(compareDetailedSpeedSamples);
     return uniqueSamples;
 }
 
-function detailedSpeedChartSamples(
+function createDetailedSpeedChartSelector(
     samples: readonly IDetailedSpeedSample[],
-    preferredSample: IDetailedSpeedSample | null,
-): readonly IDetailedSpeedChartSample[] {
+): (preferredSample: IDetailedSpeedSample | null) => readonly IDetailedSpeedChartSample[] {
     const pageIndexBySample = new Map<IDetailedSpeedSample, number>();
     for (const [index, sample] of samples.entries()) {
         pageIndexBySample.set(sample, Math.floor(index / detailedSpeedPageSize));
     }
 
-    return downsampleDetailedSpeed(samples, preferredSample).map((sample) => {
+    const chartSample = (sample: IDetailedSpeedSample): IDetailedSpeedChartSample => {
         const pageIndex = pageIndexBySample.get(sample);
         if (pageIndex === undefined) {
             throw new TypeError('Detailed-speed chart sample is outside the selected range.');
@@ -536,7 +530,31 @@ function detailedSpeedChartSamples(
             pageIndex,
             sample,
         };
-    });
+    };
+    const chartSamples = downsampleDetailedSpeed(samples, detailedSpeedChartSampleLimit).map(chartSample);
+    const selectableChartSamples =
+        samples.length <= detailedSpeedChartSampleLimit
+            ? chartSamples
+            : downsampleDetailedSpeed(samples, detailedSpeedChartSampleLimit - 1).map(chartSample);
+    let previousPreferredSample: IDetailedSpeedSample | null = null;
+    let previousChartSamples = chartSamples;
+
+    return (preferredSample) => {
+        if (preferredSample === previousPreferredSample) {
+            return previousChartSamples;
+        }
+        previousPreferredSample = preferredSample;
+        if (preferredSample === null || !pageIndexBySample.has(preferredSample)) {
+            previousChartSamples = chartSamples;
+        } else if (selectableChartSamples.some((record) => record.sample === preferredSample)) {
+            previousChartSamples = selectableChartSamples;
+        } else {
+            previousChartSamples = [...selectableChartSamples, chartSample(preferredSample)].sort((left, right) =>
+                compareDetailedSpeedSamples(left.sample, right.sample),
+            );
+        }
+        return previousChartSamples;
+    };
 }
 
 function measureDetailedSpeedRange(
@@ -581,11 +599,18 @@ export function projectDocumentDetailedSpeed(
     document: OpenedTachographDocument,
     request: IDetailedSpeedProjectionRequest,
 ): IDocumentDetailedSpeedProjection {
+    return prepareDocumentDetailedSpeed(document, request)(request);
+}
+
+export function prepareDocumentDetailedSpeed(
+    document: OpenedTachographDocument,
+    request: Pick<IDetailedSpeedProjectionRequest, 'end' | 'start'>,
+): DetailedSpeedProjectionSelector {
     const allSamples = projectDocumentDetailedSpeedSamples(document);
     const first = allSamples[0];
     const last = allSamples.at(-1);
     if (first === undefined || last === undefined) {
-        return {
+        const emptyProjection: IDocumentDetailedSpeedProjection = {
             chartSamples: [],
             chartSamplesReduced: false,
             coverage: null,
@@ -600,6 +625,7 @@ export function projectDocumentDetailedSpeed(
             statistics: null,
             totalSamples: 0,
         };
+        return () => emptyProjection;
     }
 
     const coverage = {
@@ -619,28 +645,33 @@ export function projectDocumentDetailedSpeed(
 
     const filtered = allSamples.filter((sample) => sample.recordedAt >= rangeStart && sample.recordedAt <= rangeEnd);
     const pageCount = Math.ceil(filtered.length / detailedSpeedPageSize);
-    const requestedPageIndex = Number.isInteger(request.pageIndex) && request.pageIndex >= 0 ? request.pageIndex : 0;
-    const pageIndex = pageCount === 0 ? 0 : Math.min(requestedPageIndex, pageCount - 1);
-    const pageStart = pageIndex * detailedSpeedPageSize;
-    const chartSamples = detailedSpeedChartSamples(filtered, request.preferredSample);
-
-    return {
-        chartSamples,
-        chartSamplesReduced: chartSamples.length < filtered.length,
+    const selectChart = createDetailedSpeedChartSelector(filtered);
+    const rangeProjection = {
         coverage,
         filteredSamples: filtered,
         measurement: measureDetailedSpeedRange(filtered, rangeStart, rangeEnd),
         pageCount,
-        pageIndex,
         pageSize: detailedSpeedPageSize,
         range: {
             end: rangeEnd,
             start: rangeStart,
         },
         rangeLimited,
-        samples: filtered.slice(pageStart, pageStart + detailedSpeedPageSize),
         statistics: detailedSpeedStatistics(filtered),
         totalSamples: filtered.length,
+    };
+    return ({ pageIndex: requestedPage, preferredSample }) => {
+        const requestedPageIndex = Number.isInteger(requestedPage) && requestedPage >= 0 ? requestedPage : 0;
+        const pageIndex = pageCount === 0 ? 0 : Math.min(requestedPageIndex, pageCount - 1);
+        const pageStart = pageIndex * detailedSpeedPageSize;
+        const chartSamples = selectChart(preferredSample);
+        return {
+            ...rangeProjection,
+            chartSamples,
+            chartSamplesReduced: chartSamples.length < filtered.length,
+            pageIndex,
+            samples: filtered.slice(pageStart, pageStart + detailedSpeedPageSize),
+        };
     };
 }
 

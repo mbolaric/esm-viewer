@@ -12,9 +12,9 @@ import {
 } from '#viewer-domain';
 import { createVehicleUnitDocumentFixture } from './vehicle-unit-document-fixture.js';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { createSpeedSectionViewModel } from '../view-models/speed-view-model.js';
+import { createSpeedSectionViewModel, prepareSpeedSectionViewModel } from '../view-models/speed-view-model.js';
 
 function timestamp(value: number): UtcTimestamp {
     if (!isUtcTimestamp(value)) {
@@ -59,9 +59,9 @@ function document(): OpenedTachographDocument {
     });
 }
 
-function pagedDocument(): OpenedTachographDocument {
+function pagedDocument(sampleCount = 501): OpenedTachographDocument {
     const start = Date.UTC(2026, 5, 18, 8, 42);
-    const samples = Array.from({ length: 501 }, (_unused, index) => {
+    const samples = Array.from({ length: sampleCount }, (_unused, index) => {
         const path = `/speed/${String(index)}`;
         if (!isJsonPointer(path)) {
             throw new TypeError('The paged speed view-model path must be valid.');
@@ -83,6 +83,67 @@ function pagedDocument(): OpenedTachographDocument {
 }
 
 describe('speed view model paging', () => {
+    it('formats each range sample once and reuses formatted rows for pages and exact selected chart points', () => {
+        const service = localisation();
+        const formatDateTime = vi.spyOn(service, 'formatDateTime');
+        const formatNumber = vi.spyOn(service, 'formatNumber');
+        const select = prepareSpeedSectionViewModel(pagedDocument(2_400), service, { end: null, start: null });
+        const initial = select({ pageIndex: 0, preferredSample: null });
+        const chartSamples = new Set(initial.chartRecords.map((row) => row.record));
+        const preferred = initial.allRecords.find((row) => !chartSamples.has(row.record));
+        if (preferred === undefined) {
+            throw new TypeError('The speed view-model fixture needs an omitted chart sample.');
+        }
+        const dateCalls = formatDateTime.mock.calls.length;
+        const numberCalls = formatNumber.mock.calls.length;
+        const selected = select({ pageIndex: 0, preferredSample: preferred.record });
+        expect(selected.allRecords).toBe(initial.allRecords);
+        expect(selected.records).toBe(initial.records);
+        expect(selected.chartRecords.find((row) => row.record === preferred.record)?.recordedAt).toBe(preferred.recordedAt);
+        expect(formatDateTime).toHaveBeenCalledTimes(dateCalls);
+        expect(formatNumber).toHaveBeenCalledTimes(numberCalls);
+        expect(select({ pageIndex: 0, preferredSample: preferred.record })).toBe(selected);
+
+        const paged = select({ pageIndex: 999, preferredSample: preferred.record });
+        expect(paged.pageIndex).toBe(7);
+        expect(paged.records[0]).toBe(initial.allRecords[2_100]);
+        expect(paged.chartRecords).toBe(selected.chartRecords);
+        expect(formatDateTime).toHaveBeenCalledTimes(dateCalls);
+        expect(formatNumber).toHaveBeenCalledTimes(numberCalls + 1);
+        expect(initial.pageNumber.value).toBe(1);
+        expect(paged.pageNumber.value).toBe(8);
+        expect(select({ pageIndex: 7, preferredSample: null }).chartRecords).toEqual(initial.chartRecords);
+    });
+
+    it('keeps preparation local to its document and range, including empty recordings', () => {
+        const current = pagedDocument();
+        const service = localisation();
+        const full = prepareSpeedSectionViewModel(current, service, { start: null, end: null });
+        const initial = full({ pageIndex: 0, preferredSample: null });
+        const first = initial.allRecords[0];
+        if (first === undefined) {
+            throw new TypeError('The speed range fixture must contain samples.');
+        }
+        const single = prepareSpeedSectionViewModel(current, service, {
+            start: first.recordedAt.value,
+            end: first.recordedAt.value,
+        });
+        expect(single({ pageIndex: 999, preferredSample: first.record }).allRecords).toHaveLength(1);
+        expect(full({ pageIndex: 0, preferredSample: null })).toBe(initial);
+        const empty = prepareSpeedSectionViewModel(pagedDocument(0), service, { start: null, end: null });
+        const emptyModel = empty({ pageIndex: 999, preferredSample: first.record });
+        expect(emptyModel).toMatchObject({
+            allRecords: [],
+            chartRecords: [],
+            measurement: null,
+            pageIndex: 0,
+            pageNumber: { value: 0 },
+            records: [],
+            statistics: null,
+        });
+        expect(empty({ pageIndex: 0, preferredSample: null })).toBe(emptyModel);
+    });
+
     it('exposes the whole selected range for filtering while keeping one page as the rendered slice', () => {
         const viewModel = createSpeedSectionViewModel(pagedDocument(), localisation(), {
             end: null,

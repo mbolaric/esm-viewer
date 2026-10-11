@@ -283,6 +283,7 @@ describe('desktop API decoders', () => {
         { code: ERROR_CODES.workspaceRenderFailed, severity: 'error', source: 'viewer' },
         { code: ERROR_CODES.invalidErrorReport, severity: 'warning', source: 'desktop' },
         { code: ERROR_CODES.menuBuildFailed, severity: 'error', source: 'desktop' },
+        { code: ERROR_CODES.menuStateSyncFailed, severity: 'error', source: 'desktop' },
         { code: ERROR_CODES.nativeThemeSyncFailed, severity: 'warning', source: 'desktop' },
         { code: ERROR_CODES.signatureVerificationFailed, severity: 'error', source: 'viewer' },
         { code: ERROR_CODES.dragDropListenerFailed, severity: 'error', source: 'desktop' },
@@ -301,6 +302,23 @@ describe('desktop API decoders', () => {
         ['null', null],
         ['an empty object', {}],
         ['an unrecognised code', { code: 'unknown.error', severity: 'error', source: 'viewer' }],
+        [
+            'a menu-state failure with raw error context',
+            {
+                code: ERROR_CODES.menuStateSyncFailed,
+                context: { message: '/private/example.ddd' },
+                severity: 'error',
+                source: 'desktop',
+            },
+        ],
+        [
+            'a menu-state failure with the wrong severity',
+            { code: ERROR_CODES.menuStateSyncFailed, severity: 'warning', source: 'desktop' },
+        ],
+        [
+            'a menu-state failure with the wrong source',
+            { code: ERROR_CODES.menuStateSyncFailed, severity: 'error', source: 'viewer' },
+        ],
         [
             'an empty translation-missing-key context',
             {

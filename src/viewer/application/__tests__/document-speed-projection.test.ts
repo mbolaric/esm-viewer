@@ -20,6 +20,7 @@ import {
     detailedSpeedPageSize,
     DocumentSelectionController,
     maximumDetailedSpeedRangeMilliseconds,
+    prepareDocumentDetailedSpeed,
     projectDocumentDetailedSpeed,
     projectDocumentOverspeedRecords,
     type IParsedVehicleUnitDocument,
@@ -140,6 +141,82 @@ function openedDocument(samples: readonly IDetailedSpeedSample[]): OpenedTachogr
 }
 
 describe('detailed-speed projection', () => {
+    it('reuses prepared range data across pages and exact chart selections without accumulating selected points', () => {
+        const start = Date.UTC(2026, 5, 18, 8);
+        const samples = Array.from({ length: detailedSpeedChartSampleLimit * 2 }, (_, index) =>
+            sample(start + index * 1_000, index === detailedSpeedChartSampleLimit ? 255 : 72, index),
+        );
+        const select = prepareDocumentDetailedSpeed(openedDocument(samples), { end: null, start: null });
+        const initial = select({ pageIndex: 0, preferredSample: null });
+        const chartSamples = new Set(initial.chartSamples.map((row) => row.sample));
+        const omitted = samples.filter((record) => !chartSamples.has(record));
+        const firstSelected = omitted[0];
+        const nextSelected = omitted[1];
+        if (firstSelected === undefined || nextSelected === undefined) {
+            throw new TypeError('The prepared chart fixture must have omitted samples.');
+        }
+        const selected = select({ pageIndex: 1, preferredSample: firstSelected });
+        expect(selected.filteredSamples).toBe(initial.filteredSamples);
+        expect(selected.statistics).toBe(initial.statistics);
+        expect(selected.measurement).toBe(initial.measurement);
+        expect(selected.coverage).toBe(initial.coverage);
+        expect(selected.range).toBe(initial.range);
+        expect(selected.samples[0]).toBe(initial.filteredSamples[detailedSpeedPageSize]);
+        expect(selected.chartSamples.some((row) => row.sample === firstSelected)).toBe(true);
+        expect(selected.chartSamples.some((row) => row.sample.speedKilometresPerHour === 255)).toBe(true);
+        expect(selected.chartSamples[0]?.sample).toBe(samples[0]);
+        expect(selected.chartSamples.at(-1)?.sample).toBe(samples.at(-1));
+        expect(select({ pageIndex: 2, preferredSample: firstSelected }).chartSamples).toBe(selected.chartSamples);
+
+        const next = select({ pageIndex: 2, preferredSample: nextSelected });
+        expect(next.chartSamples.some((row) => row.sample === nextSelected)).toBe(true);
+        expect(next.chartSamples.length).toBeLessThanOrEqual(detailedSpeedChartSampleLimit);
+        expect(next.chartSamples.map((row) => row.sample.recordedAt)).toEqual(
+            [...next.chartSamples].map((row) => row.sample.recordedAt).sort((left, right) => left - right),
+        );
+        expect(select({ pageIndex: 0, preferredSample: null }).chartSamples).toBe(initial.chartSamples);
+        expect(initial.pageIndex).toBe(0);
+        expect(initial.chartSamples.some((row) => row.sample === firstSelected)).toBe(false);
+    });
+
+    it.each([
+        { requested: -1, expected: 0 },
+        { requested: 1.5, expected: 0 },
+        { requested: Number.NaN, expected: 0 },
+        { requested: Number.POSITIVE_INFINITY, expected: 0 },
+        { requested: 999, expected: 1 },
+    ])('clamps prepared page request $requested to $expected', ({ requested, expected }) => {
+        const start = Date.UTC(2026, 5, 18, 8);
+        const samples = Array.from({ length: detailedSpeedPageSize + 1 }, (_, index) => sample(start + index * 1_000, 72, index));
+        const select = prepareDocumentDetailedSpeed(openedDocument(samples), { end: null, start: null });
+        expect(select({ pageIndex: requested, preferredSample: null }).pageIndex).toBe(expected);
+    });
+
+    it('ignores selected samples outside the prepared range or from another document', () => {
+        const start = Date.UTC(2026, 5, 18, 8);
+        const first = sample(start, 72, 0);
+        const last = sample(start + 1_000, 73, 1);
+        const select = prepareDocumentDetailedSpeed(openedDocument([first, last]), {
+            end: first.recordedAt,
+            start: first.recordedAt,
+        });
+        const initial = select({ pageIndex: 0, preferredSample: null });
+        for (const preferredSample of [first, last, sample(start, 72, 0)]) {
+            const selected = select({ pageIndex: 0, preferredSample });
+            expect(selected.chartSamples).toBe(initial.chartSamples);
+            expect(selected.samples).toEqual([first]);
+        }
+        const empty = prepareDocumentDetailedSpeed(openedDocument([]), { end: null, start: null });
+        expect(empty({ pageIndex: 999, preferredSample: last })).toMatchObject({
+            chartSamples: [],
+            coverage: null,
+            pageIndex: 0,
+            range: null,
+            samples: [],
+            statistics: null,
+        });
+    });
+
     it('sorts, filters, pages, and calculates factual selected-range statistics', () => {
         const start = Date.UTC(2026, 5, 18, 8);
         const samples = Array.from({ length: detailedSpeedPageSize + 2 }, (_, index) =>

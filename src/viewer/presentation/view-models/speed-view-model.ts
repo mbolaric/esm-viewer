@@ -1,5 +1,5 @@
 import {
-    projectDocumentDetailedSpeed,
+    prepareDocumentDetailedSpeed,
     projectDocumentOverspeedRecords,
     type IDetailedSpeedChartSample,
     type IDetailedSpeedProjectionRequest,
@@ -20,7 +20,7 @@ import {
 } from '#viewer-domain';
 
 import type { IFormattedUtcRange, IFormattedValue } from './document-view-model.js';
-import type { ViewerLocalisationService } from '../helpers/view-model-formatting.js';
+import { formattedValue, type ViewerLocalisationService } from '../helpers/view-model-formatting.js';
 
 export interface IFormattedUtcRangeInput extends IFormattedUtcRange {
     readonly endInput: string;
@@ -99,12 +99,9 @@ export interface ISpeedSectionViewModel {
     readonly totalSamples: IFormattedValue<number>;
 }
 
-function formattedValue<TValue>(value: TValue, display: string): IFormattedValue<TValue> {
-    return {
-        display,
-        value,
-    };
-}
+export type SpeedSectionViewModelSelector = (
+    request: Pick<IDetailedSpeedProjectionRequest, 'pageIndex' | 'preferredSample'>,
+) => ISpeedSectionViewModel;
 
 function formatUtcDateTimeInput(value: UtcTimestamp, localisation: ViewerLocalisationService): string {
     return `${localisation.formatUtcDate(value)} ${localisation.formatUtcTime(value)}`;
@@ -139,9 +136,16 @@ function mapRecord(record: IDetailedSpeedSample, localisation: ViewerLocalisatio
     };
 }
 
-function mapChartRecord(record: IDetailedSpeedChartSample, localisation: ViewerLocalisationService): ISpeedChartSampleViewModel {
+function mapChartRecord(
+    record: IDetailedSpeedChartSample,
+    rows: ReadonlyMap<IDetailedSpeedSample, ISpeedSampleViewModel>,
+): ISpeedChartSampleViewModel {
+    const row = rows.get(record.sample);
+    if (row === undefined) {
+        throw new TypeError('Detailed-speed chart sample has no formatted range row.');
+    }
     return {
-        ...mapRecord(record.sample, localisation),
+        ...row,
         pageIndex: record.pageIndex,
     };
 }
@@ -221,7 +225,18 @@ export function createSpeedSectionViewModel(
     localisation: ViewerLocalisationService,
     request: IDetailedSpeedProjectionRequest,
 ): ISpeedSectionViewModel {
-    const projection = projectDocumentDetailedSpeed(document, request);
+    return prepareSpeedSectionViewModel(document, localisation, request)(request);
+}
+
+export function prepareSpeedSectionViewModel(
+    document: OpenedTachographDocument,
+    localisation: ViewerLocalisationService,
+    request: Pick<IDetailedSpeedProjectionRequest, 'end' | 'start'>,
+): SpeedSectionViewModelSelector {
+    const selectProjection = prepareDocumentDetailedSpeed(document, request);
+    const projection = selectProjection({ pageIndex: 0, preferredSample: null });
+    const allRecords = projection.filteredSamples.map((record) => mapRecord(record, localisation));
+    const rowsBySample = new Map(allRecords.map((row) => [row.record, row]));
     const statistics =
         projection.statistics === null
             ? null
@@ -239,8 +254,9 @@ export function createSpeedSectionViewModel(
 
     const overspeedRecords = projectDocumentOverspeedRecords(document);
 
-    return {
-        chartRecords: projection.chartSamples.map((record) => mapChartRecord(record, localisation)),
+    let chartSamples = projection.chartSamples;
+    let viewModel: ISpeedSectionViewModel = {
+        chartRecords: chartSamples.map((record) => mapChartRecord(record, rowsBySample)),
         chartReduced: projection.chartSamplesReduced,
         chartTicks: formatChartTicks(projection.range, localisation),
         coverage: formatRange(projection.coverage, localisation),
@@ -275,12 +291,34 @@ export function createSpeedSectionViewModel(
         range: formatRange(projection.range, localisation),
         rangeLimited: projection.rangeLimited,
         // The table filters and sorts over every sample of the range, then shows one page of the result.
-        allRecords: projection.filteredSamples.map((record) => mapRecord(record, localisation)),
+        allRecords,
         pageSize: projection.pageSize,
-        records: projection.samples.map((record) => mapRecord(record, localisation)),
+        records: allRecords.slice(0, projection.pageSize),
         statistics,
         timeZone: localisation.timeZone,
         totalSamples: formattedValue(projection.totalSamples, localisation.formatNumber(projection.totalSamples)),
+    };
+    return (selection) => {
+        const selectedProjection = selectProjection(selection);
+        const pageChanged = selectedProjection.pageIndex !== viewModel.pageIndex;
+        const chartChanged = selectedProjection.chartSamples !== chartSamples;
+        if (!pageChanged && !chartChanged) {
+            return viewModel;
+        }
+        chartSamples = selectedProjection.chartSamples;
+        const pageStart = selectedProjection.pageIndex * projection.pageSize;
+        const pageNumber = projection.pageCount === 0 ? 0 : selectedProjection.pageIndex + 1;
+        viewModel = {
+            ...viewModel,
+            chartRecords: chartChanged
+                ? chartSamples.map((record) => mapChartRecord(record, rowsBySample))
+                : viewModel.chartRecords,
+            chartReduced: selectedProjection.chartSamplesReduced,
+            pageIndex: selectedProjection.pageIndex,
+            pageNumber: pageChanged ? formattedValue(pageNumber, localisation.formatNumber(pageNumber)) : viewModel.pageNumber,
+            records: pageChanged ? allRecords.slice(pageStart, pageStart + projection.pageSize) : viewModel.records,
+        };
+        return viewModel;
     };
 }
 

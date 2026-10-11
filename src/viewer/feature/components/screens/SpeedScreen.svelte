@@ -134,9 +134,10 @@
             sortable: true,
         },
     ]);
+    const sampleSearch = $derived(sampleFilterText);
     const sampleTooling = new TableToolingController<ISpeedSampleViewModel>({
         columns: () => columns,
-        filterText: () => sampleFilterText,
+        filterText: () => sampleSearch,
         filterValues: (record) => [record.recordedAt.display, record.speed.display, record.source.path],
         sortValue: createStandardSortValue({
             time: (record) => record.recordedAt.value,
@@ -272,7 +273,8 @@
 
     // P12: the table sees every sample of the range, so a filter or a sort applies to the whole set and only the
     // displayed page is a slice of the result.
-    const sampleRows = $derived(sampleTooling.snapshot(viewModel?.allRecords ?? []).rows);
+    const allSampleRecords = $derived(viewModel?.allRecords ?? []);
+    const sampleRows = $derived(sampleTooling.snapshot(allSampleRecords).rows);
     const filteredPageCount = $derived(
         viewModel === null || viewModel.pageSize === 0 ? 0 : Math.ceil(sampleRows.length / viewModel.pageSize),
     );

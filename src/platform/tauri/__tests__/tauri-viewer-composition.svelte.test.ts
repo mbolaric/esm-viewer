@@ -1,4 +1,6 @@
-import { describe, expect, it, vi } from 'vitest';
+import { MenuItem } from '@tauri-apps/api/menu';
+import { clearMocks, mockIPC } from '@tauri-apps/api/mocks';
+import { afterEach, describe, expect, it, vi, type Mock, type MockInstance } from 'vitest';
 
 import {
     createMemoryKeyValueStore,
@@ -12,6 +14,149 @@ import { createTauriViewerContext, TauriPlatformService, type createApplicationM
 vi.mock('@tauri-apps/api/window', () => ({
     getCurrentWindow: () => ({ setTheme: () => Promise.resolve() }),
 }));
+
+afterEach(() => {
+    clearMocks();
+    vi.restoreAllMocks();
+});
+
+interface INativeCommandStateFixture {
+    readonly closeEnabled: MockInstance<MenuItem['setEnabled']>;
+    readonly createContext: () => ReturnType<typeof createTauriViewerContext>;
+    readonly openEnabled: MockInstance<MenuItem['setEnabled']>;
+    readonly report: Mock<(event: IErrorEvent, detail?: unknown) => Promise<void>>;
+}
+
+async function nativeCommandStateFixture(): Promise<INativeCommandStateFixture> {
+    let nextRid = 1;
+    mockIPC((command) => {
+        if (command !== 'plugin:menu|new') {
+            throw new TypeError('Unexpected native menu command.');
+        }
+        const rid = nextRid++;
+        return [rid, `menu-${String(rid)}`];
+    });
+    const openItem = await MenuItem.new({ text: 'Open' });
+    const closeItem = await MenuItem.new({ text: 'Close' });
+    const openEnabled = vi.spyOn(openItem, 'setEnabled').mockResolvedValue(undefined);
+    const closeEnabled = vi.spyOn(closeItem, 'setEnabled').mockResolvedValue(undefined);
+    const installMenu = vi.fn<typeof createApplicationMenu>().mockImplementation((_execute, items) => {
+        items.set('file.open', openItem);
+        items.set('file.close', closeItem);
+        return Promise.resolve({ updateLocale: () => Promise.resolve() });
+    });
+    const report = vi.fn<(event: IErrorEvent, detail?: unknown) => Promise<void>>().mockResolvedValue(undefined);
+    return {
+        closeEnabled,
+        createContext: () =>
+            createTauriViewerContext(new TauriPlatformService(createMemoryKeyValueStore()), {
+                errorService: { report },
+                installMenu,
+                preferencesTarget: { apply: () => true, dispose: () => undefined },
+            }),
+        openEnabled,
+        report,
+    };
+}
+
+describe('native menu command-state synchronization', () => {
+    it('publishes command states, skips unchanged states, and updates modal availability without reporting errors', async () => {
+        const { closeEnabled, createContext, openEnabled, report } = await nativeCommandStateFixture();
+        const context = await createContext();
+        try {
+            expect(openEnabled).toHaveBeenCalledExactlyOnceWith(true);
+            expect(closeEnabled).toHaveBeenCalledExactlyOnceWith(false);
+            expect(context.commandController.synchronize()).toBe(true);
+            expect(openEnabled).toHaveBeenCalledOnce();
+            expect(closeEnabled).toHaveBeenCalledOnce();
+
+            expect(context.preferencesController.open()).toBe(true);
+            expect(context.commandController.synchronize()).toBe(true);
+            expect(openEnabled.mock.calls).toEqual([[true], [false]]);
+            expect(closeEnabled.mock.calls).toEqual([[false], [false]]);
+            expect(report).not.toHaveBeenCalled();
+        } finally {
+            context.preferencesController.dispose();
+            await context.documentController.dispose();
+        }
+    });
+
+    it.each(['open', 'close'] as const)(
+        'reports a delayed %s-menu rejection without exposing raw error details or blocking later updates',
+        async (failedItem) => {
+            const { closeEnabled, createContext, openEnabled, report } = await nativeCommandStateFixture();
+            const pending = Promise.withResolvers<undefined>();
+            (failedItem === 'open' ? openEnabled : closeEnabled).mockReturnValueOnce(pending.promise);
+            const context = await createContext();
+            try {
+                expect(openEnabled).toHaveBeenCalledExactlyOnceWith(true);
+                expect(closeEnabled).toHaveBeenCalledExactlyOnceWith(false);
+                expect(report).not.toHaveBeenCalled();
+                pending.reject(new Error('Synthetic native failure at /private/example.ddd'));
+                await vi.waitFor(() => {
+                    expect(report).toHaveBeenCalledExactlyOnceWith({
+                        code: 'desktop.menu-state-sync-failed',
+                        severity: 'error',
+                        source: 'desktop',
+                    });
+                });
+
+                expect(context.commandController.execute('application.preferences')).toBe(true);
+                expect(context.commandController.synchronize()).toBe(true);
+                expect(openEnabled.mock.calls).toEqual([[true], [false]]);
+                expect(closeEnabled.mock.calls).toEqual([[false], [false]]);
+                expect(context.preferencesController.cancel()).toBe(true);
+                expect(context.commandController.synchronize()).toBe(true);
+                expect(openEnabled.mock.calls).toEqual([[true], [false], [true]]);
+                expect(report).toHaveBeenCalledOnce();
+            } finally {
+                context.preferencesController.dispose();
+                await context.documentController.dispose();
+            }
+        },
+    );
+
+    it('reports each rejection when multiple menu items fail in the same update', async () => {
+        const { closeEnabled, createContext, openEnabled, report } = await nativeCommandStateFixture();
+        openEnabled.mockRejectedValueOnce(new Error('Synthetic open-menu failure'));
+        closeEnabled.mockRejectedValueOnce(new Error('Synthetic close-menu failure'));
+        const context = await createContext();
+        try {
+            await vi.waitFor(() => {
+                expect(report.mock.calls).toEqual([
+                    [{ code: 'desktop.menu-state-sync-failed', severity: 'error', source: 'desktop' }],
+                    [{ code: 'desktop.menu-state-sync-failed', severity: 'error', source: 'desktop' }],
+                ]);
+            });
+        } finally {
+            context.preferencesController.dispose();
+            await context.documentController.dispose();
+        }
+    });
+
+    it('reports synchronous failures and preserves retry on the next synchronization', async () => {
+        const { closeEnabled, createContext, openEnabled, report } = await nativeCommandStateFixture();
+        const context = await createContext();
+        try {
+            openEnabled.mockImplementationOnce(() => {
+                throw new Error('Synthetic synchronous failure at /private/example.ddd');
+            });
+            expect(context.preferencesController.open()).toBe(true);
+            expect(context.commandController.synchronize()).toBe(false);
+            expect(context.commandController.synchronize()).toBe(true);
+            expect(openEnabled.mock.calls).toEqual([[true], [false], [false]]);
+            expect(closeEnabled.mock.calls).toEqual([[false], [false]]);
+            expect(report).toHaveBeenCalledExactlyOnceWith({
+                code: 'desktop.menu-state-sync-failed',
+                severity: 'error',
+                source: 'desktop',
+            });
+        } finally {
+            context.preferencesController.dispose();
+            await context.documentController.dispose();
+        }
+    });
+});
 
 describe('native menu initialization', () => {
     it.each(['missing', 'corrupt', 'unavailable'] as const)(

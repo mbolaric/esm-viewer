@@ -170,12 +170,16 @@ export async function createTauriViewerContext(
         preferencesController,
         stateTarget: {
             update(state: ApplicationCommandState): boolean {
+                const reportFailure = (): void => {
+                    void errorService.report({ code: ERROR_CODES.menuStateSyncFailed, severity: 'error', source: 'desktop' });
+                };
                 try {
                     for (const [command, item] of commandMenuItems) {
-                        void item.setEnabled(state[command]);
+                        void item.setEnabled(state[command]).catch(reportFailure);
                     }
                     return true;
                 } catch {
+                    reportFailure();
                     return false;
                 }
             },

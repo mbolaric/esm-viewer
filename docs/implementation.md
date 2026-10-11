@@ -491,6 +491,16 @@ the existing preferences store (`localStorage` in the current Tauri host,
   occupies in the table as filtered and sorted, not to the chronological page
   the chart computed, and leaves the table alone when the active filter excludes
   it (the inspector still shows it).
+  `prepareDocumentDetailedSpeed` prepares range data and bounded chart projections
+  once; its selector changes the page and preserves the exact selected chart sample
+  without sorting the source recording or recalculating statistics and distance.
+  `prepareSpeedSectionViewModel` formats each range sample once and reuses those
+  rows for the table, chart, and inspector. `ViewerSectionViewModels` keeps this
+  preparation separate from page/selection state, rebuilding it when the document,
+  range, or formatting preferences change. The table derives full-range filtering
+  and sorting from the shared row collection, not page or selection changes.
+  Existing one-shot projection and view-model APIs remain available, and no
+  persisted settings format changes.
 - **Places** — recorded positions, border crossings, and load/unload
   operations, each with country entered/left, odometer reading and
   discrepancy notes, GNSS accuracy/coordinate-precision caveats, and a
@@ -1357,6 +1367,13 @@ Tauri's `setAsWindowMenu` (Windows/Linux) or `setAsAppMenu` (macOS), closes the
 previous menu resource, and synchronizes active command states. Existing
 File/Edit/View/Help ordering is unchanged. `ViewerRoot` accepts additional
 Welcome and no-document failure actions.
+Native command-state synchronization preserves the synchronous host contract
+and handles each `MenuItem.setEnabled` promise rejection. Both asynchronous
+rejections and synchronous exceptions report the contextless
+`desktop.menu-state-sync-failed` event through `IErrorService`, without raw
+native error details. An asynchronous failure of one item does not prevent
+other item updates or later command-state changes; synchronous failures retain
+the existing retry behavior on the next synchronization.
 The foundation stylesheet provides the shared handbook card layout so contributed
 guide content retains the same appearance without copying dialog styles.
 Guide contributions can specify a typed `beforeTab` position. Preference

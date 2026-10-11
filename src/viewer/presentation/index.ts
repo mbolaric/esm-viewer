@@ -99,6 +99,7 @@ export {
     calculatePresetSpeedRange,
     calculateSpeedChartBounds,
     createSpeedSectionViewModel,
+    prepareSpeedSectionViewModel,
     parseSpeedRangeInput,
     type IFormattedUtcRangeInput,
     type IOverspeedControlViewModel,
@@ -109,6 +110,7 @@ export {
     type ISpeedSampleViewModel,
     type ISpeedSectionViewModel,
     type ISpeedStatisticsViewModel,
+    type SpeedSectionViewModelSelector,
 } from './view-models/speed-view-model.js';
 export {
     createTechnicalSectionViewModel,

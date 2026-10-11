@@ -19,10 +19,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import SpeedScreen from '../components/screens/SpeedScreen.svelte';
 import { createDocumentScopedValue } from '../controllers/document-scoped-value.svelte.js';
+import { TableToolingController } from '../controllers/table-tooling-controller.svelte.js';
 import { createViewerTestRenderOptions } from './viewer-test-render.js';
 
 afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
 });
 
 function timestamp(value: number): UtcTimestamp {
@@ -179,6 +181,57 @@ function overspeedViewModel(): ISpeedSectionViewModel {
 }
 
 describe('SpeedScreen', () => {
+    it('reuses full-range filtering and sorting when only the page or selected sample changes', async () => {
+        const base = viewModel();
+        const first = base.allRecords[0];
+        const second = base.allRecords[1];
+        if (first === undefined || second === undefined) {
+            throw new TypeError('The speed tooling fixture must contain samples.');
+        }
+        const filterText = createDocumentScopedValue('');
+        const snapshot = vi.spyOn(TableToolingController.prototype, 'snapshot');
+        const initial = { ...base, pageSize: 1, records: [first] };
+        const rendered = render(
+            SpeedScreen,
+            {
+                props: {
+                    onchartfailure: vi.fn(),
+                    onclearrecord: vi.fn(),
+                    onpage: vi.fn(),
+                    onrange: vi.fn(),
+                    onreset: vi.fn(),
+                    onselectrecord: vi.fn(),
+                    onopensource: vi.fn(),
+                    overspeedFilterText: createDocumentScopedValue(''),
+                    sampleFilterText: filterText,
+                    selectedRecord: null,
+                    viewModel: initial,
+                },
+            },
+            createViewerTestRenderOptions(),
+        );
+        expect(snapshot).toHaveBeenCalledOnce();
+        await rendered.rerender({
+            selectedRecord: second.record,
+            viewModel: { ...initial, pageIndex: 1, pageNumber: formatted(2, '2'), records: [second] },
+        });
+        expect(snapshot).toHaveBeenCalledOnce();
+        const table = screen.getByRole('table', {
+            name: 'Exact chronological detailed-speed samples for the selected UTC range',
+        });
+        expect(
+            within(table)
+                .getByRole('button', { name: /Select speed sample: .*73 km\/h/u })
+                .getAttribute('aria-pressed'),
+        ).toBe('true');
+        await rendered.rerender({ selectedRecord: null });
+        expect(snapshot).toHaveBeenCalledOnce();
+        filterText.set('72');
+        await tick();
+        expect(snapshot).toHaveBeenCalledTimes(2);
+        expect(within(table).getByRole('button', { name: /Select speed sample: .*72 km\/h/u })).toBeTruthy();
+    });
+
     it('renders factual summaries, bounded controls, pagination, selection, and source actions', async () => {
         const range = vi.fn();
         const reset = vi.fn();
