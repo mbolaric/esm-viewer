@@ -1039,6 +1039,16 @@ two-consecutive-reduced-weekly-rest review per qualifying week pair) shows
 that explanation once, with an occurrence count, instead of repeating the
 identical paragraph once per period.
 
+The screen evaluates the current document once per document, selected rule
+profile, or night-work window change and passes that result to
+`createComplianceViewModel` through its existing optional evaluation input.
+Category, severity, and search changes filter those results without rerunning
+the regulatory engine; grouping, translation, and reporting interactions also
+reuse the evaluation. Summary counts and external-evidence reviews remain
+document-wide, while the table and infringement letter use the filtered
+findings. Closing the document clears the screen's evaluation. This reuse is
+local to the mounted screen and changes no persisted data or public contracts.
+
 **Reporting outputs**:
 - **Driver Infringement Acknowledgment Letter**
   (`DriverInfringementLetterDialog.svelte`): company heading/address/VAT-or-

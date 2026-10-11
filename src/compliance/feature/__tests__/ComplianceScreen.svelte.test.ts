@@ -1,4 +1,5 @@
 import { decodeFileMetadata } from '#contracts';
+import { evaluateDocumentCompliance } from '#compliance';
 import {
     createSourceReference,
     isDurationMilliseconds,
@@ -9,11 +10,17 @@ import {
     type UtcTimestamp,
 } from '#tachograph-domain';
 import { createDocumentSource, createOpenedTachographDocument } from '#viewer-application';
-import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/svelte';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import ComplianceScreen from '../ComplianceScreen.svelte';
 import { createViewerTestRenderOptions, type IViewerTestRenderOptions } from '#testing';
+
+vi.mock('../../application/compliance-service.js', { spy: true });
+
+beforeEach(() => {
+    vi.clearAllMocks();
+});
 
 afterEach(() => {
     cleanup();
@@ -221,6 +228,158 @@ describe('ComplianceScreen', () => {
 
         await fireEvent.input(search, { target: { value: 'no such rule' } });
         expect(screen.getByText('No Matching Infringements')).toBeDefined();
+    });
+
+    it('reuses the evaluation through category, severity, search, grouping and reporting interactions', async () => {
+        renderComplianceScreen(createMockInfringementDocument(), vi.fn());
+        const evaluation = vi.mocked(evaluateDocumentCompliance);
+        const initialEvaluationCalls = evaluation.mock.calls.length;
+        expect(initialEvaluationCalls).toBe(1);
+        const category = screen.getByRole('combobox', { name: 'Category' });
+        const search = screen.getByRole('searchbox', { name: 'Search Infringements' });
+        const severity = within(screen.getByRole('group', { name: 'Severity' }));
+
+        await fireEvent.change(category, { target: { value: 'dailyDriving' } });
+        expect(screen.getByText('No Matching Infringements')).toBeDefined();
+        expect(screen.getByText(/1 infringement\(s\) exist in this document/)).toBeDefined();
+        await fireEvent.change(category, { target: { value: 'break' } });
+        expect(screen.getByRole('cell', { name: 'Break Requirements' })).toBeDefined();
+
+        await fireEvent.click(severity.getByRole('button', { name: 'Minor (0)' }));
+        expect(screen.getByText('No Matching Infringements')).toBeDefined();
+        await fireEvent.click(severity.getByRole('button', { name: 'Serious (1)' }));
+        expect(screen.getByRole('cell', { name: 'Break Requirements' })).toBeDefined();
+
+        await fireEvent.input(search, { target: { value: 'no such rule' } });
+        expect(screen.getByText('No Matching Infringements')).toBeDefined();
+        await fireEvent.input(search, { target: { value: 'BRÉAK_continuous' } });
+        expect(screen.getByRole('cell', { name: 'Break Requirements' })).toBeDefined();
+        await fireEvent.input(search, { target: { value: '' } });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Group by EU Article' }));
+        expect(screen.getByRole('heading', { level: 3, name: /Art\. 7/ })).toBeDefined();
+        await fireEvent.click(screen.getByRole('button', { name: 'Infringement Letter' }));
+        expect(screen.getByText('Driver Infringement Acknowledgment Letter')).toBeDefined();
+        await fireEvent.click(screen.getByRole('button', { name: 'Close letter dialog' }));
+
+        console.info(
+            'ESM_VIEWER_COMPLIANCE_FILTERS',
+            JSON.stringify({
+                initialEvaluationCalls,
+                interactionEvaluationCalls: evaluation.mock.calls.length - initialEvaluationCalls,
+            }),
+        );
+        expect(evaluation).toHaveBeenCalledTimes(initialEvaluationCalls);
+    });
+
+    it('reevaluates for shared profile changes and every night-window field', async () => {
+        const options = createViewerTestRenderOptions();
+        const mockDocument = createActivityDocument({
+            activity: 'driving',
+            displayName: 'night-work.ddd',
+            durationMs: 11 * 60 * 60_000,
+            sha256: 'c'.repeat(64),
+            startMs: Date.UTC(2026, 7, 1, 6),
+        });
+        const { rerender } = renderComplianceScreen(mockDocument, vi.fn(), options);
+        const evaluation = vi.mocked(evaluateDocumentCompliance);
+        expect(evaluation).toHaveBeenCalledTimes(1);
+
+        await fireEvent.change(screen.getByLabelText('Regulatory Scope Profile:'), {
+            target: { value: 'DIRECTIVE_2002_15_EC_WORKING_TIME' },
+        });
+        expect(evaluation).toHaveBeenCalledTimes(2);
+        expect(evaluation.mock.lastCall?.[1]).toBe(options.wrapperProps.context.complianceProfileController.selectedProfile);
+        expect(screen.queryByRole('cell', { name: 'Night Work' })).toBeNull();
+
+        await rerender({ nightWindow: { endHour: 7, startHour: 0, timeZone: 'UTC' } });
+        expect(evaluation).toHaveBeenCalledTimes(3);
+        expect(screen.getByRole('cell', { name: 'Night Work' })).toBeDefined();
+
+        await rerender({ nightWindow: { endHour: 7, startHour: 3, timeZone: 'UTC' } });
+        expect(evaluation).toHaveBeenCalledTimes(4);
+        expect(evaluation.mock.lastCall?.[2]).toEqual({ endHour: 7, startHour: 3, timeZone: 'UTC' });
+        expect(screen.getByRole('cell', { name: 'Night Work' })).toBeDefined();
+
+        await rerender({ nightWindow: { endHour: 7, startHour: 3, timeZone: 'Europe/Berlin' } });
+        expect(evaluation).toHaveBeenCalledTimes(5);
+        expect(screen.queryByRole('cell', { name: 'Night Work' })).toBeNull();
+    });
+
+    it('replaces evaluation results with the document and clears them on close', async () => {
+        const { rerender } = renderComplianceScreen(createMockInfringementDocument(), vi.fn());
+        const evaluation = vi.mocked(evaluateDocumentCompliance);
+        expect(evaluation).toHaveBeenCalledTimes(1);
+        expect(screen.getByRole('cell', { name: 'Break Requirements' })).toBeDefined();
+
+        const replacement = createMobilityAccommodationDocument();
+        await rerender({ document: replacement });
+        expect(evaluation).toHaveBeenCalledTimes(2);
+        expect(evaluation.mock.lastCall?.[0]).toBe(replacement);
+        expect(screen.queryByRole('cell', { name: 'Break Requirements' })).toBeNull();
+        expect(screen.getByText('No Infringements Detected')).toBeDefined();
+
+        await rerender({ document: null });
+        expect(evaluation).toHaveBeenCalledTimes(2);
+        expect(screen.getByRole('button', { name: 'Infringement Letter' }).hasAttribute('disabled')).toBe(true);
+        expect(screen.getByRole('button', { name: 'EU Attestation' }).hasAttribute('disabled')).toBe(true);
+
+        await rerender({ document: createMockInfringementDocument() });
+        expect(evaluation).toHaveBeenCalledTimes(3);
+        expect(screen.getByRole('cell', { name: 'Break Requirements' })).toBeDefined();
+    });
+
+    it('updates translations without reevaluating unchanged regulatory inputs', async () => {
+        const options = createViewerTestRenderOptions();
+        const { preferencesController, translationService } = options.wrapperProps.context;
+        const { rerender } = renderComplianceScreen(createMockInfringementDocument(), vi.fn(), options);
+        const evaluation = vi.mocked(evaluateDocumentCompliance);
+        expect(evaluation).toHaveBeenCalledTimes(1);
+
+        expect(preferencesController.open()).toBe(true);
+        expect(
+            await preferencesController.apply({
+                ...preferencesController.snapshot.preferences,
+                locale: 'de',
+            }),
+        ).toBe(true);
+        expect(await screen.findByRole('cell', { name: translationService.translate('compliance.categoryBreak') })).toBeDefined();
+        expect(screen.queryByRole('cell', { name: 'Break Requirements' })).toBeNull();
+        expect(evaluation).toHaveBeenCalledTimes(1);
+
+        const englishTranslations = createViewerTestRenderOptions().wrapperProps.context.translationService;
+        await rerender({
+            nightWindow: { endHour: 4, startHour: 0, timeZone: 'UTC' },
+            translationService: englishTranslations,
+        });
+        expect(screen.getByRole('cell', { name: 'Break Requirements' })).toBeDefined();
+        expect(evaluation).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps external-evidence reviews visible when filters exclude all findings', async () => {
+        renderComplianceScreen(createMobilityAccommodationDocument(), vi.fn());
+        const evaluation = vi.mocked(evaluateDocumentCompliance);
+
+        await fireEvent.change(screen.getByLabelText('Regulatory Scope Profile:'), {
+            target: { value: 'EU_MOBILITY_PACKAGE_2020' },
+        });
+        expect(evaluation).toHaveBeenCalledTimes(2);
+        expect(screen.getByText('Weekly rest accommodation')).toBeDefined();
+
+        await fireEvent.change(screen.getByRole('combobox', { name: 'Category' }), {
+            target: { value: 'dailyDriving' },
+        });
+        await fireEvent.input(screen.getByRole('searchbox', { name: 'Search Infringements' }), {
+            target: { value: 'no such rule' },
+        });
+        expect(screen.getByText('Weekly rest accommodation')).toBeDefined();
+        expect(evaluation).toHaveBeenCalledTimes(2);
+
+        await fireEvent.change(screen.getByLabelText('Regulatory Scope Profile:'), {
+            target: { value: 'EU_561_2006_STANDARD' },
+        });
+        expect(screen.queryByText('Weekly rest accommodation')).toBeNull();
+        expect(evaluation).toHaveBeenCalledTimes(3);
     });
 
     it('renders Directive 2002/15/EC and AETR options in profile selector', () => {

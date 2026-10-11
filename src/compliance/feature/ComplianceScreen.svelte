@@ -10,6 +10,7 @@
         createAttestationFormViewModel,
         createComplianceViewModel,
         createInfringementLetterViewModel,
+        evaluateDocumentCompliance,
         type AttestationReason,
         type IComplianceTranslationService,
         type IInfringementViewModel,
@@ -89,6 +90,20 @@
     let groupByArticle = $state(false);
     const columnVisibility = new SessionColumnVisibility();
 
+    const evaluationDocument = $derived(document);
+    const nightWorkEndHour = $derived(nightWindow.endHour);
+    const nightWorkStartHour = $derived(nightWindow.startHour);
+    const nightWorkTimeZone = $derived(nightWindow.timeZone);
+    const evaluation = $derived(
+        evaluationDocument !== null
+            ? evaluateDocumentCompliance(evaluationDocument, selectedProfile, {
+                  endHour: nightWorkEndHour,
+                  startHour: nightWorkStartHour,
+                  timeZone: nightWorkTimeZone,
+              })
+            : undefined,
+    );
+
     const viewModel = $derived(
         createComplianceViewModel(
             document,
@@ -98,6 +113,7 @@
             severityFilter,
             searchFilter,
             nightWindow,
+            evaluation,
         ),
     );
 
