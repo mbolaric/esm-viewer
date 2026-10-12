@@ -16,7 +16,7 @@
         type DateFormatKey,
         type TimeFormatKey,
     } from '#localization';
-    import { Button, Checkbox, Dialog, InlineError, Tabs } from '#ui';
+    import { Button, Checkbox, Dialog, InlineError, Tabs, TimeZoneSelect } from '#ui';
     import { untrack } from 'svelte';
 
     import { isViewerLocale, type ViewerLocale } from '#i18n-locales';
@@ -181,12 +181,8 @@
         });
     }
 
-    function handleTimeZoneChange(event: Event): void {
-        const target = event.currentTarget;
-        if (!(target instanceof HTMLSelectElement)) {
-            return;
-        }
-        draft.displayTimeZone = target.value;
+    function handleTimeZoneChange(timeZone: string): void {
+        draft.displayTimeZone = timeZone;
         if (!dateFormatTouched) {
             draft.displayDateFormat = defaultDateFormatForTimeZone(draft.displayTimeZone);
         }
@@ -317,11 +313,13 @@
                             <span class="preferences-field-label">
                                 {translationService.translate('preferences.timeDisplay')}
                             </span>
-                            <select onchange={handleTimeZoneChange} value={draft.displayTimeZone} disabled={saving}>
-                                {#each availableTimeZones as timeZone (timeZone)}
-                                    <option value={timeZone}>{timeZone}</option>
-                                {/each}
-                            </select>
+                            <TimeZoneSelect
+                                {availableTimeZones}
+                                label={translationService.translate('preferences.timeDisplay')}
+                                onchange={handleTimeZoneChange}
+                                value={draft.displayTimeZone}
+                                disabled={saving}
+                            />
                         </label>
 
                         <label class="preferences-field">
@@ -378,11 +376,15 @@
                             <span class="preferences-field-label">
                                 {translationService.translate('preferences.nightWork.timeZone')}
                             </span>
-                            <select bind:value={draft.nightWorkTimeZone} disabled={saving}>
-                                {#each availableNightWorkTimeZones as timeZone (timeZone)}
-                                    <option value={timeZone}>{timeZone}</option>
-                                {/each}
-                            </select>
+                            <TimeZoneSelect
+                                availableTimeZones={availableNightWorkTimeZones}
+                                label={translationService.translate('preferences.nightWork.timeZone')}
+                                onchange={(timeZone: string) => {
+                                    draft.nightWorkTimeZone = timeZone;
+                                }}
+                                value={draft.nightWorkTimeZone}
+                                disabled={saving}
+                            />
                         </label>
 
                         <label class="preferences-field">

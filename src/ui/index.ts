@@ -73,6 +73,7 @@ export { default as FilterChipGroup } from './controls/FilterChipGroup.svelte';
 export type { IFilterChipOption } from './controls/filter-chip.js';
 export { default as SegmentedControl } from './controls/SegmentedControl.svelte';
 export { default as Tabs } from './controls/Tabs.svelte';
+export { default as TimeZoneSelect } from './controls/TimeZoneSelect.svelte';
 export { default as TaskState } from './layout/TaskState.svelte';
 export { default as TimeSeriesChart } from './charts/TimeSeriesChart.svelte';
 export { default as Toast } from './toast/Toast.svelte';

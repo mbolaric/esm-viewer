@@ -648,7 +648,9 @@ translated in all seven catalogues and rebuilt when the selected language change
   language (English/German/French/Italian/Polish/Spanish/Croatian), theme (system/light/dark), an
   auto-run-verification-on-open toggle. Date & Time: date format
   (`dd/MM/yyyy`, `MM/dd/yyyy`, `yyyy-MM-dd`, medium-date), time format
-  (24h/12h). Date pickers follow the selected date format;
+  (24h/12h). Display and night-work timezones reuse the public generic
+  `TimeZoneSelect` component, with supported IANA timezone choices and UTC
+  supplied by the Preferences controller. Date pickers follow the selected date format;
   numeric entry also accepts trailing separators and unambiguous day/month
   order. Night Work Window: the IANA time zone and start/end hour used
   by the Compliance working-time evaluator on every screen that evaluates
