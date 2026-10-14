@@ -169,6 +169,15 @@ impl FittedParagraph {
         Self::default().styled_string(text, style)
     }
 
+    pub fn literal(text: &str, style: Style) -> Self {
+        Self::default().styled_literal(text, style)
+    }
+
+    pub fn styled_literal(mut self, text: impl AsRef<str>, style: impl Into<Style>) -> Self {
+        self.segments.push((text.as_ref().to_string(), style.into()));
+        self
+    }
+
     pub fn styled_string(mut self, text: impl AsRef<str>, style: impl Into<Style>) -> Self {
         self.push_styled(text, style);
         self
@@ -226,6 +235,14 @@ mod tests {
         // The closing bracket is found by byte offset, so skipping it must not consume an extra character.
         assert_eq!(clean_text("<aé>bc"), "bc");
         assert_eq!(clean_text("x<bé>y</bé>z"), "xyz");
+    }
+
+    #[test]
+    fn literal_paragraph_preserves_tag_like_evidence_entities_and_spacing() {
+        let text = "<b>Quoted evidence</b> &amp; &lt;  x\n  y";
+        let paragraph = FittedParagraph::literal(text, Style::new()).styled_literal(" <code>0912</code>", Style::new());
+        assert_eq!(paragraph.segments[0].0, text);
+        assert_eq!(paragraph.segments[1].0, " <code>0912</code>");
     }
 
     // One millimetre per character keeps the arithmetic obvious.

@@ -111,7 +111,10 @@ The native launcher registers the Viewer command inventory through
 `with_viewer_commands!` in one invoke handler. It owns the Tauri builder,
 product identity, plugins, capabilities, and window/navigation setup.
 The shared PDF engine renders factual reports,
-attestations, and infringement letters. Viewer plugins are dialog and filesystem.
+attestations, and infringement letters. Factual-report DTO text is literal: tag-like
+quotes, entity spellings and whitespace are preserved before width-aware PDF wrapping;
+it is never interpreted as HTML. Other document formats retain their existing text
+cleaning. Viewer plugins are dialog and filesystem.
 Small settings use IKeyValueStore/createStoredValue; IPC is decoded from unknown,
 and parser data is normalized before UI use.
 `IKeyValueStore` retains its best-effort `getItem`/`setItem`/`removeItem`

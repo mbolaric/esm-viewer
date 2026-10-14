@@ -1,12 +1,12 @@
-use super::text::{clean_text, FittedParagraph};
+use super::text::FittedParagraph;
 use genpdfi::elements::{Break, LinearLayout, PaddedElement, TableLayout};
 use genpdfi::style::{Color, LineStyle, Style};
 use genpdfi::{Alignment, Document, Margins, PaperSize, Position};
 use serde::{Deserialize, Serialize};
 
 use super::layout::{
-    centered, framed_columns, framed_table, labelled_value, new_document, paragraph, push_footer_notice, push_row,
-    render_to_bytes, standard_page_margins, table_cell, MUTED_TEXT,
+    framed_columns, framed_table, labelled_literal_value, new_document, push_row, render_to_bytes, standard_page_margins,
+    table_cell, MUTED_TEXT, NOTICE_TEXT,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -167,19 +167,25 @@ pub fn render_factual_report(req: &FactualReportPdfRequest) -> Result<Vec<u8>, S
     }
     if !req.footer_notice.is_empty() {
         doc.push(Break::new(0.6_f32));
-        push_footer_notice(&mut doc, &clean_text(&req.footer_notice));
+        doc.push(
+            FittedParagraph::literal(&req.footer_notice, Style::new().italic().with_font_size(7).with_color(NOTICE_TEXT))
+                .aligned(Alignment::Center),
+        );
     }
     render_to_bytes(doc)
 }
 
 // Title, optional subtitle, and the framed box of header fields.
 fn push_report_heading(doc: &mut Document, req: &FactualReportPdfRequest) -> Result<(), String> {
-    doc.push(centered(clean_text(&req.title), Style::new().bold().with_font_size(12)));
+    doc.push(FittedParagraph::literal(&req.title, Style::new().bold().with_font_size(12)).aligned(Alignment::Center));
     if !req.subtitle.is_empty() {
-        doc.push(centered(clean_text(&req.subtitle), Style::new().with_font_size(7).with_color(MUTED_TEXT)));
+        doc.push(
+            FittedParagraph::literal(&req.subtitle, Style::new().with_font_size(7).with_color(MUTED_TEXT))
+                .aligned(Alignment::Center),
+        );
     }
     doc.push(Break::new(0.6_f32));
-    let lines = req.header_fields.iter().map(|field| labelled_value(&field.label, &field.value)).collect();
+    let lines = req.header_fields.iter().map(|field| labelled_literal_value(&field.label, &field.value)).collect();
     doc.push(framed_columns(lines, 0.0)?);
     doc.push(Break::new(0.6_f32));
     Ok(())
@@ -191,7 +197,7 @@ fn push_summary_grid(doc: &mut Document, req: &FactualReportPdfRequest) -> Resul
     if req.summary_items.is_empty() {
         return Ok(());
     }
-    doc.push(paragraph(clean_text(&req.summary_title), Style::new().bold().with_font_size(9)));
+    doc.push(FittedParagraph::literal(&req.summary_title, Style::new().bold().with_font_size(9)));
     doc.push(Break::new(0.3_f32));
     let mut summary_table = TableLayout::new(vec![1; SUMMARY_COLUMNS]);
     summary_table.set_cell_decorator(genpdfi::elements::FrameCellDecorator::new(true, true, false));
@@ -200,8 +206,8 @@ fn push_summary_grid(doc: &mut Document, req: &FactualReportPdfRequest) -> Resul
         let mut row = summary_table.row();
         for item in items {
             let mut cell = LinearLayout::vertical();
-            cell.push(FittedParagraph::new(&item.label, Style::new().with_font_size(7).with_color(MUTED_TEXT)));
-            cell.push(FittedParagraph::new(&item.value, Style::new().bold().with_font_size(8)));
+            cell.push(FittedParagraph::literal(&item.label, Style::new().with_font_size(7).with_color(MUTED_TEXT)));
+            cell.push(FittedParagraph::literal(&item.value, Style::new().bold().with_font_size(8)));
             row = row.element(table_cell(cell));
         }
         // A short last row is padded with empty cells, since every table row needs one element per column.
@@ -217,9 +223,9 @@ fn push_summary_grid(doc: &mut Document, req: &FactualReportPdfRequest) -> Resul
 
 fn push_section(doc: &mut Document, section: &ReportTableSectionDto) -> Result<(), String> {
     doc.push(Break::new(0.6_f32));
-    doc.push(paragraph(clean_text(&section.title), Style::new().bold().with_font_size(9)));
+    doc.push(FittedParagraph::literal(&section.title, Style::new().bold().with_font_size(9)));
     if !section.subtitle.is_empty() {
-        doc.push(paragraph(clean_text(&section.subtitle), Style::new().italic().with_font_size(7).with_color(MUTED_TEXT)));
+        doc.push(FittedParagraph::literal(&section.subtitle, Style::new().italic().with_font_size(7).with_color(MUTED_TEXT)));
     }
     doc.push(Break::new(0.3_f32));
     if let Some(timeline) = section.timeline.as_ref().filter(|t| !t.segments.is_empty()) {
@@ -266,8 +272,10 @@ fn push_section_table(doc: &mut Document, section: &ReportTableSectionDto) -> Re
 
     let mut header_row = table.row();
     for h in &section.headers {
-        header_row = header_row
-            .element(PaddedElement::new(FittedParagraph::new(h, Style::new().bold().with_font_size(font_size)), cell_margins));
+        header_row = header_row.element(PaddedElement::new(
+            FittedParagraph::literal(h, Style::new().bold().with_font_size(font_size)),
+            cell_margins,
+        ));
     }
     push_row(header_row)?;
 
@@ -276,7 +284,7 @@ fn push_section_table(doc: &mut Document, section: &ReportTableSectionDto) -> Re
         for i in 0..col_count {
             let cell_text = row.cells.get(i).map(|s| s.as_str()).unwrap_or("\u{2014}");
             data_row = data_row.element(PaddedElement::new(
-                FittedParagraph::new(cell_text, Style::new().with_font_size(font_size)),
+                FittedParagraph::literal(cell_text, Style::new().with_font_size(font_size)),
                 cell_margins,
             ));
         }

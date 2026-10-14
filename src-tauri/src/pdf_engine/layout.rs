@@ -64,6 +64,11 @@ pub fn labelled_value(label: &str, value: &str) -> FittedParagraph {
         .styled_string(format!(" {value}"), Style::new().bold().with_font_size(8))
 }
 
+pub fn labelled_literal_value(label: &str, value: &str) -> FittedParagraph {
+    FittedParagraph::literal(&format!("{label}:"), Style::new().with_font_size(8).with_color(MUTED_TEXT))
+        .styled_literal(format!(" {value}"), Style::new().bold().with_font_size(8))
+}
+
 // Framed two-column box. The first half of the lines fills the left column and the rest the right, so any line count
 // stays balanced.
 pub fn framed_columns(lines: Vec<FittedParagraph>, line_gap_mm: f32) -> Result<impl Element, String> {
