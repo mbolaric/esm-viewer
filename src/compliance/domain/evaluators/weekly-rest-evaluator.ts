@@ -1,4 +1,5 @@
 import type { EvaluationInterval, EvidencedEvaluationInterval } from '../unrecorded-time.js';
+import type { IComplianceScenarioEvidence } from '../scenario-evidence.js';
 import { calendarWeekStart, getCalendarWeekKey, MILLISECONDS_PER_MINUTE, MILLISECONDS_PER_WEEK, parseIsoUtcDay } from '#time';
 import type { IComplianceAssessment } from '../compliance-assessment.js';
 import type { IInfringement } from '../infringement.js';
@@ -120,6 +121,7 @@ function fullWeeksWithinDocument(fileStart: number, fileEnd: number): readonly I
 }
 
 interface IRestSpan {
+    readonly durationMs: number;
     readonly end: number;
     readonly interval: EvidencedEvaluationInterval;
     readonly start: number;
@@ -334,7 +336,7 @@ function evaluateRegularRestPresence(
         }
         previousPairWasInsufficient = false;
 
-        const hasRegularRest = restsInPair.some((rest) => rest.end - rest.start >= regularRestMs);
+        const hasRegularRest = restsInPair.some((rest) => rest.durationMs >= regularRestMs);
         if (hasRegularRest) {
             previousPairWasMissingRegular = false;
             continue;
@@ -391,7 +393,7 @@ function evaluateRegularRestPresence(
             continue;
         }
 
-        const maxRestInPair = Math.max(...restsInPair.map((rest) => rest.end - rest.start));
+        const maxRestInPair = Math.max(...restsInPair.map((rest) => rest.durationMs));
         const { deficitMinutes, measuredMinutes } = measureDeficitMinutes(
             maxRestInPair,
             profile.weeklyRestRules.regularRestMinutes,
@@ -432,9 +434,7 @@ function createMobilityBaselineAssessments(
 
     const assessments: IComplianceAssessment[] = [];
     const regularRestMs = profile.weeklyRestRules.regularRestMinutes * MILLISECONDS_PER_MINUTE;
-    const postEffectiveRegularRest = restSpans.find(
-        (rest) => rest.start >= effectiveFrom && rest.end - rest.start >= regularRestMs,
-    );
+    const postEffectiveRegularRest = restSpans.find((rest) => rest.start >= effectiveFrom && rest.durationMs >= regularRestMs);
     if (postEffectiveRegularRest !== undefined) {
         assessments.push(
             mobilityAssessment(
@@ -475,6 +475,7 @@ export interface IWeeklyRestEvaluationResult {
 export function evaluateWeeklyRestCompliance(
     intervals: readonly EvaluationInterval[],
     profile: IRuleProfile,
+    evidence?: IComplianceScenarioEvidence,
 ): IWeeklyRestEvaluationResult {
     if (intervals.length === 0) {
         return { assessments: [], infringements: [] };
@@ -487,9 +488,16 @@ export function evaluateWeeklyRestCompliance(
     const restSpans: IRestSpan[] = [];
     for (const interval of intervals) {
         if (interval.activity === 'breakOrRest') {
+            const ferry = evidence?.ferryRests.find((rest) => rest.start <= interval.start && interval.end <= rest.end);
+            if (ferry !== undefined && ferry.restKind !== 'regularDaily') {
+                if (interval.end === ferry.end) {
+                    restSpans.push({ start: ferry.start, end: ferry.end, interval, durationMs: ferry.restDurationMs });
+                }
+                continue;
+            }
             const durationMs = Math.max(0, interval.end - interval.start);
             if (durationMs >= reducedRestMs) {
-                restSpans.push({ end: interval.end, interval, start: interval.start });
+                restSpans.push({ end: interval.end, interval, start: interval.start, durationMs });
             }
         }
     }

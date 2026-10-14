@@ -1,10 +1,11 @@
 import { MILLISECONDS_PER_DAY, MILLISECONDS_PER_MINUTE } from '#time';
 
 import type { IComplianceAssessment } from './compliance-assessment.js';
-import { isQualifyingDailyRest, resolveDailyCycleWindow, type IDailyCyclePolicy } from './daily-cycle.js';
+import { isQualifyingDailyRest, qualifyingRestEnd, resolveDailyCycleWindow, type IDailyCyclePolicy } from './daily-cycle.js';
 import { EU_561_2006_CONSOLIDATED_URL } from './legal-references.js';
 import type { IMultiManningRuleConfig, IRuleProfile } from './rule-profile.js';
 import type { EvaluationInterval } from './unrecorded-time.js';
+import type { IComplianceScenarioEvidence } from './scenario-evidence.js';
 
 // 'crew': Art. 4(o) holds, so Art. 8(5) applies. 'crewFailed': crew driving was recorded, but after the first hour some
 // driving had only one card. 'unknown': crew driving was recorded, but later driving has no known crew status.
@@ -59,6 +60,7 @@ function qualifyDutyPeriod(
     intervals: readonly EvaluationInterval[],
     windowStart: number,
     rules: IMultiManningRuleConfig,
+    evidence?: IComplianceScenarioEvidence,
 ): ICrewQualification {
     const windowLimit = windowStart + rules.dailyRestWindowMinutes * MILLISECONDS_PER_MINUTE;
     const minDailyRestMs = rules.minDailyRestMinutes * MILLISECONDS_PER_MINUTE;
@@ -78,7 +80,7 @@ function qualifyDutyPeriod(
             }
             firstHourEnd = Math.max(interval.start, windowStart) + rules.firstHourMinutes * MILLISECONDS_PER_MINUTE;
         }
-        if (interval.activity === 'breakOrRest' && interval.end - interval.start >= minDailyRestMs) {
+        if (qualifyingRestEnd(interval, minDailyRestMs, evidence) !== null) {
             break;
         }
         if (interval.activity !== 'driving') {
@@ -111,6 +113,7 @@ function qualifyDutyPeriod(
 export function createDailyCyclePolicy(
     intervals: readonly EvaluationInterval[],
     profile: IRuleProfile,
+    evidence?: IComplianceScenarioEvidence,
 ): IMultiManningCyclePolicy {
     const rules = profile.multiManningRules;
     const qualifications = new Map<number, ICrewQualification>();
@@ -121,7 +124,7 @@ export function createDailyCyclePolicy(
         }
         let qualification = qualifications.get(windowStart);
         if (qualification === undefined) {
-            qualification = qualifyDutyPeriod(intervals, windowStart, rules);
+            qualification = qualifyDutyPeriod(intervals, windowStart, rules, evidence);
             qualifications.set(windowStart, qualification);
         }
         return qualification;
@@ -132,7 +135,8 @@ export function createDailyCyclePolicy(
         windowLengthMs: (windowStart) =>
             rules !== null && qualify(windowStart).status === 'crew'
                 ? rules.dailyRestWindowMinutes * MILLISECONDS_PER_MINUTE
-                : MILLISECONDS_PER_DAY,
+                : MILLISECONDS_PER_DAY +
+                  (evidence?.cycleExtensions.find((extension) => extension.windowStart === windowStart)?.extensionMs ?? 0),
     };
 }
 
@@ -221,8 +225,9 @@ export interface ICrewDutyPeriod {
 export function resolveCrewDutyPeriods(
     intervals: readonly EvaluationInterval[],
     profile: IRuleProfile,
+    evidence?: IComplianceScenarioEvidence,
 ): readonly ICrewDutyPeriod[] {
-    const policy = createDailyCyclePolicy(intervals, profile);
+    const policy = createDailyCyclePolicy(intervals, profile, evidence);
     const periods: ICrewDutyPeriod[] = [];
     let anchor: number | null = null;
     let index = 0;
@@ -248,8 +253,13 @@ export function resolveCrewDutyPeriods(
                 break;
             }
             index++;
-            if (isQualifyingDailyRest(candidate, profile)) {
-                nextAnchor = candidate.end;
+            const restEnd = qualifyingRestEnd(
+                candidate,
+                profile.dailyRestRules.reducedRestMinutes * MILLISECONDS_PER_MINUTE,
+                evidence,
+            );
+            if (restEnd !== null) {
+                nextAnchor = restEnd;
                 break;
             }
         }

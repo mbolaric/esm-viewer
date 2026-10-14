@@ -20,6 +20,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { evaluateDocumentCompliance, nightWindowFromPreferences } from '../compliance-service.js';
+import { evaluateDocumentComplianceScenario, type ComplianceScenarioResult } from '../compliance-scenario.js';
 import { AETR_2020_INTERNATIONAL, EU_MOBILITY_PACKAGE_2020 } from '../../domain/rule-profile.js';
 
 const singleDriverCrew: IActivityCrewContext = { crewPresence: 'single', slot: 'Driver' };
@@ -518,5 +519,356 @@ describe('nightWindowFromPreferences', () => {
         expect(
             nightWindowFromPreferences({ nightWorkEndHour: 5, nightWorkStartHour: 1, nightWorkTimeZone: 'Europe/Berlin' }),
         ).toEqual({ endHour: 5, startHour: 1, timeZone: 'Europe/Berlin' });
+    });
+});
+
+function scenarioRange(
+    basisId: string,
+    sourceIndex: number,
+    startMinutes: number,
+    endMinutes: number,
+): {
+    basisId: string;
+    end: number;
+    sourcePointer: string;
+    start: number;
+} {
+    return {
+        basisId,
+        sourcePointer: `/driverActivityData/${String(sourceIndex)}`,
+        start: MONDAY + startMinutes * MINUTE_MS,
+        end: MONDAY + endMinutes * MINUTE_MS,
+    };
+}
+
+function reviewedScenario(
+    document: ReturnType<typeof singleGenerationDocument>,
+    assumptions: readonly unknown[],
+): Extract<ComplianceScenarioResult, { status: 'available' }> {
+    const result = evaluateDocumentComplianceScenario(document, { contentSha256: document.source.sha256, assumptions });
+    if (result.status !== 'available') {
+        throw new Error(`Scenario fixture unexpectedly unavailable: ${result.reason}`);
+    }
+    return result;
+}
+
+const CARD_OUT_BREAK = [
+    ['breakOrRest', 360],
+    ['driving', 240],
+    ['unknown', 60],
+    ['driving', 180],
+    ['breakOrRest', 600],
+] as const;
+
+const FERRY_DAILY_REST = [
+    ['breakOrRest', 660],
+    ['driving', 240],
+    ['work', 360],
+    ['breakOrRest', 330],
+    ['driving', 30],
+    ['breakOrRest', 330],
+] as const;
+
+const ARTICLE12_RETURN = {
+    kind: 'article12Return',
+    maximumExtensionMinutes: 60,
+    weeklyRestKind: 'regular',
+    destination: 'residence',
+    exceptionalCircumstances: true,
+    roadSafetyMaintained: true,
+    writtenReason: true,
+    compensatedByDeadline: true,
+    dutyStart: MONDAY + 660 * MINUTE_MS,
+} as const;
+
+describe('evidence-based compliance scenarios', () => {
+    it('preserves the recorded baseline and source when external work replaces an unrecorded break', () => {
+        const document = singleGenerationDocument(cardTimeline(CARD_OUT_BREAK));
+        const original = JSON.stringify(document.content);
+        const baseline = evaluateDocumentCompliance(document);
+        const result = reviewedScenario(document, [
+            { ...scenarioRange('timesheet', 2, 600, 660), kind: 'unrecordedActivity', activity: 'work' },
+        ]);
+        expect(result.baseline).toEqual(baseline);
+        expect(result.baseline.infringements.some((finding) => finding.ruleId === 'BREAK_CONTINUOUS_DRIVING')).toBe(false);
+        expect(result.reviewed.infringements.some((finding) => finding.ruleId === 'BREAK_CONTINUOUS_DRIVING')).toBe(true);
+        expect(JSON.stringify(document.content)).toBe(original);
+        expect(result.reviewed).not.toHaveProperty('evaluationIntervals');
+        expect(result.basis).toMatchObject({ calculationVersion: '1', contentSha256: document.source.sha256 });
+    });
+
+    it('keeps the manual-entry review topic when external rest confirms the baseline assumption', () => {
+        const document = singleGenerationDocument(cardTimeline(CARD_OUT_BREAK));
+        const result = reviewedScenario(document, [
+            { ...scenarioRange('home-rest', 2, 600, 660), kind: 'unrecordedActivity', activity: 'breakOrRest' },
+        ]);
+        expect(result.reviewed.infringements).toEqual(result.baseline.infringements);
+        expect(result.reviewed.assessments).toEqual(result.baseline.assessments);
+        expect(result.reviewed.assessments.some((assessment) => assessment.ruleId === 'UNRECORDED_PERIOD_REVIEW')).toBe(true);
+    });
+
+    it('applies both disjoint interpretations inside one unrecorded interval', () => {
+        const document = singleGenerationDocument(cardTimeline(CARD_OUT_BREAK));
+        const result = reviewedScenario(document, [
+            { ...scenarioRange('first-work', 2, 600, 615), kind: 'unrecordedActivity', activity: 'work' },
+            { ...scenarioRange('second-work', 2, 630, 645), kind: 'unrecordedActivity', activity: 'work' },
+        ]);
+        expect(result.reviewed.infringements.some((finding) => finding.ruleId === 'BREAK_CONTINUOUS_DRIVING')).toBe(true);
+        expect(result.basis.assumptions).toHaveLength(2);
+    });
+
+    it('rejects recorded activity replacement, overlapping assumptions and a changed source hash atomically', () => {
+        const document = singleGenerationDocument(cardTimeline(CARD_OUT_BREAK));
+        const work = { ...scenarioRange('work', 2, 600, 660), kind: 'unrecordedActivity', activity: 'work' };
+        for (const [request, reason] of [
+            [
+                { contentSha256: document.source.sha256, assumptions: [{ ...work, ...scenarioRange('work', 1, 360, 600) }] },
+                'unrecordedTimeRequired',
+            ],
+            [
+                { contentSha256: document.source.sha256, assumptions: [work, { ...work, basisId: 'overlap' }] },
+                'conflictingAssumptions',
+            ],
+            [{ contentSha256: 'a'.repeat(64), assumptions: [work] }, 'contentChanged'],
+            [{ contentSha256: document.source.sha256, assumptions: [{ ...work, activity: 'driving' }] }, 'invalidRequest'],
+            [{ contentSha256: document.source.sha256, assumptions: [{ ...work, start: Number.NaN }] }, 'invalidRequest'],
+            [
+                { contentSha256: document.source.sha256, assumptions: [{ ...work, sourcePointer: '/foreignSource' }] },
+                'sourceRangeUnavailable',
+            ],
+        ] as const) {
+            expect(evaluateDocumentComplianceScenario(document, request)).toMatchObject({ status: 'unavailable', reason });
+        }
+    });
+
+    it('uses the existing 30-hour engine after an explicit crew-presence assumption', () => {
+        const document = singleGenerationDocument(
+            cardTimeline([
+                ['breakOrRest', 540],
+                ['driving', 240],
+                ['work', 1020],
+                ['breakOrRest', 540],
+            ]),
+        );
+        const result = reviewedScenario(document, [{ ...scenarioRange('crew-evidence', 1, 540, 780), kind: 'crewPresence' }]);
+        expect(result.baseline.infringements.some((finding) => finding.category === 'dailyRest')).toBe(true);
+        expect(result.reviewed.infringements.some((finding) => finding.category === 'dailyRest')).toBe(false);
+        expect(result.reviewed.crewDutyPeriods[0]).toMatchObject({
+            qualification: { status: 'crew' },
+            windowStart: MONDAY + 540 * MINUTE_MS,
+            windowEnd: MONDAY + (540 + 1800) * MINUTE_MS,
+        });
+    });
+
+    it('excludes scoped driving from driving rules without turning the movement into rest', () => {
+        const document = singleGenerationDocument(
+            cardTimeline([
+                ['breakOrRest', 660],
+                ['driving', 300],
+                ['breakOrRest', 660],
+            ]),
+        );
+        const result = reviewedScenario(document, [
+            { ...scenarioRange('private-site', 1, 900, 960), kind: 'outOfScope', outsideRegulation561: true },
+        ]);
+        expect(result.baseline.infringements.some((finding) => finding.ruleId === 'BREAK_CONTINUOUS_DRIVING')).toBe(true);
+        expect(result.reviewed.infringements.some((finding) => finding.ruleId === 'BREAK_CONTINUOUS_DRIVING')).toBe(false);
+        expect(result.reviewed.crewDutyPeriods[0]?.windowStart).toBe(result.baseline.crewDutyPeriods[0]?.windowStart);
+    });
+
+    it('credits evidenced interrupted regular daily rest, retains baseline findings, and stops requesting the same ferry proof', () => {
+        const document = singleGenerationDocument(cardTimeline(FERRY_DAILY_REST));
+        const result = reviewedScenario(document, [
+            {
+                ...scenarioRange('ferry-ticket', 3, 1260, 1950),
+                kind: 'ferryRest',
+                restKind: 'regularDaily',
+                accompaniedVehicle: true,
+                sleepingAccommodation: 'bunkOrCouchette',
+                scheduledCrossingMinutes: 180,
+            },
+        ]);
+        expect(result.baseline.infringements.some((finding) => finding.category === 'dailyRest')).toBe(true);
+        expect(result.reviewed.infringements.some((finding) => finding.category === 'dailyRest')).toBe(false);
+        expect(
+            result.baseline.assessments.some((assessment) => assessment.ruleId === 'DAILY_REST_FERRY_TRAIN_INTERRUPTION_REVIEW'),
+        ).toBe(true);
+        expect(
+            result.reviewed.assessments.some((assessment) => assessment.ruleId === 'DAILY_REST_FERRY_TRAIN_INTERRUPTION_REVIEW'),
+        ).toBe(false);
+    });
+
+    it('rejects ferry credit beyond interruption limits and without required external conditions', () => {
+        const document = singleGenerationDocument(
+            cardTimeline([...FERRY_DAILY_REST.slice(0, 4), ['driving', 61], ['breakOrRest', 330]]),
+        );
+        const ferry = {
+            ...scenarioRange('ferry-ticket', 3, 1260, 1981),
+            kind: 'ferryRest',
+            restKind: 'regularDaily',
+            accompaniedVehicle: true,
+            sleepingAccommodation: 'bunkOrCouchette',
+            scheduledCrossingMinutes: 180,
+        };
+        expect(
+            evaluateDocumentComplianceScenario(document, { contentSha256: document.source.sha256, assumptions: [ferry] }),
+        ).toMatchObject({ status: 'unavailable', reason: 'ferryConditionsUnavailable' });
+        expect(
+            evaluateDocumentComplianceScenario(document, {
+                contentSha256: document.source.sha256,
+                assumptions: [{ ...ferry, accompaniedVehicle: false }],
+            }),
+        ).toMatchObject({ status: 'unavailable', reason: 'invalidRequest' });
+    });
+
+    it('credits reduced weekly ferry rest using actual rest minutes, not interruption time', () => {
+        const document = singleGenerationDocument(
+            cardTimeline([
+                ['breakOrRest', 2700],
+                ['work', 7200],
+                ['breakOrRest', 720],
+                ['driving', 30],
+                ['breakOrRest', 720],
+                ['work', 8790],
+            ]),
+        );
+        const result = reviewedScenario(document, [
+            {
+                ...scenarioRange('weekly-ferry', 2, 9900, 11370),
+                kind: 'ferryRest',
+                restKind: 'reducedWeekly',
+                accompaniedVehicle: true,
+                sleepingAccommodation: 'bunkOrCouchette',
+                scheduledCrossingMinutes: 180,
+            },
+        ]);
+        expect(result.baseline.infringements.some((finding) => finding.ruleId === 'WEEKLY_REST_INSUFFICIENT')).toBe(true);
+        expect(result.reviewed.infringements.some((finding) => finding.ruleId === 'WEEKLY_REST_INSUFFICIENT')).toBe(false);
+    });
+
+    it('requires an eight-hour scheduled crossing and a cabin for regular weekly ferry rest', () => {
+        const document = singleGenerationDocument(
+            cardTimeline([
+                ['breakOrRest', 660],
+                ['work', 600],
+                ['breakOrRest', 1350],
+                ['driving', 30],
+                ['breakOrRest', 1350],
+            ]),
+        );
+        const ferry = {
+            ...scenarioRange('regular-weekly-ferry', 2, 1260, 3990),
+            kind: 'ferryRest',
+            restKind: 'regularWeekly',
+            accompaniedVehicle: true,
+            sleepingAccommodation: 'cabin',
+            scheduledCrossingMinutes: 480,
+        };
+        expect(reviewedScenario(document, [ferry]).status).toBe('available');
+        for (const change of [
+            { scheduledCrossingMinutes: 479 },
+            { sleepingAccommodation: 'bunkOrCouchette' },
+            { restKind: 'reducedWeekly' },
+        ]) {
+            expect(
+                evaluateDocumentComplianceScenario(document, {
+                    contentSha256: document.source.sha256,
+                    assumptions: [{ ...ferry, ...change }],
+                }),
+            ).toMatchObject({ status: 'unavailable', reason: 'ferryConditionsUnavailable' });
+        }
+    });
+
+    it('applies the one-hour weekly-return allowance to driving while retaining the continuous-driving break finding', () => {
+        const document = singleGenerationDocument(
+            cardTimeline([
+                ['breakOrRest', 660],
+                ['driving', 240],
+                ['breakOrRest', 45],
+                ['driving', 240],
+                ['work', 30],
+                ['driving', 180],
+                ['breakOrRest', 2700],
+            ]),
+        );
+        const result = reviewedScenario(document, [{ ...scenarioRange('signed-return', 5, 1335, 1395), ...ARTICLE12_RETURN }]);
+        expect(result.baseline.infringements.some((finding) => finding.ruleId === 'DAILY_DRIVING_LIMIT')).toBe(true);
+        expect(result.reviewed.infringements.some((finding) => finding.ruleId === 'DAILY_DRIVING_LIMIT')).toBe(false);
+        expect(result.reviewed.infringements.some((finding) => finding.ruleId === 'BREAK_CONTINUOUS_DRIVING')).toBe(true);
+        expect(result.reviewed.crewDutyPeriods[0]?.windowEnd).toBe(MONDAY + (660 + 1500) * MINUTE_MS);
+    });
+
+    it('requires the immediate thirty-minute break and regular weekly rest for a two-hour return', () => {
+        const document = singleGenerationDocument(
+            cardTimeline([
+                ['breakOrRest', 660],
+                ['driving', 240],
+                ['breakOrRest', 45],
+                ['driving', 300],
+                ['breakOrRest', 30],
+                ['driving', 120],
+                ['breakOrRest', 2700],
+            ]),
+        );
+        const article12 = {
+            ...scenarioRange('two-hour-return', 5, 1275, 1395),
+            ...ARTICLE12_RETURN,
+            maximumExtensionMinutes: 120,
+        };
+        expect(
+            reviewedScenario(document, [article12]).reviewed.infringements.some(
+                (finding) => finding.ruleId === 'DAILY_DRIVING_LIMIT',
+            ),
+        ).toBe(false);
+        for (const change of [{ weeklyRestKind: 'reduced' }, { writtenReason: false }, { compensatedByDeadline: false }]) {
+            expect(
+                evaluateDocumentComplianceScenario(document, {
+                    contentSha256: document.source.sha256,
+                    assumptions: [{ ...article12, ...change }],
+                }).status,
+            ).toBe('unavailable');
+        }
+        const noBreak = singleGenerationDocument(
+            cardTimeline([
+                ['breakOrRest', 660],
+                ['driving', 240],
+                ['breakOrRest', 45],
+                ['driving', 240],
+                ['work', 30],
+                ['driving', 180],
+                ['breakOrRest', 2700],
+            ]),
+        );
+        expect(
+            evaluateDocumentComplianceScenario(noBreak, { contentSha256: noBreak.source.sha256, assumptions: [article12] }),
+        ).toMatchObject({ status: 'unavailable', reason: 'article12ConditionsUnavailable' });
+    });
+
+    it('never extends the fortnightly driving limit with an Article 12 weekly-return assumption', () => {
+        const days = () =>
+            [
+                ['driving', 540],
+                ['breakOrRest', 900],
+            ] as const;
+        const document = singleGenerationDocument(
+            cardTimeline([
+                ['breakOrRest', 660],
+                ...Array.from({ length: 6 }, days).flat(),
+                ['driving', 180],
+                ['breakOrRest', 2700],
+                ...Array.from({ length: 5 }, days).flat(),
+            ]),
+        );
+        const article12 = {
+            ...scenarioRange('weekly-return', 13, 9420, 9480),
+            ...ARTICLE12_RETURN,
+            dutyStart: MONDAY + 9300 * MINUTE_MS,
+        };
+        const result = reviewedScenario(document, [article12]);
+        expect(result.baseline.infringements.some((finding) => finding.ruleId === 'WEEKLY_DRIVING_LIMIT')).toBe(true);
+        expect(result.reviewed.infringements.some((finding) => finding.ruleId === 'WEEKLY_DRIVING_LIMIT')).toBe(false);
+        expect(result.reviewed.infringements.filter((finding) => finding.ruleId === 'WEEKLY_DRIVING_BIWEEKLY_LIMIT')).toEqual(
+            result.baseline.infringements.filter((finding) => finding.ruleId === 'WEEKLY_DRIVING_BIWEEKLY_LIMIT'),
+        );
     });
 });

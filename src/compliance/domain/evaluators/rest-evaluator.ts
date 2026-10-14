@@ -3,11 +3,12 @@ import type { EvaluationInterval, EvidencedEvaluationInterval } from '../unrecor
 import { MILLISECONDS_PER_MINUTE } from '#time';
 
 import type { IComplianceAssessment } from '../compliance-assessment.js';
-import { isQualifyingDailyRest, nextDailyCycleAnchor, resolveDailyCycleWindow } from '../daily-cycle.js';
+import { isQualifyingDailyRest, qualifyingRestEnd, nextDailyCycleAnchor, resolveDailyCycleWindow } from '../daily-cycle.js';
 import type { IInfringement } from '../infringement.js';
 import { EU_561_2006_CONSOLIDATED_URL } from '../legal-references.js';
 import { createDailyCyclePolicy, type IMultiManningCyclePolicy } from '../multi-manning.js';
 import { calculateDeficitSeverity, measureDeficitMinutes, type IRuleProfile } from '../rule-profile.js';
+import type { IComplianceScenarioEvidence } from '../scenario-evidence.js';
 
 // Art. 8(4): at most 3 reduced daily rests between weekly rests; counter resets on weekly rest.
 // Weekly-rest boundaries are derived unclipped up front because >=24h rests exceed the 24h daily-rest window.
@@ -16,6 +17,7 @@ import { calculateDeficitSeverity, measureDeficitMinutes, type IRuleProfile } fr
 function partitionByWeeklyRest(
     intervals: readonly EvaluationInterval[],
     weeklyRestMs: number,
+    evidence?: IComplianceScenarioEvidence,
 ): readonly {
     readonly initialAnchor: number | null;
     readonly intervals: readonly EvaluationInterval[];
@@ -25,7 +27,7 @@ function partitionByWeeklyRest(
     ];
 
     for (const interval of intervals) {
-        if (interval.activity === 'breakOrRest' && interval.end - interval.start >= weeklyRestMs) {
+        if (qualifyingRestEnd(interval, weeklyRestMs, evidence) !== null) {
             partitions.at(-1)?.intervals.push(interval);
             partitions.push({ initialAnchor: interval.end, intervals: [] });
             continue;
@@ -46,20 +48,21 @@ export interface IDailyRestEvaluationResult {
 export function evaluateDailyRestCompliance(
     intervals: readonly EvaluationInterval[],
     profile: IRuleProfile,
+    evidence?: IComplianceScenarioEvidence,
 ): IDailyRestEvaluationResult {
     if (intervals.length === 0) {
         return { assessments: [], infringements: [] };
     }
 
     const weeklyRestMs = profile.weeklyRestRules.reducedRestMinutes * MILLISECONDS_PER_MINUTE;
-    const partitions = partitionByWeeklyRest(intervals, weeklyRestMs);
+    const partitions = partitionByWeeklyRest(intervals, weeklyRestMs, evidence);
     // Built from every interval so a duty period is qualified the same way as in the driving evaluator.
-    const cyclePolicy = createDailyCyclePolicy(intervals, profile);
+    const cyclePolicy = createDailyCyclePolicy(intervals, profile, evidence);
 
     const assessments: IComplianceAssessment[] = [];
     const infringements: IInfringement[] = [];
     for (const { initialAnchor, intervals: partitionIntervals } of partitions) {
-        const result = evaluateDailyRestCycles(partitionIntervals, profile, initialAnchor, cyclePolicy);
+        const result = evaluateDailyRestCycles(partitionIntervals, profile, initialAnchor, cyclePolicy, evidence);
         assessments.push(...result.assessments);
         infringements.push(...result.infringements);
     }
@@ -131,6 +134,7 @@ function evaluateDailyRestCycles(
     profile: IRuleProfile,
     initialAnchor: number | null,
     cyclePolicy: IMultiManningCyclePolicy,
+    evidence?: IComplianceScenarioEvidence,
 ): IDailyRestEvaluationResult {
     if (intervals.length === 0) {
         return { assessments: [], infringements: [] };
@@ -206,7 +210,16 @@ function evaluateDailyRestCycles(
             nextCandidateIdx = j + 1;
         }
 
-        const maxSingleRestMs = restSegments.reduce((max, s) => Math.max(max, s.durationMs), 0);
+        const confirmedFerry = evidence?.ferryRests.find((rest) => rest.start >= shiftStart && rest.start < windowEnd);
+        const confirmedSegments =
+            confirmedFerry === undefined
+                ? []
+                : restSegments.filter((segment) => segment.start >= confirmedFerry.start && segment.end <= confirmedFerry.end);
+        const confirmedRestMs = confirmedSegments.reduce((sum, segment) => sum + segment.durationMs, 0);
+        const maxSingleRestMs = Math.max(
+            restSegments.reduce((max, s) => Math.max(max, s.durationMs), 0),
+            confirmedRestMs >= requiredRestMs ? confirmedRestMs : 0,
+        );
         const lastRestInterval = restSegments.at(-1)?.interval ?? current;
 
         const hasValidSplitRest = ((): boolean => {
@@ -247,6 +260,7 @@ function evaluateDailyRestCycles(
         if (!isTailIncomplete) {
             if (
                 isFerryTrainInterruptedRegularRest &&
+                confirmedRestMs < requiredRestMs &&
                 (maxSingleRestMs < reducedRestMs ||
                     (maxSingleRestMs < requiredRestMs && reducedRestCount + 1 > profile.dailyRestRules.maxReductionsPerPeriod)) &&
                 !hasValidSplitRest
@@ -326,8 +340,14 @@ function evaluateDailyRestCycles(
         }
 
         // Interrupted ferry/train rest does not qualify as cycle-ending rest without external proof.
-        const qualifyingRest = restSegments.find((s) => s.durationMs >= reducedRestMs);
-        if (qualifyingRest !== undefined) {
+        const qualifyingRest = restSegments.find(
+            (s) => s.durationMs >= reducedRestMs && qualifyingRestEnd(s.interval, reducedRestMs, evidence) !== null,
+        );
+        if (confirmedFerry !== undefined) {
+            cycleAnchor = nextDailyCycleAnchor(cycleWindow, confirmedFerry.end);
+            const lastIndex = intervals.findIndex((interval) => interval.end === confirmedFerry.end);
+            i = Math.max(i + 1, lastIndex + 1);
+        } else if (qualifyingRest !== undefined) {
             // Use qualifying rest's actual end rather than window-clipped end to preserve credit for spillover rest.
             cycleAnchor = nextDailyCycleAnchor(cycleWindow, qualifyingRest.interval.end);
             // Ensure index advances past evaluated duty to avoid infinite loops on preceding rests.

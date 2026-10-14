@@ -1,10 +1,11 @@
 import type { EvaluationInterval } from '../unrecorded-time.js';
 import { contiguousCalendarWeekKeys, getCalendarWeekKey, MILLISECONDS_PER_MINUTE, splitByCalendarWeek } from '#time';
 
-import { isQualifyingDailyRest, nextDailyCycleAnchor, resolveDailyCycleWindow, type IDailyCycleWindow } from '../daily-cycle.js';
+import { qualifyingRestEnd, nextDailyCycleAnchor, resolveDailyCycleWindow, type IDailyCycleWindow } from '../daily-cycle.js';
 import type { IInfringement } from '../infringement.js';
 import { createDailyCyclePolicy } from '../multi-manning.js';
 import { calculateSeverity, measureExcessMinutes, type IRuleProfile } from '../rule-profile.js';
+import type { IComplianceScenarioEvidence } from '../scenario-evidence.js';
 
 interface IDailyDrivingPeriod {
     readonly cycleWindow: IDailyCycleWindow;
@@ -32,15 +33,17 @@ function findFirstDrivingInWeek(intervals: readonly EvaluationInterval[], weekKe
 export function evaluateDrivingInfringements(
     intervals: readonly EvaluationInterval[],
     profile: IRuleProfile,
+    evidence?: IComplianceScenarioEvidence,
 ): readonly IInfringement[] {
     const infringements: IInfringement[] = [];
     const dailyPeriods: IDailyDrivingPeriod[] = [];
     const weeklyDrivingMs = new Map<string, number>();
+    const weeklyExtensionMs = new Map<string, number>();
 
     let currentPeriod: IDailyDrivingPeriod | null = null;
     let cycleAnchor: number | null = null;
     // Art. 8(5): a multi-manning duty period runs 30 hours, so its driving is not cut at 24 hours.
-    const cyclePolicy = createDailyCyclePolicy(intervals, profile);
+    const cyclePolicy = createDailyCyclePolicy(intervals, profile, evidence);
 
     for (const interval of intervals) {
         // Art. 8(2) & 4(k): Close an expired cycle's driving period to prevent compounding driving across subsequent days.
@@ -75,7 +78,19 @@ export function evaluateDrivingInfringements(
             for (const segment of splitByCalendarWeek(interval.start, interval.end)) {
                 weeklyDrivingMs.set(segment.weekKey, (weeklyDrivingMs.get(segment.weekKey) ?? 0) + segment.durationMs);
             }
-        } else if (isQualifyingDailyRest(interval, profile)) {
+            for (const extension of evidence?.cycleExtensions ?? []) {
+                const start = Math.max(interval.start, extension.drivingStart);
+                const end = Math.min(interval.end, extension.drivingEnd);
+                if (start >= end) {
+                    continue;
+                }
+                for (const segment of splitByCalendarWeek(start, end)) {
+                    weeklyExtensionMs.set(segment.weekKey, (weeklyExtensionMs.get(segment.weekKey) ?? 0) + segment.durationMs);
+                }
+            }
+        } else if (
+            qualifyingRestEnd(interval, profile.dailyRestRules.reducedRestMinutes * MILLISECONDS_PER_MINUTE, evidence) !== null
+        ) {
             // A qualifying daily rest period ends the current daily driving cycle
             if (currentPeriod !== null) {
                 dailyPeriods.push(currentPeriod);
@@ -107,7 +122,11 @@ export function evaluateDrivingInfringements(
                 weeklyExtensions.set(weekKey, extensionsThisWeek + 1);
             }
 
-            const allowedMinutes = extensionAvailable ? extendedLimitMinutes : standardLimitMinutes;
+            const allowedMinutes =
+                (extensionAvailable ? extendedLimitMinutes : standardLimitMinutes) +
+                (evidence?.cycleExtensions.find((extension) => extension.windowStart === period.cycleWindow.start)?.extensionMs ??
+                    0) /
+                    MILLISECONDS_PER_MINUTE;
 
             if (period.durationMs > allowedMinutes * MILLISECONDS_PER_MINUTE) {
                 const { excessMinutes, measuredMinutes } = measureExcessMinutes(period.durationMs, allowedMinutes);
@@ -139,7 +158,8 @@ export function evaluateDrivingInfringements(
     }
 
     for (const [weekKey, totalDurationMs] of weeklyDrivingMs) {
-        const maxWeeklyMinutes = profile.weeklyDrivingRules.maxWeeklyDrivingMinutes;
+        const maxWeeklyMinutes =
+            profile.weeklyDrivingRules.maxWeeklyDrivingMinutes + (weeklyExtensionMs.get(weekKey) ?? 0) / MILLISECONDS_PER_MINUTE;
         const maxWeeklyMs = maxWeeklyMinutes * MILLISECONDS_PER_MINUTE;
 
         // A limit of 0 disables weekly driving checks (e.g. GB domestic rules).

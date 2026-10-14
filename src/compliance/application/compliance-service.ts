@@ -24,7 +24,8 @@ import {
     type ICrewDutyPeriod,
 } from '../domain/multi-manning.js';
 import { EU_561_2006_STANDARD, type IRuleProfile } from '../domain/rule-profile.js';
-import { resolveUnrecordedTime } from '../domain/unrecorded-time.js';
+import { resolveUnrecordedTime, type IUnrecordedPeriod } from '../domain/unrecorded-time.js';
+import type { IComplianceScenarioEvidence } from '../domain/scenario-evidence.js';
 
 export interface IComplianceEvaluationResult {
     readonly assessments: readonly IComplianceAssessment[];
@@ -72,15 +73,29 @@ export function evaluateDocumentCompliance(
     // Unrecorded time is evaluated as rest and each period is listed for review, so a missing manual entry is never
     // reported as missing rest.
     const { evaluationIntervals, unrecordedPeriods } = resolveUnrecordedTime(intervals);
-    // Merge contiguous intervals across midnight splits before evaluation to restore true durations.
-    const mergedIntervals = mergeContiguousActivityIntervals(evaluationIntervals);
+    return evaluateComplianceIntervals(
+        evaluationIntervals,
+        unrecordedPeriods,
+        evaluateAnomalyInfringements(projectDocumentCanonicalEventFaultRecords(document), profile),
+        profile,
+        nightWindow,
+    );
+}
+
+export function evaluateComplianceIntervals(
+    intervals: readonly EvaluationInterval[],
+    unrecordedPeriods: readonly IUnrecordedPeriod[],
+    anomalyInfringements: readonly IInfringement[],
+    profile: IRuleProfile,
+    nightWindow?: INightWindow,
+    evidence?: IComplianceScenarioEvidence,
+): IComplianceEvaluationResult {
+    const mergedIntervals = mergeContiguousActivityIntervals(intervals);
 
     const breakInfringements = evaluateBreakInfringements(mergedIntervals, profile);
-    const drivingInfringements = evaluateDrivingInfringements(mergedIntervals, profile);
-    const dailyRestResult = evaluateDailyRestCompliance(mergedIntervals, profile);
-    const weeklyRestResult = evaluateWeeklyRestCompliance(mergedIntervals, profile);
-    const eventFaults = projectDocumentCanonicalEventFaultRecords(document);
-    const anomalyInfringements = evaluateAnomalyInfringements(eventFaults, profile);
+    const drivingInfringements = evaluateDrivingInfringements(mergedIntervals, profile, evidence);
+    const dailyRestResult = evaluateDailyRestCompliance(mergedIntervals, profile, evidence);
+    const weeklyRestResult = evaluateWeeklyRestCompliance(mergedIntervals, profile, evidence);
     const workingTimeInfringements = evaluateWorkingTimeInfringements(mergedIntervals, profile, nightWindow);
 
     const infringements = [
@@ -102,7 +117,7 @@ export function evaluateDocumentCompliance(
             ...evaluateUnrecordedPeriodAssessments(unrecordedPeriods, profile),
         ],
         creditedAvailabilityBreaks: resolveCreditedAvailabilityBreaks(mergedIntervals, profile),
-        crewDutyPeriods: resolveCrewDutyPeriods(mergedIntervals, profile),
+        crewDutyPeriods: resolveCrewDutyPeriods(mergedIntervals, profile, evidence),
         evaluationIntervals: mergedIntervals,
         infringements: infringements,
         profile,

@@ -2,6 +2,7 @@ import type { EvaluationInterval } from './unrecorded-time.js';
 import { MILLISECONDS_PER_DAY, MILLISECONDS_PER_MINUTE } from '#time';
 
 import type { IRuleProfile } from './rule-profile.js';
+import type { IComplianceScenarioEvidence } from './scenario-evidence.js';
 
 // Reg. 561/2006 Art. 8(2) & Guidance Note 7: 24h cycles start at prior qualifying rest end; Art. 8(5) replaces the 24h
 // with 30h for a multi-manning duty period. Shared by driving and daily-rest evaluators to synchronize cycle measurement.
@@ -27,6 +28,18 @@ export function isQualifyingDailyRest(interval: EvaluationInterval, profile: IRu
         interval.activity === 'breakOrRest' &&
         interval.end - interval.start >= profile.dailyRestRules.reducedRestMinutes * MILLISECONDS_PER_MINUTE
     );
+}
+
+export function qualifyingRestEnd(
+    interval: EvaluationInterval,
+    minimumRestMs: number,
+    evidence?: IComplianceScenarioEvidence,
+): number | null {
+    const ferry = evidence?.ferryRests.find((rest) => rest.start <= interval.start && interval.end <= rest.end);
+    if (ferry !== undefined) {
+        return interval.end === ferry.end && ferry.restDurationMs >= minimumRestMs ? ferry.end : null;
+    }
+    return interval.activity === 'breakOrRest' && interval.end - interval.start >= minimumRestMs ? interval.end : null;
 }
 
 // Resolves the cycle window from anchor or falls back to dutyStart when anchor is null or its window has lapsed.

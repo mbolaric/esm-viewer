@@ -713,6 +713,27 @@ Domestic rules. Evaluators live in `src/compliance/domain/evaluators/`:
 `weekly-rest-evaluator`, `working-time-evaluator`, `anomaly-evaluator`
 (card-less vehicle motion anomalies).
 
+**Evidence-based scenario API**: `evaluateDocumentComplianceScenario` is a public
+`#compliance` application service for a single driver-card document. It preserves
+the standard recorded baseline and returns separate numerical outputs under
+explicit reviewer-supplied assumptions, with the source hash, evidence IDs,
+profile and calculation version. It does not modify the opened document,
+original file or persisted data, and does not expose interpreted intervals as
+recorded facts. This is an embeddable API; the standalone Viewer does not add a
+scenario editor.
+
+The bounded contract supports work/rest interpretations of unrecorded time,
+crew-presence assertions, driving outside Regulation 561/2006 treated as work,
+evidence-confirmed ferry rest, and the Article 12 one/two-hour weekly-return
+case. Missing conditions, conflicting ranges, changed content and unsupported
+inputs reject the whole scenario. Numerical effects reuse the existing
+evaluators; exemptions do not remove unrelated break, fortnightly-driving,
+working-time, anomaly or weekly-rest obligations. Manual-entry review topics
+remain even when external evidence supports a rest interpretation. See
+[the scenario contract and fixture basis](compliance-scenarios.md) for supported
+conditions, source references and limitations. Reviewer assertions are inputs
+to the comparison, not certification of their truth or a legal decision.
+
 Every evaluator compares exact elapsed milliseconds with the configured legal
 thresholds, never independently-rounded minute values, through two shared
 `rule-profile.ts` helpers: `measureExcessMinutes` (a duration measured
