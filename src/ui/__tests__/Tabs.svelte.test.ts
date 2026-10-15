@@ -53,12 +53,45 @@ describe('Tabs', () => {
         expect(screen.queryByText('Panel content for first')).toBeNull();
     });
 
-    it('moves focus and selection with arrow, home, and end keys', async () => {
+    it('retains panel inputs and identity while exposing only the selected panel when requested', async () => {
+        const inputs = createRawSnippet<[string]>((id) => ({
+            render: () => `<label>${id()} panel input<input value="Initial value" /></label>`,
+        }));
+        const rendered = render(Tabs, {
+            props: {
+                items,
+                label: 'Example views',
+                keepMounted: true,
+                onselect: vi.fn(),
+                panel: inputs,
+                selectedId: 'first',
+            },
+        });
+        const firstPanel = screen.getByRole('tabpanel');
+        const input = screen.getByRole('textbox', { name: 'first panel input' });
+        await fireEvent.input(input, { target: { value: 'Retained input' } });
+        await rendered.rerender({ selectedId: 'second' });
+        const secondPanel = screen.getByRole('tabpanel');
+        expect(secondPanel).not.toBe(firstPanel);
+        expect(firstPanel).toHaveProperty('hidden', true);
+        expect(screen.getAllByRole('tabpanel', { hidden: true })).toHaveLength(2);
+        expect(screen.queryByRole('textbox', { name: 'first panel input' })).toBeNull();
+        expect(screen.getByRole('textbox', { name: 'second panel input' })).toBeTruthy();
+        expect(screen.getByRole('tab', { name: 'Second view' }).getAttribute('aria-controls')).toBe(secondPanel.id);
+        await rendered.rerender({ selectedId: 'first' });
+        expect(screen.getByRole('tabpanel')).toBe(firstPanel);
+        expect(screen.getByRole('textbox', { name: 'first panel input' })).toBe(input);
+        expect(input).toHaveProperty('value', 'Retained input');
+        expect(secondPanel).toHaveProperty('hidden', true);
+    });
+
+    it.each([false, true])('moves focus and selection with arrow, home, and end keys (keepMounted=%s)', async (keepMounted) => {
         const onselect = vi.fn();
         const rendered = render(Tabs, {
             props: {
                 items,
                 label: 'Example views',
+                keepMounted,
                 onselect,
                 panel,
                 selectedId: 'first',

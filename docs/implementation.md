@@ -58,6 +58,15 @@ descriptors. Its Viewer workspace uses `applicationMode="embedded"`; global
 dialogs run separately through `ViewerApplicationDialogs`. Direct standalone
 `ViewerRoot` consumers retain the default, self-contained dialog adapter.
 
+The public shared `Tabs` component supports an optional `keepMounted` prop,
+defaulting to `false`. Opting in mounts every panel and preserves child state and
+input across tab switches. Inactive panels use `hidden` with an explicit hidden
+display rule, keeping them out of the visible layout, accessibility tree and
+keyboard sequence. Only the selected tab remains in the tab list's roving focus
+sequence. Consumers should opt in for bounded collections whose panel state must
+survive navigation; hidden panels remain mounted and may keep their subscriptions
+and background work. Existing consumers retain active-panel-only mounting.
+
 `docs/site/` contains the English static product website for GitHub Pages. It
 explains shipped Viewer features, desktop privacy, supported downloads, installer
 limitations and reporting. Its download area presents three platform columns for

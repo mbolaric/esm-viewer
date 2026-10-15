@@ -12,6 +12,7 @@
     interface IProps {
         items: readonly ITabItem[];
         label: string;
+        keepMounted?: boolean;
         onselect: (id: string) => void;
         // 'vertical' renders a sidebar tab list and swaps roving arrow keys to Up/Down per WAI-ARIA APG.
         orientation?: 'horizontal' | 'vertical';
@@ -19,7 +20,7 @@
         selectedId: string;
     }
 
-    let { items, label, onselect, orientation = 'horizontal', panel, selectedId }: IProps = $props();
+    let { items, label, keepMounted = false, onselect, orientation = 'horizontal', panel, selectedId }: IProps = $props();
 
     const uid = $props.id();
     let tabElements: (HTMLButtonElement | undefined)[] = $state([]);
@@ -99,8 +100,15 @@
         {/each}
     </div>
     {#each items as item, index (item.id)}
-        {#if index === selectedIndex}
-            <div aria-labelledby={tabId(item)} class="tab-panel" id={panelId(item)} role="tabpanel" tabindex="0">
+        {#if keepMounted || index === selectedIndex}
+            <div
+                aria-labelledby={tabId(item)}
+                class="tab-panel"
+                hidden={index !== selectedIndex}
+                id={panelId(item)}
+                role="tabpanel"
+                tabindex="0"
+            >
                 {@render panel(item.id)}
             </div>
         {/if}
@@ -193,6 +201,10 @@
     .tab-panel {
         display: grid;
         gap: var(--space-section);
+    }
+
+    .tab-panel[hidden] {
+        display: none;
     }
 
     .vertical .tab-panel {
