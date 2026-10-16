@@ -1543,6 +1543,9 @@ result-count control set is reused, not reimplemented, across nearly every
 records screen — Activities, Places, Associations, Events & Faults,
 Technical, Integrity, Speed, and Comparison all use it.
 
+First-row tooltips open downward only when positioned inside the table. Floating
+action tooltips retain Button's viewport placement so table scrolling cannot hide them.
+
 **Toasts** (`src/ui/toast`): a shared toast controller/container gives
 transient success/failure feedback for actions like PDF export and print,
 used from the Compliance and Comparison screens.
@@ -1594,7 +1597,7 @@ document.
   data directly.
 - **Icon registry** (`src/ui/icon`): pinned `@lucide/svelte` icons behind
   one shared, closed registry — no ad hoc SVGs, no emoji, no per-feature
-  icon imports.
+  icon imports. `refreshCw` identifies explicit refresh or reanalysis actions.
 - **Localization** (`src/localization` + per-feature `feature/i18n/`):
   seven packaged locales (English, German, French, Italian, Polish, Spanish,
   Croatian) kept at 100% key parity against English, checked by

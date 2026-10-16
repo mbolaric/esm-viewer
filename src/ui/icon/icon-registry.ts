@@ -31,6 +31,7 @@ import OctagonAlert from '@lucide/svelte/icons/octagon-alert';
 import Pin from '@lucide/svelte/icons/pin';
 import Plus from '@lucide/svelte/icons/plus';
 import Printer from '@lucide/svelte/icons/printer';
+import RefreshCw from '@lucide/svelte/icons/refresh-cw';
 import Search from '@lucide/svelte/icons/search';
 import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 import Truck from '@lucide/svelte/icons/truck';
@@ -72,6 +73,7 @@ export type IconName =
     | 'pin'
     | 'plus'
     | 'printer'
+    | 'refreshCw'
     | 'search'
     | 'triangleAlert'
     | 'truck'
@@ -113,6 +115,7 @@ const iconRegistry = {
     pin: Pin,
     plus: Plus,
     printer: Printer,
+    refreshCw: RefreshCw,
     search: Search,
     triangleAlert: TriangleAlert,
     truck: Truck,

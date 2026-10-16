@@ -62,10 +62,10 @@ describe('Icon', () => {
         expect(rendered.container.querySelector('svg[aria-hidden="true"]')).toBeTruthy();
     });
 
-    it('renders the registered copy icon', () => {
+    it.each(['copy', 'refreshCw'] as const)('renders the registered %s icon', (name) => {
         const rendered = render(Icon, {
             props: {
-                name: 'copy',
+                name,
             },
         });
 

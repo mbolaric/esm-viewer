@@ -714,7 +714,7 @@
     }
 
     /* First row tooltips open downward to prevent clipping by scroll container. */
-    :global(.data-table tbody tr:first-child .has-tooltip[data-tooltip]::after) {
+    :global(.data-table tbody tr:first-child .has-tooltip:not(.tooltip-floating)[data-tooltip]::after) {
         inset-block-start: calc(var(--size-full) + var(--space-compact));
         inset-block-end: auto;
     }
