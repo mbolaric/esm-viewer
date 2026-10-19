@@ -662,7 +662,10 @@ translated in all seven catalogues and rebuilt when the selected language change
   (`dd/MM/yyyy`, `MM/dd/yyyy`, `yyyy-MM-dd`, medium-date), time format
   (24h/12h). Display and night-work timezones reuse the public generic
   `TimeZoneSelect` component, with supported IANA timezone choices and UTC
-  supplied by the Preferences controller. Date pickers follow the selected date format;
+  supplied by the Preferences controller. The shared date-picker popup uses fixed positioning, stays within the visible
+  viewport or containing native dialog, and scrolls internally when space is limited. It repositions on scrolling, resizing
+  and popup size changes; day numbers stay on one line at 200% zoom. Escape closes the calendar and restores input focus
+  without dismissing the containing dialog. Date pickers follow the selected date format;
   numeric entry also accepts trailing separators and unambiguous day/month
   order. Night Work Window: the IANA time zone and start/end hour used
   by the Compliance working-time evaluator on every screen that evaluates

@@ -54,7 +54,50 @@
     let focusedCellKey = $state<string | null>(null);
     let gridElement = $state<HTMLDivElement | undefined>();
     let inputElement = $state<HTMLInputElement | undefined>();
+    let popupElement = $state<HTMLDivElement | undefined>();
     const monthHeadingId = $derived(`${id}-month`);
+
+    function updatePopupPosition(): void {
+        if (popupElement === undefined || containerElement === undefined) return;
+        const dialog = containerElement.closest('dialog[open]')?.getBoundingClientRect();
+        const boundary = {
+            left: Math.max(0, dialog?.left ?? 0),
+            top: Math.max(0, dialog?.top ?? 0),
+            right: Math.min(globalThis.innerWidth, dialog?.right ?? globalThis.innerWidth),
+            bottom: Math.min(globalThis.innerHeight, dialog?.bottom ?? globalThis.innerHeight),
+        };
+        const gap = Number.parseFloat(globalThis.getComputedStyle(popupElement).rowGap) || 0;
+        popupElement.style.setProperty(
+            '--date-picker-available-width',
+            `${String(Math.max(0, boundary.right - boundary.left - gap * 2))}px`,
+        );
+        popupElement.style.setProperty(
+            '--date-picker-available-height',
+            `${String(Math.max(0, boundary.bottom - boundary.top - gap * 2))}px`,
+        );
+        const anchor = containerElement.getBoundingClientRect();
+        const popup = popupElement.getBoundingClientRect();
+        const preferredLeft =
+            globalThis.getComputedStyle(containerElement).direction === 'rtl' ? anchor.left : anchor.right - popup.width;
+        const preferredTop =
+            anchor.bottom + gap + popup.height <= boundary.bottom ? anchor.bottom + gap : anchor.top - gap - popup.height;
+        popupElement.style.left = `${String(Math.max(boundary.left + gap, Math.min(preferredLeft, boundary.right - gap - popup.width)))}px`;
+        popupElement.style.top = `${String(Math.max(boundary.top + gap, Math.min(preferredTop, boundary.bottom - gap - popup.height)))}px`;
+    }
+
+    $effect(() => {
+        if (!presenter.isOpen || popupElement === undefined) return;
+        updatePopupPosition();
+        const observer = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(updatePopupPosition);
+        observer?.observe(popupElement);
+        globalThis.addEventListener('resize', updatePopupPosition);
+        globalThis.addEventListener('scroll', updatePopupPosition, true);
+        return () => {
+            observer?.disconnect();
+            globalThis.removeEventListener('resize', updatePopupPosition);
+            globalThis.removeEventListener('scroll', updatePopupPosition, true);
+        };
+    });
 
     $effect.pre(() => {
         presenter.setLocalise(localise);
@@ -163,6 +206,8 @@
 
     function handleDocumentKeydown(event: KeyboardEvent): void {
         if (event.key === 'Escape' && presenter.isOpen) {
+            event.preventDefault();
+            event.stopPropagation();
             presenter.close();
             inputElement?.focus();
         }
@@ -223,7 +268,7 @@
     </div>
 
     {#if presenter.isOpen}
-        <div class="date-picker-popup popover-surface" role="dialog" aria-label={labels.popup}>
+        <div bind:this={popupElement} class="date-picker-popup popover-surface" role="dialog" aria-label={labels.popup}>
             <div class="date-picker-header">
                 <button
                     aria-label={labels.prevMonth}
@@ -372,9 +417,14 @@
     }
 
     .date-picker-popup {
-        inset-inline-end: var(--space-none);
+        position: fixed;
+        inset: auto;
         inline-size: var(--size-date-picker-popup);
-        max-inline-size: var(--size-date-picker-popup-max);
+        min-inline-size: var(--size-zero);
+        max-inline-size: min(var(--size-date-picker-popup-max), var(--date-picker-available-width, var(--size-full)));
+        max-block-size: var(--date-picker-available-height, var(--size-viewport));
+        overflow: auto;
+        overflow-wrap: normal;
     }
 
     .date-picker-header {
@@ -455,6 +505,9 @@
 
     .date-picker-day {
         min-block-size: var(--size-control-compact);
+        padding: var(--space-none);
+        inline-size: var(--size-full);
+        white-space: nowrap;
         background: var(--color-transparent);
         border: none;
         border-radius: var(--radius-control);

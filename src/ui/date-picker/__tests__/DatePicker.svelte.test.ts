@@ -6,6 +6,7 @@ import type { IDatePickerLocalisation } from '../date-picker-presenter.svelte.js
 
 afterEach(() => {
     cleanup();
+    vi.restoreAllMocks();
 });
 
 const julyTwentySeventh = Date.UTC(2026, 6, 27);
@@ -56,6 +57,7 @@ interface IProps {
     readonly onclear?: Mock<() => void>;
     readonly placeholder?: string;
     readonly value?: number | null;
+    readonly target?: HTMLElement;
 }
 
 interface IRenderPickerResult {
@@ -68,6 +70,7 @@ function renderPicker(options: IProps = {}): IRenderPickerResult {
     const onchange = options.onchange ?? vi.fn();
     const onclear = options.onclear;
     const rendered = render(DatePicker, {
+        target: options.target ?? document.body,
         props: {
             id: 'test-date',
             labels,
@@ -103,6 +106,36 @@ async function openPicker(): Promise<HTMLElement> {
 }
 
 describe('DatePicker', () => {
+    it('keeps a popup inside its containing dialog and repositions it as the anchor moves', async () => {
+        const dialog = document.createElement('dialog');
+        dialog.open = true;
+        document.body.append(dialog);
+        let anchorLeft = 180;
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+            if (this === dialog) return new DOMRect(10, 10, 300, 380);
+            if (this.classList.contains('date-picker')) return new DOMRect(anchorLeft, 280, 60, 32);
+            if (this.classList.contains('date-picker-popup')) return new DOMRect(0, 0, 160, 250);
+            return new DOMRect();
+        });
+        try {
+            renderPicker({ target: dialog });
+            const popup = await openPicker();
+            await waitFor(() => {
+                expect(popup.style.left).toBe('80px');
+                expect(popup.style.top).toBe('30px');
+                expect(popup.style.getPropertyValue('--date-picker-available-width')).toBe('300px');
+                expect(popup.style.getPropertyValue('--date-picker-available-height')).toBe('380px');
+            });
+            anchorLeft = 300;
+            await fireEvent.scroll(window);
+            expect(popup.style.left).toBe('150px');
+            await fireEvent.click(within(popup).getByRole('button', { name: '2026-07-15' }));
+            expect(dialog.open).toBe(true);
+            expect(screen.queryByRole('dialog', { name: 'Choose a date' })).toBeNull();
+        } finally {
+            dialog.remove();
+        }
+    });
     it('renders the formatted value in the labelled text input', () => {
         renderPicker();
 
@@ -231,7 +264,10 @@ describe('DatePicker', () => {
         renderPicker();
         await openPicker();
 
-        await fireEvent.keyDown(window, { key: 'Escape' });
+        const escape = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true, bubbles: true });
+        await fireEvent(window, escape);
+        expect(escape.defaultPrevented).toBe(true);
+        expect(document.activeElement).toBe(pickerInput());
         expect(screen.queryByRole('dialog')).toBeNull();
 
         await openPicker();
