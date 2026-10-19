@@ -525,18 +525,18 @@
         border: var(--border-control);
     }
 
-    .date-picker-day.selected {
-        background: var(--color-accent);
-        color: var(--color-on-accent);
-        font-weight: var(--font-weight-action);
-    }
-
     .date-picker-day.current-month {
         color: var(--color-text);
     }
 
     .date-picker-day:not(.current-month) {
         color: var(--color-text-muted);
+    }
+
+    .date-picker-day.selected {
+        background: var(--color-accent);
+        color: var(--color-on-accent);
+        font-weight: var(--font-weight-action);
     }
 
     .date-picker-day:disabled {

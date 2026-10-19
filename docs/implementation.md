@@ -665,7 +665,8 @@ translated in all seven catalogues and rebuilt when the selected language change
   supplied by the Preferences controller. The shared date-picker popup uses fixed positioning, stays within the visible
   viewport or containing native dialog, and scrolls internally when space is limited. It repositions on scrolling, resizing
   and popup size changes; day numbers stay on one line at 200% zoom. Escape closes the calendar and restores input focus
-  without dismissing the containing dialog. Date pickers follow the selected date format;
+  without dismissing the containing dialog. Selected days retain the accent foreground token in both themes, overriding
+  ordinary current-month and adjacent-month day colors. Date pickers follow the selected date format;
   numeric entry also accepts trailing separators and unambiguous day/month
   order. Night Work Window: the IANA time zone and start/end hour used
   by the Compliance working-time evaluator on every screen that evaluates
