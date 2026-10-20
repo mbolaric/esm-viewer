@@ -15,6 +15,7 @@ describe('ViewerDocumentSession', () => {
     it('resets every filter, search, speed range, and activity link when another document opens', () => {
         const session = new ViewerDocumentSession();
         session.syncDocumentKey('first');
+        session.activityView.set({ dayIndex: 2, tab: 'calendar', aggregationMode: 'shift', timelineVariant: 'band' });
         session.eventFaultFilter.set('fault');
         session.placesSearchText.set('Berlin');
         session.setSpeedRange(timestamp(1_000), timestamp(2_000));
@@ -23,6 +24,12 @@ describe('ViewerDocumentSession', () => {
 
         session.syncDocumentKey('second');
 
+        expect(session.activityView.value).toEqual({
+            dayIndex: null,
+            tab: 'day',
+            aggregationMode: 'utc',
+            timelineVariant: 'lanes',
+        });
         expect(session.eventFaultFilter.value).toBe('all');
         expect(session.placesSearchText.value).toBe('');
         expect(session.speedRangeStart.value).toBeNull();
@@ -35,10 +42,12 @@ describe('ViewerDocumentSession', () => {
         const session = new ViewerDocumentSession();
         session.syncDocumentKey('first');
         session.technicalSearchText.set('VIN');
+        session.activityView.set({ ...session.activityView.value, dayIndex: 1, tab: 'allDays' });
 
         session.syncDocumentKey('first');
 
         expect(session.technicalSearchText.value).toBe('VIN');
+        expect(session.activityView.value).toMatchObject({ dayIndex: 1, tab: 'allDays' });
     });
 
     it('starts a new speed range on its first page and clamps page requests', () => {

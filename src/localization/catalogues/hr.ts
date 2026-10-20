@@ -668,8 +668,7 @@ export const hr = {
     'integrity.limitation.failed.verificationFailed': 'Nijedan zaključak o integritetu nije dostupan jer provjera nije dovršena.',
     'integrity.limitation.notChecked.missingRootCertificate':
         'Nijedan rezultat potpisa nije dostupan bez potrebnog korijenskog certifikata.',
-    'integrity.limitation.notChecked.notRequested':
-        'Nijedna radnja provjere nije dostupna u ovoj verziji, pa ovaj zaslon ne navodi nikakav rezultat potpisa.',
+    'integrity.limitation.notChecked.notRequested': 'Potpisi još nisu provjereni. Pokrenite provjeru gumbom „Provjeri potpise”.',
     'integrity.limitation.unsupported.unsupportedCardApplication':
         'Nijedna podržana operacija provjere nije dostupna za jednu ili više aplikacija kartice.',
     'integrity.limitation.unsupported.unsupportedCertificateChain':
@@ -691,6 +690,8 @@ export const hr = {
     'integrity.verificationItemsEmpty': 'Nije dostupan nijedan dokaz provjere po stavci.',
     'integrity.verificationItemsHeading': 'Stavke provjere',
     'integrity.viewEvidence': 'Prikaži dokaze integriteta',
+    'rawData.returnToView': 'Povratak na {section}',
+    'integrity.retryVerification': 'Ponovi provjeru',
     'integrity.verifySignatures': 'Provjeri potpise',
     'integrity.verifyingSignatures': 'Provjera u tijeku…',
     'inspector.close': 'Zatvori inspektora',

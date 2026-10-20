@@ -1,18 +1,24 @@
 <script lang="ts">
+    import Button from '../controls/Button.svelte';
+    import type { IInlineNoticeAction } from '../controls/inline-notice.js';
     import { focusOnMount } from './focus-on-mount.js';
     import type { Snippet } from 'svelte';
 
     interface IProps {
         readonly actions?: Snippet;
+        readonly backAction?: IInlineNoticeAction | undefined;
         readonly description?: string;
         readonly heading: string;
     }
 
-    let { actions, description = undefined, heading }: IProps = $props();
+    let { actions, backAction = undefined, description = undefined, heading }: IProps = $props();
 </script>
 
 <header class="screen-header" class:with-actions={actions !== undefined}>
     <div class="screen-header-titles">
+        {#if backAction !== undefined}
+            <Button icon="chevronLeft" label={backAction.label} onclick={backAction.onclick} size="compact" variant="ghost" />
+        {/if}
         <h1 tabindex="-1" use:focusOnMount>{heading}</h1>
         {#if description !== undefined}
             <p>{description}</p>
@@ -37,6 +43,7 @@
 
     .screen-header-titles {
         display: grid;
+        justify-items: start;
         gap: var(--space-compact);
     }
 

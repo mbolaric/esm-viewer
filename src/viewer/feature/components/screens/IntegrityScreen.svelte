@@ -120,13 +120,15 @@
             <strong>
                 {translateIntegrityStatus(viewModel.assessment.status, translationService)}
             </strong>
-            {#if viewModel.assessment.status === 'notChecked'}
+            {#if viewModel.assessment.status === 'notChecked' || viewModel.assessment.status === 'failed'}
                 <span class="verify-action">
                     <Button
                         disabled={verifying}
                         label={verifying
                             ? translationService.translate('integrity.verifyingSignatures')
-                            : translationService.translate('integrity.verifySignatures')}
+                            : viewModel.assessment.status === 'failed'
+                              ? translationService.translate('integrity.retryVerification')
+                              : translationService.translate('integrity.verifySignatures')}
                         onclick={onverify}
                         variant="primary"
                     />

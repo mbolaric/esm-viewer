@@ -3,7 +3,7 @@
 
     import { SectionMessage, Tabs, type IntervalTimelineRuntimeLoader } from '#ui';
     import type { DocumentSectionRecord } from '#viewer-application';
-    import type { ActivityInterval, JsonPointer, UtcTimestamp } from '#viewer-domain';
+    import type { ActivityInterval, JsonPointer } from '#viewer-domain';
     import type {
         ActivityLinkedSection,
         IActivityDayViewModel,
@@ -18,9 +18,10 @@
     import type { IDocumentScopedValue } from '../../controllers/document-scoped-value.svelte.js';
     import { useViewerTranslationService } from '../../viewer-context.js';
 
-    type ActivitiesTab = 'allDays' | 'calendar' | 'day';
+    import type { IActivityViewState } from '../../controllers/viewer-document-session.svelte.js';
 
     interface IProps {
+        viewState: IDocumentScopedValue<IActivityViewState>;
         allDaysFilterText: IDocumentScopedValue<string>;
         calendarFilterText: IDocumentScopedValue<string>;
         dayFilterText: IDocumentScopedValue<string>;
@@ -33,10 +34,10 @@
         selectedRecord: DocumentSectionRecord | null;
         timelineRuntimeLoader?: IntervalTimelineRuntimeLoader | undefined;
         viewModel: IActivitySectionViewModel | null;
-        requestedDayMidnight?: UtcTimestamp | null | undefined;
     }
 
     let {
+        viewState,
         allDaysFilterText,
         calendarFilterText,
         dayFilterText,
@@ -46,23 +47,14 @@
         onopensource,
         onselectinfringement = undefined,
         onselectrecord,
-        requestedDayMidnight = undefined,
         selectedRecord,
         timelineRuntimeLoader = undefined,
         viewModel,
     }: IProps = $props();
 
     const translationService = useViewerTranslationService();
-    let requestedDayIndex = $state<number | null>(null);
     let dateSelectionStatus = $state<'idle' | 'unavailable'>('idle');
-    let activeTab = $state<ActivitiesTab>('day');
-
-    $effect(() => {
-        if (requestedDayMidnight !== null && requestedDayMidnight !== undefined && viewModel !== null) {
-            chooseDateValue(requestedDayMidnight);
-            activeTab = 'day';
-        }
-    });
+    const activeTab = $derived(viewState.value.tab);
 
     const selectedDayIndex = $derived.by(() => {
         if (viewModel === null || viewModel.days.length === 0) {
@@ -70,7 +62,7 @@
         }
 
         const latestIndex = viewModel.days.length - 1;
-        return Math.min(Math.max(requestedDayIndex ?? latestIndex, 0), latestIndex);
+        return Math.min(Math.max(viewState.value.dayIndex ?? latestIndex, 0), latestIndex);
     });
     const selectedDay = $derived<IActivityDayViewModel | null>(
         viewModel === null || selectedDayIndex < 0 ? null : (viewModel.days[selectedDayIndex] ?? null),
@@ -85,7 +77,7 @@
     ]);
 
     function chooseDay(index: number): void {
-        requestedDayIndex = index;
+        viewState.set({ ...viewState.value, dayIndex: index });
         dateSelectionStatus = 'idle';
         onclearrecord();
     }
@@ -123,12 +115,12 @@
     }
 
     function chooseTab(tabId: string): void {
-        activeTab = tabId === 'allDays' || tabId === 'calendar' ? tabId : 'day';
+        viewState.set({ ...viewState.value, tab: tabId === 'allDays' || tabId === 'calendar' ? tabId : 'day' });
     }
 
     async function showDay(index: number): Promise<void> {
         chooseDay(index);
-        activeTab = 'day';
+        chooseTab('day');
         await tick();
         globalThis.document.getElementById('activity-date')?.focus();
     }
@@ -181,6 +173,7 @@
                         />
                     {:else}
                         <ActivitiesDayView
+                            {viewState}
                             {dateSelectionStatus}
                             dayCount={viewModel.days.length}
                             enabled={activeTab === 'day'}

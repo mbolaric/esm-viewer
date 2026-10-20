@@ -660,8 +660,7 @@ export const en = {
         'No integrity conclusion is available because verification did not complete.',
     'integrity.limitation.notChecked.missingRootCertificate':
         'No signature result is available without the required root certificate.',
-    'integrity.limitation.notChecked.notRequested':
-        'No verification action is available in this build, so this screen does not claim a signature result.',
+    'integrity.limitation.notChecked.notRequested': 'Signatures have not been checked. Use Verify signatures to request a check.',
     'integrity.limitation.unsupported.unsupportedCardApplication':
         'No supported verification operation is available for one or more card applications.',
     'integrity.limitation.unsupported.unsupportedCertificateChain':
@@ -683,6 +682,8 @@ export const en = {
     'integrity.verificationItemsEmpty': 'No per-item verification evidence is available.',
     'integrity.verificationItemsHeading': 'Verification items',
     'integrity.viewEvidence': 'View integrity evidence',
+    'rawData.returnToView': 'Return to {section}',
+    'integrity.retryVerification': 'Retry verification',
     'integrity.verifySignatures': 'Verify signatures',
     'integrity.verifyingSignatures': 'Verifying…',
     'inspector.close': 'Close inspector',

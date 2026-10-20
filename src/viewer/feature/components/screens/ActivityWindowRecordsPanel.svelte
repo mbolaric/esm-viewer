@@ -4,21 +4,15 @@
     import { useViewerTranslationService } from '../../viewer-context.js';
     import type { IActivityDayLinkProps } from '../../helpers/activity-day-link-props.js';
 
-    interface IProps extends IActivityDayLinkProps {
+    interface IProps extends Omit<IActivityDayLinkProps, 'onreturnactivityday'> {
         children: Snippet;
+        header?: Snippet;
         emptyMessage: string;
         recordsEmpty: boolean;
     }
 
-    let {
-        activityDayLabel,
-        activityDayMidnight,
-        children,
-        emptyMessage,
-        onclearactivityday,
-        onreturnactivityday = undefined,
-        recordsEmpty,
-    }: IProps = $props();
+    let { activityDayLabel, activityDayMidnight, children, header, emptyMessage, onclearactivityday, recordsEmpty }: IProps =
+        $props();
 
     const translationService = useViewerTranslationService();
 </script>
@@ -27,15 +21,6 @@
     <div class="activity-window-notice">
         <InlineNotice
             actions={[
-                ...(onreturnactivityday !== undefined
-                    ? [
-                          {
-                              icon: 'chevronLeft' as const,
-                              label: translationService.translate('activityWindow.returnToActivities'),
-                              onclick: onreturnactivityday,
-                          },
-                      ]
-                    : []),
                 {
                     label: translationService.translate('activityWindow.showAll'),
                     onclick: onclearactivityday,
@@ -47,6 +32,7 @@
         />
     </div>
 {/if}
+{@render header?.()}
 {#if recordsEmpty}
     <p>
         {activityDayMidnight !== null ? translationService.translate('activityWindow.empty') : emptyMessage}

@@ -415,6 +415,17 @@ the existing preferences store (`localStorage` in the current Tauri host,
 
 ### 5.1 Screens (`src/viewer/feature/components/screens/`)
 
+Source links open the canonical Raw data pointer with a compact, start-aligned
+translated return action above the view heading. The reusable `ScreenHeader`
+owns this optional back action and renders it as the existing ghost button with
+a left chevron and an explicit destination. Raw data and activity-linked record
+screens use that same placement; the date notice keeps only Show all records.
+Returning restores the selected record or
+activity finding, the linked-day context and main reading position, and focuses
+the selected record control (or the section heading when no record was selected).
+Choosing the originating sidebar section provides the same return behavior.
+Opening another document clears the source-return context.
+
 - **Overview** — structured as a modular Bento grid across five responsive cards:
   an Identity hero card (span 7) featuring driver or vehicle name with icon,
   issuing state badge, and a key-value grid (card number, date of birth, validity
@@ -429,7 +440,11 @@ the existing preferences store (`localStorage` in the current Tauri host,
   (span 12) at <= 68rem (1088px), and collapses detail grids from 2 columns to 1
   column at <= 56rem (896px). Above the grid, KPI tiles display active days,
   activity intervals, events/faults, warnings, and security alerts.
-- **Activities** — contextual return breadcrumbs when navigated from linked
+
+- **Activities** — the selected day/application entry, tab, UTC/duty-shift totals mode
+  and timeline style belong to the opened-document session. They survive section
+  changes and recovery from a failed replacement-file open, and reset when another
+  document opens. Contextual return actions when navigated from linked
   record sections back to the originating activity day; three tabs:
   - *Day*: a per-day records table (start/end, duration, activity, card
     slot, crew — two cards, one card, or no crew status — and evidence) with
@@ -523,7 +538,10 @@ the existing preferences store (`localStorage` in the current Tauri host,
   or a track/table row selects the same record everywhere else on screen.
   The journey card is its own component (`PlacesJourneyPanel`, which owns the
   view mode, map route, and shift controls); `PlacesScreen` keeps the active
-  shift, since the records table is filtered to the same linked day.
+  shift. When opened from an activity day, the day context and return/show-all
+  actions appear before the filters and journey. Both journey selection and records
+  are restricted to that day; a day without a matching journey never falls back to
+  an unrelated shift. Show all records restores navigation across the whole file.
 - **Associations** — card ↔ vehicle-unit pairing history: VIN, device
   manufacturer/software version, slot, first/last use, inserted/withdrawn
   timestamps, and session distance/odometer, filterable and linkable back
@@ -549,6 +567,10 @@ the existing preferences store (`localStorage` in the current Tauri host,
 - **Integrity** — per-record signature-chain verification results, scope
   and status per verification item, a "verify signatures" action, and an
   explicit limitations disclosure when verification scope is only partial.
+  Not-requested copy explains how to start the available check. An operationally
+  failed check offers Retry verification in Integrity and Overview, disabled while
+  running; retry uses the current retained file without reopening or reparsing it.
+  A failed operation remains distinct from a completed invalid-signature result.
   What is actually verifiable: Gen1 driver/workshop card applications
   (144-byte ERCA RSA key) and Gen2 driver/workshop card applications
   (205-byte ERCA CVC, brainpoolP256r1) are checked and reported

@@ -1,5 +1,5 @@
-import { cleanup, render, screen } from '@testing-library/svelte';
-import { afterEach, describe, expect, it } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/svelte';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import ScreenHeader from '../layout/ScreenHeader.svelte';
 
@@ -8,6 +8,19 @@ afterEach(() => {
 });
 
 describe('ScreenHeader', () => {
+    it('places an optional return action before the focused view heading', async () => {
+        const back = vi.fn();
+        render(ScreenHeader, {
+            props: { heading: 'Source evidence', backAction: { label: 'Return to Activities', onclick: back } },
+        });
+        const action = screen.getByRole('button', { name: 'Return to Activities' });
+        const heading = screen.getByRole('heading', { level: 1, name: 'Source evidence' });
+        expect(action.compareDocumentPosition(heading) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+        expect(document.activeElement).toBe(heading);
+        await fireEvent.click(action);
+        expect(back).toHaveBeenCalledOnce();
+    });
+
     it('renders and focuses the screen heading', () => {
         render(ScreenHeader, {
             props: {

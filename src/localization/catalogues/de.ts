@@ -854,7 +854,8 @@ export const de = {
         'Keine Integritätsbewertung verfügbar, da die Prüfung nicht abgeschlossen wurde.',
     'integrity.limitation.notChecked.missingRootCertificate':
         'Kein Signaturergebnis verfügbar ohne das erforderliche Stammzertifikat.',
-    'integrity.limitation.notChecked.notRequested': 'Keine Signaturprüfung in diesem Build angefordert.',
+    'integrity.limitation.notChecked.notRequested':
+        'Die Signaturen wurden noch nicht geprüft. Mit „Signaturen prüfen“ starten Sie die Prüfung.',
     'integrity.limitation.unsupported.unsupportedCardApplication':
         'Für eine oder mehrere Kartenanwendungen ist keine unterstützte Signaturprüfung verfügbar.',
     'integrity.limitation.unsupported.unsupportedCertificateChain':
@@ -876,6 +877,8 @@ export const de = {
     'integrity.verificationGeneration': 'Prüfgeneration',
     'integrity.verificationItemsEmpty': 'Keine Einzel-Integritätsnachweise verfügbar.',
     'integrity.verificationItemsHeading': 'Geprüfte Elemente',
+    'rawData.returnToView': 'Zurück zu {section}',
+    'integrity.retryVerification': 'Prüfung wiederholen',
     'integrity.verifySignatures': 'Signaturen prüfen',
     'integrity.verifyingSignatures': 'Prüfe…',
     'integrity.viewEvidence': 'Integritätsnachweis anzeigen',

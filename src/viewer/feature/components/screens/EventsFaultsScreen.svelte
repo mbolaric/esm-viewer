@@ -10,7 +10,7 @@
         type IEventFaultRecordViewModel,
         type IEventFaultSectionViewModel,
     } from '#viewer-presentation';
-    import type { IActivityDayLinkProps } from '../../helpers/activity-day-link-props.js';
+    import { createActivityDayBackAction, type IActivityDayLinkProps } from '../../helpers/activity-day-link-props.js';
     import ActivityWindowRecordsPanel from './ActivityWindowRecordsPanel.svelte';
     import type { TranslationKey } from '#i18n-locales';
     import RecordFilterPanel from '../records/RecordFilterPanel.svelte';
@@ -262,6 +262,11 @@
 {/snippet}
 
 <RecordSectionLayout
+    backAction={createActivityDayBackAction(
+        activityDayMidnight,
+        onreturnactivityday,
+        translationService.translate('activityWindow.returnToActivities'),
+    )}
     className="events-faults-screen record-workspace wide-workspace"
     errorDescription={translationService.translate('eventsFaults.error')}
     errorHeading={translationService.translate('eventsFaults.errorHeading')}
@@ -311,7 +316,6 @@
                 {activityDayMidnight}
                 emptyMessage={emptyLabel(viewModel.filter)}
                 {onclearactivityday}
-                {onreturnactivityday}
                 recordsEmpty={windowedRecords.length === 0}
             >
                 {@const eventFaultTableSnapshot = recordTooling.snapshot(windowedRecords)}

@@ -13,7 +13,7 @@
         type IVehicleUnitUseViewModel,
         type IVehicleUseViewModel,
     } from '#viewer-presentation';
-    import type { IActivityDayLinkProps } from '../../helpers/activity-day-link-props.js';
+    import { createActivityDayBackAction, type IActivityDayLinkProps } from '../../helpers/activity-day-link-props.js';
     import ActivityWindowRecordsPanel from './ActivityWindowRecordsPanel.svelte';
     import type { TranslationKey } from '#i18n-locales';
     import RecordFilterPanel from '../records/RecordFilterPanel.svelte';
@@ -500,6 +500,11 @@
 {/snippet}
 
 <RecordSectionLayout
+    backAction={createActivityDayBackAction(
+        activityDayMidnight,
+        onreturnactivityday,
+        translationService.translate('activityWindow.returnToActivities'),
+    )}
     className="associations-screen record-workspace wide-workspace"
     errorDescription={translationService.translate('associations.error')}
     errorHeading={translationService.translate('associations.errorHeading')}
@@ -528,7 +533,6 @@
                 {activityDayMidnight}
                 emptyMessage={translationService.translate('associations.empty')}
                 {onclearactivityday}
-                {onreturnactivityday}
                 recordsEmpty={windowedRecords.length === 0}
             >
                 {@const associationTableSnapshot = recordTooling.snapshot(windowedRecords)}

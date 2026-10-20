@@ -681,7 +681,7 @@ export const fr = {
     'integrity.limitation.notChecked.missingRootCertificate':
         'Aucun résultat de signature n’est disponible sans le certificat racine requis.',
     'integrity.limitation.notChecked.notRequested':
-        'Aucune action de vérification n’est disponible dans cette version, cet écran ne revendique donc aucun résultat de signature.',
+        'Les signatures n’ont pas encore été vérifiées. Utilisez « Vérifier les signatures » pour lancer la vérification.',
     'integrity.limitation.unsupported.unsupportedCardApplication':
         'Aucune opération de vérification prise en charge n’est disponible pour une ou plusieurs applications de carte.',
     'integrity.limitation.unsupported.unsupportedCertificateChain':
@@ -703,6 +703,8 @@ export const fr = {
     'integrity.verificationItemsEmpty': 'Aucune preuve de vérification par élément n’est disponible.',
     'integrity.verificationItemsHeading': 'Éléments de vérification',
     'integrity.viewEvidence': 'Afficher les preuves d’intégrité',
+    'rawData.returnToView': 'Revenir à {section}',
+    'integrity.retryVerification': 'Réessayer la vérification',
     'integrity.verifySignatures': 'Vérifier les signatures',
     'integrity.verifyingSignatures': 'Vérification en cours…',
     'inspector.close': 'Fermer l’inspecteur',

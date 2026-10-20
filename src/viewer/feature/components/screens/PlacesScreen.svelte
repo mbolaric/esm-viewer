@@ -16,7 +16,6 @@
         type IRecordedCardReference,
         type JsonPointer,
         type TachographLocationRecord,
-        type UtcTimestamp,
     } from '#viewer-domain';
     import {
         filterLocationsByActivityDay,
@@ -26,7 +25,7 @@
         type ILocationSectionViewModel,
         type LocationRecordViewModel,
     } from '#viewer-presentation';
-    import type { IActivityDayLinkProps } from '../../helpers/activity-day-link-props.js';
+    import { createActivityDayBackAction, type IActivityDayLinkProps } from '../../helpers/activity-day-link-props.js';
     import ActivityWindowRecordsPanel from './ActivityWindowRecordsPanel.svelte';
     import type { TranslationKey } from '#i18n-locales';
     import RecordFilterPanel from '../records/RecordFilterPanel.svelte';
@@ -170,10 +169,13 @@
         }),
     });
 
-    const shifts = $derived(viewModel?.shifts ?? []);
+    const shifts = $derived(
+        (viewModel?.shifts ?? []).filter(
+            (shift) => activityDayMidnight === null || journeyShiftBelongsToUtcDay(shift, activityDayMidnight),
+        ),
+    );
 
     let selectedShiftId = $state<string | null>(null);
-    let selectedShiftDayUtc = $state<UtcTimestamp | null>(null);
 
     const activeShift = $derived.by<IJourneyShiftSummary | null>(() => {
         if (shifts.length === 0) {
@@ -181,19 +183,7 @@
         }
         const explicitSelection =
             selectedShiftId === null ? null : (shifts.find((shift) => shift.id === selectedShiftId) ?? null);
-        if (activityDayMidnight !== null) {
-            // Explicit navigation takes precedence while linked day is unchanged.
-            if (explicitSelection !== null && selectedShiftDayUtc !== null && selectedShiftDayUtc === activityDayMidnight) {
-                return explicitSelection;
-            }
-            const matchingByDay = shifts.find((shift) => journeyShiftBelongsToUtcDay(shift, activityDayMidnight));
-            if (matchingByDay !== undefined) {
-                return matchingByDay;
-            }
-        } else if (explicitSelection !== null) {
-            return explicitSelection;
-        }
-        return shifts.at(-1) ?? null;
+        return explicitSelection ?? (activityDayMidnight === null ? shifts.at(-1) : shifts[0]) ?? null;
     });
 
     const windowedRecords = $derived(
@@ -231,10 +221,8 @@
         }
     }
 
-    // Explicit shift choice holds while the linked activity day stays the same.
     function selectShift(shiftId: string): void {
         selectedShiftId = shiftId;
-        selectedShiftDayUtc = activityDayMidnight;
     }
 
     function formatOdometer(value: string): string {
@@ -487,6 +475,11 @@
 {/snippet}
 
 <RecordSectionLayout
+    backAction={createActivityDayBackAction(
+        activityDayMidnight,
+        onreturnactivityday,
+        translationService.translate('activityWindow.returnToActivities'),
+    )}
     className="places-screen record-workspace wide-workspace"
     errorDescription={translationService.translate('places.error')}
     errorHeading={translationService.translate('places.errorHeading')}
@@ -495,40 +488,40 @@
     {viewModel}
 >
     {#snippet content(viewModel: ILocationSectionViewModel)}
-        <RecordFilterPanel
-            filterHeading={translationService.translate('eventsFaults.filterHeading')}
-            filters={typeFilters}
-            headingId="places-filter-heading"
-            recordCount={viewModel.totalCount.display}
-            recordsShown={translationService.translate('eventsFaults.recordsShown')}
-            timeBasis={viewModel.timeZone}
-            timeBasisLabel={translationService.translate('activities.timeZone')}
-        />
+        <ActivityWindowRecordsPanel
+            {activityDayLabel}
+            {activityDayMidnight}
+            emptyMessage={translationService.translate('places.empty')}
+            {onclearactivityday}
+            recordsEmpty={windowedRecords.length === 0}
+        >
+            {#snippet header()}
+                <RecordFilterPanel
+                    filterHeading={translationService.translate('eventsFaults.filterHeading')}
+                    filters={typeFilters}
+                    headingId="places-filter-heading"
+                    recordCount={viewModel.totalCount.display}
+                    recordsShown={translationService.translate('eventsFaults.recordsShown')}
+                    timeBasis={viewModel.timeZone}
+                    timeBasisLabel={translationService.translate('activities.timeZone')}
+                />
 
-        {#if activeShift !== null && activeShift.summary.legs.length > 0}
-            <PlacesJourneyPanel
-                {activeShift}
-                onselectshift={selectShift}
-                onselectwaypoint={handleSelectMapWaypoint}
-                {selectedWaypointId}
-                {shifts}
-            />
-        {/if}
-
-        <section class="evidence-panel" aria-labelledby="places-records-heading">
-            <h2 id="places-records-heading">
-                {translationService.translate('places.recordsHeading')}
-            </h2>
-            <p>{translationService.translate('places.recordedEvidence')}</p>
-            <ActivityWindowRecordsPanel
-                {activityDayLabel}
-                {activityDayMidnight}
-                emptyMessage={translationService.translate('places.empty')}
-                {onclearactivityday}
-                {onreturnactivityday}
-                recordsEmpty={windowedRecords.length === 0}
-            >
-                {@const placeTableSnapshot = recordTooling.snapshot(windowedRecords)}
+                {#if activeShift !== null && activeShift.summary.legs.length > 0}
+                    <PlacesJourneyPanel
+                        {activeShift}
+                        onselectshift={selectShift}
+                        onselectwaypoint={handleSelectMapWaypoint}
+                        {selectedWaypointId}
+                        {shifts}
+                    />
+                {/if}
+            {/snippet}
+            {@const placeTableSnapshot = recordTooling.snapshot(windowedRecords)}
+            <section class="evidence-panel" aria-labelledby="places-records-heading">
+                <h2 id="places-records-heading">
+                    {translationService.translate('places.recordsHeading')}
+                </h2>
+                <p>{translationService.translate('places.recordedEvidence')}</p>
                 <DataTable
                     labels={tableLabels}
                     tooling={recordTooling}
@@ -542,15 +535,16 @@
                     rowKey={recordKey}
                     rows={placeTableSnapshot.rows}
                 />
-            </ActivityWindowRecordsPanel>
-            <p aria-live="polite">
-                {copyStatus === 'succeeded'
-                    ? translationService.translate('places.copied')
-                    : copyStatus === 'failed'
-                      ? translationService.translate('places.copyFailed')
-                      : ''}
-            </p>
-        </section>
+
+                <p aria-live="polite">
+                    {copyStatus === 'succeeded'
+                        ? translationService.translate('places.copied')
+                        : copyStatus === 'failed'
+                          ? translationService.translate('places.copyFailed')
+                          : ''}
+                </p>
+            </section>
+        </ActivityWindowRecordsPanel>
 
         {#if viewModel.hasGen2v2ParserLimitation}
             <section class="evidence-panel" aria-labelledby="places-limitation-heading">

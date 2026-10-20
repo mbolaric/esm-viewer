@@ -681,7 +681,7 @@ export const it = {
     'integrity.limitation.notChecked.missingRootCertificate':
         'Nessun risultato di firma è disponibile senza il certificato radice richiesto.',
     'integrity.limitation.notChecked.notRequested':
-        'Nessuna azione di verifica è disponibile in questa versione, quindi questa schermata non rivendica alcun risultato di firma.',
+        'Le firme non sono ancora state controllate. Usa «Verifica firme» per avviare il controllo.',
     'integrity.limitation.unsupported.unsupportedCardApplication':
         'Nessuna operazione di verifica supportata è disponibile per una o più applicazioni di carta.',
     'integrity.limitation.unsupported.unsupportedCertificateChain':
@@ -703,6 +703,8 @@ export const it = {
     'integrity.verificationItemsEmpty': 'Nessuna evidenza di verifica per elemento è disponibile.',
     'integrity.verificationItemsHeading': 'Elementi di verifica',
     'integrity.viewEvidence': 'Visualizza evidenza di integrità',
+    'rawData.returnToView': 'Torna a {section}',
+    'integrity.retryVerification': 'Riprova verifica',
     'integrity.verifySignatures': 'Verifica firme',
     'integrity.verifyingSignatures': 'Verifica in corso…',
     'inspector.close': 'Chiudi ispettore',

@@ -1,8 +1,16 @@
 import type { AssociationGenerationFilter, EventFaultTypeFilter, LocationRecordTypeFilter } from '#viewer-application';
+import type { IntervalTimelineVariant } from '#ui';
 import type { UtcTimestamp } from '#viewer-domain';
 import type { IActivityInfringementPinViewModel } from '#viewer-presentation';
 
 import { createDocumentScopedValue, type IDocumentScopedValue } from './document-scoped-value.svelte.js';
+
+export interface IActivityViewState {
+    readonly dayIndex: number | null;
+    readonly tab: 'allDays' | 'calendar' | 'day';
+    readonly aggregationMode: 'utc' | 'shift';
+    readonly timelineVariant: IntervalTimelineVariant;
+}
 
 export interface ILinkedActivityDay {
     readonly label: string;
@@ -17,6 +25,13 @@ export class ViewerDocumentSession {
     public readonly associationFilter = this.scoped<AssociationGenerationFilter>('all');
     public readonly eventFaultFilter = this.scoped<EventFaultTypeFilter>('all');
     public readonly locationFilter = this.scoped<LocationRecordTypeFilter>('all');
+
+    public readonly activityView = this.scoped<IActivityViewState>({
+        dayIndex: null,
+        tab: 'day',
+        aggregationMode: 'utc',
+        timelineVariant: 'lanes',
+    });
 
     public readonly activitiesAllDaysSearchText = this.scoped('');
     public readonly activitiesCalendarSearchText = this.scoped('');

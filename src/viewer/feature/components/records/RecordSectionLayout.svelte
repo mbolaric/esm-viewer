@@ -1,8 +1,9 @@
 <script lang="ts" generics="TViewModel">
-    import { observeAvailableOverflow, ScreenHeader, SectionMessage } from '#ui';
+    import { observeAvailableOverflow, ScreenHeader, SectionMessage, type IInlineNoticeAction } from '#ui';
     import type { Snippet } from 'svelte';
 
     interface IProps<TViewModel> {
+        readonly backAction?: IInlineNoticeAction | undefined;
         readonly className: string;
         readonly content: Snippet<[TViewModel]>;
         readonly description?: string;
@@ -15,6 +16,7 @@
     }
 
     let {
+        backAction = undefined,
         className,
         content,
         description,
@@ -28,7 +30,7 @@
 </script>
 
 <article class={className} class:fill-height={fillHeight} use:observeAvailableOverflow={{ enabled: fillHeight }}>
-    <ScreenHeader {heading} />
+    <ScreenHeader {heading} {backAction} />
 
     {#if description !== undefined}
         <p>{description}</p>

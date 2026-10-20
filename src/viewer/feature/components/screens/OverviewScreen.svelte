@@ -356,12 +356,14 @@
             </p>
             <div class="integrity-actions">
                 <Button label={translationService.translate('integrity.viewEvidence')} onclick={onopenintegrity} />
-                {#if viewModel.integrity.status === 'notChecked'}
+                {#if viewModel.integrity.status === 'notChecked' || viewModel.integrity.status === 'failed'}
                     <Button
                         disabled={verifying}
                         label={verifying
                             ? translationService.translate('integrity.verifyingSignatures')
-                            : translationService.translate('integrity.verifySignatures')}
+                            : viewModel.integrity.status === 'failed'
+                              ? translationService.translate('integrity.retryVerification')
+                              : translationService.translate('integrity.verifySignatures')}
                         onclick={onverify}
                         variant="primary"
                     />

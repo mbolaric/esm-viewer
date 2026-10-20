@@ -11,6 +11,7 @@ export const viewerLocales = ['en', 'de', 'fr', 'it', 'pl', 'es', 'hr'] as const
 export type ViewerLocale = (typeof viewerLocales)[number];
 
 export type IMessageParams = Readonly<{
+    'rawData.returnToView': Readonly<{ section: string }>;
     'activityWindow.filteredNotice': Readonly<{
         date: string;
     }>;

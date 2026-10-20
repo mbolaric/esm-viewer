@@ -670,7 +670,7 @@ export const pl = {
     'integrity.limitation.failed.verificationFailed': 'Brak wniosku o integralności, ponieważ weryfikacja się nie zakończyła.',
     'integrity.limitation.notChecked.missingRootCertificate': 'Brak wyniku podpisu bez wymaganego certyfikatu głównego.',
     'integrity.limitation.notChecked.notRequested':
-        'W tej wersji brak dostępnej akcji weryfikacji, więc ten ekran nie podaje żadnego wyniku podpisu.',
+        'Podpisy nie zostały jeszcze sprawdzone. Użyj przycisku „Zweryfikuj podpisy”, aby rozpocząć sprawdzanie.',
     'integrity.limitation.unsupported.unsupportedCardApplication':
         'Brak obsługiwanej operacji weryfikacji dla jednej lub więcej aplikacji karty.',
     'integrity.limitation.unsupported.unsupportedCertificateChain':
@@ -692,6 +692,8 @@ export const pl = {
     'integrity.verificationItemsEmpty': 'Brak dostępnych dowodów weryfikacji poszczególnych elementów.',
     'integrity.verificationItemsHeading': 'Elementy weryfikacji',
     'integrity.viewEvidence': 'Wyświetl dowody integralności',
+    'rawData.returnToView': 'Wróć do {section}',
+    'integrity.retryVerification': 'Ponów weryfikację',
     'integrity.verifySignatures': 'Zweryfikuj podpisy',
     'integrity.verifyingSignatures': 'Weryfikowanie…',
     'inspector.close': 'Zamknij inspektor',

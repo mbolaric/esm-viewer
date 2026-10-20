@@ -26,6 +26,30 @@ function numberValue(value: number): Readonly<{ readonly display: string; readon
 }
 
 describe('IntegrityScreen', () => {
+    it('offers a disabled-while-running retry after an operational verification failure', async () => {
+        const retry = vi.fn();
+        const viewModel: IIntegrityDetailViewModel = {
+            assessment: { code: 'verificationFailed', status: 'failed' },
+            checkedItems: numberValue(0),
+            invalidItems: numberValue(0),
+            items: [],
+            scopes: [],
+            validItems: numberValue(0),
+        };
+        const props = {
+            filterText: createDocumentScopedValue(''),
+            onopensource: vi.fn(),
+            onverify: retry,
+            verifying: false,
+            viewModel,
+        };
+        const rendered = render(IntegrityScreen, { props }, createViewerTestRenderOptions());
+        await fireEvent.click(screen.getByRole('button', { name: 'Retry verification' }));
+        expect(retry).toHaveBeenCalledOnce();
+        await rendered.rerender({ ...props, verifying: true });
+        expect(screen.getByRole('button', { name: 'Verifying…' }).hasAttribute('disabled')).toBe(true);
+    });
+
     it('renders text-and-icon scope and item evidence with canonical source actions', async () => {
         const validSource = source('g1', '/cardDataResponses/gen1/cardDownload');
         const invalidSource = source('g1', '/cardDataResponses/gen1/identification');

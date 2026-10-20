@@ -25,6 +25,7 @@ import type { IIntervalTimelineChartModel, IIntervalTimelineRuntimeCallbacks } f
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { ViewerDocumentSession } from '../controllers/viewer-document-session.svelte.js';
 import ActivitiesScreen from '../components/screens/ActivitiesScreen.svelte';
 import ActivityTimeline from '../components/screens/ActivityTimeline.svelte';
 import { createDocumentScopedValue } from '../controllers/document-scoped-value.svelte.js';
@@ -228,6 +229,7 @@ function renderActivitiesScreen(options: IActivitiesScreenRenderOptions = {}): R
         ActivitiesScreen,
         {
             props: {
+                viewState: new ViewerDocumentSession().activityView,
                 allDaysFilterText: createDocumentScopedValue(''),
                 calendarFilterText: createDocumentScopedValue(''),
                 dayFilterText: createDocumentScopedValue(''),
@@ -383,6 +385,7 @@ describe('ActivitiesScreen', () => {
             ActivitiesScreen,
             {
                 props: {
+                    viewState: new ViewerDocumentSession().activityView,
                     allDaysFilterText: createDocumentScopedValue(''),
                     calendarFilterText: createDocumentScopedValue(''),
                     dayFilterText: createDocumentScopedValue(''),
@@ -712,6 +715,7 @@ describe('ActivitiesScreen', () => {
 
     it('renders explicit empty and projection-error states', async () => {
         const commonProps = {
+            viewState: new ViewerDocumentSession().activityView,
             allDaysFilterText: createDocumentScopedValue(''),
             calendarFilterText: createDocumentScopedValue(''),
             dayFilterText: createDocumentScopedValue(''),

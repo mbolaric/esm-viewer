@@ -390,13 +390,26 @@ describe('PlacesScreen', () => {
                     onopensource: vi.fn(),
                     onselectrecord: vi.fn(),
                     selectedRecord: null,
-                    viewModel: viewModel(),
+                    viewModel: {
+                        ...viewModel(),
+                        shifts: [
+                            journeyShiftViewModel(
+                                'unrelated',
+                                timestamp(Date.UTC(2026, 5, 18)),
+                                'June 18, 2026',
+                                '08:00 – 17:00',
+                                480,
+                            ),
+                        ],
+                    },
                 },
             },
             createViewerTestRenderOptions(),
         );
 
         expect(screen.getByText('No records are present for the selected day.')).toBeTruthy();
+        expect(screen.queryByRole('combobox', { name: 'Shift progression navigator' })).toBeNull();
+        expect(screen.queryByText(/08:00 – 17:00/u)).toBeNull();
         expect(
             screen.queryByRole('table', {
                 name: 'Chronological recorded place and GNSS position evidence',
@@ -441,30 +454,28 @@ describe('PlacesScreen', () => {
         expect(screen.queryByText(/07:30 – 16:30/u)).toBeNull();
         expect(screen.getByText('480 km')).toBeTruthy();
 
-        const shiftSelect = screen.getByRole('combobox', {
-            name: 'Shift progression navigator',
-        });
-        expect(within(shiftSelect).getAllByRole('option')).toHaveLength(2);
+        expect(screen.queryByRole('combobox', { name: 'Shift progression navigator' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Previous route shift' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Next route shift' })).toBeNull();
+        const notice = screen.getByText('Showing records for June 18, 2026');
+        const journey = screen.getByRole('region', { name: 'Journey progression' });
+        expect(notice.compareDocumentPosition(journey) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
 
-        const previousShift = screen.getByRole('button', { name: 'Previous route shift' });
-        expect(previousShift.hasAttribute('disabled')).toBe(true);
-
+        await fireEvent.click(screen.getByRole('button', { name: 'Show all records' }));
+        expect(commonProps.onclearactivityday).toHaveBeenCalledOnce();
+        await rendered.rerender({ ...commonProps, activityDayLabel: null, activityDayMidnight: null });
+        expect(screen.getByText(/07:30 – 16:30/u)).toBeTruthy();
+        expect(within(screen.getByRole('combobox', { name: 'Shift progression navigator' })).getAllByRole('option')).toHaveLength(
+            2,
+        );
+        await fireEvent.click(screen.getByRole('button', { name: 'Previous route shift' }));
+        expect(screen.getByText(/08:00 – 17:00/u)).toBeTruthy();
         await fireEvent.click(screen.getByRole('button', { name: 'Next route shift' }));
         expect(screen.getByText(/07:30 – 16:30/u)).toBeTruthy();
-        expect(screen.queryByText(/08:00 – 17:00/u)).toBeNull();
-        expect(previousShift.hasAttribute('disabled')).toBe(false);
 
-        await fireEvent.click(previousShift);
+        await rendered.rerender({ ...commonProps, activityDayLabel: 'June 18, 2026', activityDayMidnight: day1 });
         expect(screen.getByText(/08:00 – 17:00/u)).toBeTruthy();
-
-        // Changing the linked day re-applies the day-link rule over the stale selection.
-        await rendered.rerender({
-            ...commonProps,
-            activityDayLabel: 'June 19, 2026',
-            activityDayMidnight: day2,
-        });
-        expect(screen.getByText(/07:30 – 16:30/u)).toBeTruthy();
-        expect(screen.queryByText(/08:00 – 17:00/u)).toBeNull();
+        expect(screen.queryByText(/07:30 – 16:30/u)).toBeNull();
     });
 
     it('supports switching journey view modes between step track, vector map, and split view', async () => {

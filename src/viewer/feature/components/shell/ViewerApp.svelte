@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
+    import { tick, type Snippet } from 'svelte';
 
     import {
         documentKindIcon,
@@ -16,6 +16,7 @@
     import {
         writeTextToClipboard,
         type AssociationGenerationFilter,
+        type DocumentSectionRecord,
         type DocumentWorkspaceSection,
         type EventFaultTypeFilter,
         type IDocumentSelectionSnapshot,
@@ -86,6 +87,14 @@
     }
 
     // Passed to section snippets; each destructures needed context.
+    interface ISourceReturnContext {
+        readonly section: DocumentWorkspaceSection;
+        readonly record: DocumentSectionRecord | null;
+        readonly infringement: IActivityInfringementPinViewModel | null;
+        readonly scrollTop: number;
+        readonly scrollLeft: number;
+    }
+
     interface ISectionSnippetContext {
         readonly overview: IDocumentOverviewViewModel;
         readonly selection: IDocumentSelectionSnapshot;
@@ -158,6 +167,8 @@
             reopenToken: file.reopenToken,
         })),
     );
+    let workspaceElement = $state<HTMLDivElement>();
+    let sourceReturnContext = $state.raw<ISourceReturnContext | null>(null);
     let requestedRawDataPointer = $state<IRawDataRevealRequest | null>(null);
     let rawDataRevealSequence = 0;
 
@@ -169,6 +180,8 @@
     // Resets document-scoped filters and search inputs to initial state when document changes.
     $effect(() => {
         session.syncDocumentKey(documentSessionKey);
+        sourceReturnContext = null;
+        requestedRawDataPointer = null;
     });
 
     function cancelOpening(): void {
@@ -206,10 +219,53 @@
     }
 
     function openRawDataSource(path: JsonPointer): void {
+        if (selection !== null && selection.projection.section !== 'rawData') {
+            const main = workspaceElement?.querySelector('main');
+            sourceReturnContext = {
+                section: selection.projection.section,
+                record: selection.selectedRecord,
+                infringement: session.selectedActivityInfringement.value,
+                scrollTop: main?.scrollTop ?? 0,
+                scrollLeft: main?.scrollLeft ?? 0,
+            };
+        }
+        session.selectedActivityInfringement.set(null);
         // Each activation is its own request, so opening the same pointer again returns to it.
         rawDataRevealSequence += 1;
         requestedRawDataPointer = { path, sequence: rawDataRevealSequence };
         documentController.selectSection('rawData');
+    }
+
+    async function returnFromRawSource(): Promise<void> {
+        const origin = sourceReturnContext;
+        if (origin === null || !documentController.selectSection(origin.section)) {
+            return;
+        }
+        sourceReturnContext = null;
+        requestedRawDataPointer = null;
+        session.selectedActivityInfringement.set(origin.infringement);
+        if (origin.record?.source !== null && origin.record?.source !== undefined) {
+            const path = origin.record.source.path;
+            const matchingRecord = documentController.selectionSnapshot?.projection.records.find(
+                (record) => record.source?.path === path,
+            );
+            if (matchingRecord !== undefined) {
+                documentController.selectRecord(matchingRecord);
+            }
+        }
+        const documentKey = documentSessionKey;
+        await tick();
+        if (documentSessionKey !== documentKey) {
+            return;
+        }
+        const main = workspaceElement?.querySelector('main');
+        const target =
+            main?.querySelector<HTMLElement>('tr[aria-selected="true"] button') ?? main?.querySelector<HTMLElement>('h1');
+        target?.focus({ preventScroll: true });
+        if (main !== null && main !== undefined) {
+            main.scrollTop = origin.scrollTop;
+            main.scrollLeft = origin.scrollLeft;
+        }
     }
 
     function clearSelectedRecord(): void {
@@ -316,13 +372,15 @@
         return result.ok;
     }
 
-    let requestedActivityDayMidnight = $state<UtcTimestamp | null>(null);
-
     function selectSection(section: DocumentWorkspaceSection): void {
+        if (selection?.projection.section === 'rawData' && sourceReturnContext?.section === section) {
+            void returnFromRawSource();
+            return;
+        }
+        sourceReturnContext = null;
         requestedRawDataPointer = null;
         session.linkedActivityDay.set(null);
         session.selectedActivityInfringement.set(null);
-        requestedActivityDayMidnight = null;
         documentController.selectSection(section);
     }
 
@@ -333,10 +391,7 @@
     }
 
     function returnToActivities(): void {
-        const midnight = session.linkedActivityDay.value?.midnight ?? null;
-        if (midnight !== null) {
-            requestedActivityDayMidnight = midnight;
-        }
+        session.activityView.set({ ...session.activityView.value, tab: 'day' });
         session.linkedActivityDay.set(null);
         clearSelectedRecord();
         documentController.selectSection('activities');
@@ -459,6 +514,7 @@ top-level snippets are needed for it to reference them at all.
 {/snippet}
 {#snippet activitiesSection({ selection: currentSelection }: ISectionSnippetContext)}
     <ActivitiesScreen
+        viewState={session.activityView}
         allDaysFilterText={session.activitiesAllDaysSearchText}
         calendarFilterText={session.activitiesCalendarSearchText}
         dayFilterText={session.activitiesDaySearchText}
@@ -468,7 +524,6 @@ top-level snippets are needed for it to reference them at all.
         onselectinfringement={selectActivityInfringement}
         onselectrecord={selectActivityRecord}
         onopensource={openRawDataSource}
-        requestedDayMidnight={requestedActivityDayMidnight}
         selectedRecord={currentSelection.selectedRecord}
         viewModel={sections.activity}
     />
@@ -562,6 +617,20 @@ top-level snippets are needed for it to reference them at all.
     {#if sections.rawDataExplorer !== null}
         <RawDataScreen
             explorer={sections.rawDataExplorer}
+            returnAction={sourceReturnContext === null
+                ? undefined
+                : {
+                      label: viewerContext.translationService.translate('rawData.returnToView', {
+                          section: translateDocumentSection(
+                              sourceReturnContext.section,
+                              currentOverview.documentKind,
+                              viewerContext.translationService,
+                          ),
+                      }),
+                      onclick: () => {
+                          void returnFromRawSource();
+                      },
+                  }}
             initialPath={requestedRawDataPointer?.path ?? null}
             oncopy={copyRawDataEvidence}
             revealRequest={requestedRawDataPointer}
@@ -574,7 +643,7 @@ top-level snippets are needed for it to reference them at all.
     {/if}
 {/snippet}
 
-<div class="viewer-workspace-shell" hidden={!visible}>
+<div bind:this={workspaceElement} class="viewer-workspace-shell" hidden={!visible}>
     <FileDropSurface
         ariaLabel={viewerContext.translationService.translate('drop.area')}
         disabled={!visible || documentController.busy || preferences.isOpen}

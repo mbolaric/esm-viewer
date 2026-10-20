@@ -184,11 +184,7 @@ describe('viewer open workflow', () => {
         });
         expect(document.activeElement).toBe(integrityHeading);
         expect(screen.getByText('No checked items reported')).toBeTruthy();
-        expect(
-            screen.getByText(
-                'No verification action is available in this build, so this screen does not claim a signature result.',
-            ),
-        ).toBeTruthy();
+        expect(screen.getByText('Signatures have not been checked. Use Verify signatures to request a check.')).toBeTruthy();
         expect(screen.getByText('No per-item verification evidence is available.')).toBeTruthy();
 
         await fireEvent.click(within(navigator).getByRole('button', { name: 'Overview' }));
@@ -354,6 +350,67 @@ describe('viewer open workflow', () => {
         ).toBeTruthy();
     });
 
+    it('returns from raw evidence to the same activity day, record, display modes and reading position', async () => {
+        const harness = createViewerDocumentHarness({ openedAtStepMs: 1 });
+        renderWorkflow(harness);
+        await openActivities(harness);
+        await fireEvent.click(screen.getByRole('button', { name: 'Previous day' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Duty Shift' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Day profile' }));
+        await fireEvent.click(screen.getByRole('button', { name: /Select activity record: Driving/u }));
+        const main = screen.getByRole('main');
+        main.scrollTop = 420;
+        const inspector = screen.getByRole('complementary', { name: 'Record inspector' });
+        await fireEvent.click(within(inspector).getByRole('button', { name: 'Open in Raw Data: /activities/0' }));
+        await screen.findByRole('heading', { level: 1, name: 'Raw data' });
+        expect(screen.queryByRole('complementary', { name: 'Record inspector' })).toBeNull();
+        await fireEvent.click(screen.getByRole('button', { name: 'Return to Activities' }));
+        const restoredRecord = await screen.findByRole('button', { name: /Select activity record: Driving/u, pressed: true });
+        await waitFor(() => {
+            expect(document.activeElement).toBe(restoredRecord);
+        });
+        expect(screen.getByLabelText('Activity date')).toHaveProperty('value', 'Jul 26, 2026');
+        expect(screen.getByRole('button', { name: 'Duty Shift', pressed: true })).toBeTruthy();
+        expect(screen.getByRole('button', { name: 'Day profile', pressed: true })).toBeTruthy();
+        expect(screen.getByRole('main').scrollTop).toBe(420);
+        expect(screen.getByRole('complementary', { name: 'Record inspector' })).toBeTruthy();
+
+        const navigator = screen.getByRole('navigation', { name: 'Document sections' });
+        await fireEvent.click(screen.getByRole('tab', { name: 'All days' }));
+        await fireEvent.click(within(navigator).getByRole('button', { name: 'Overview' }));
+        await screen.findByRole('heading', { level: 1, name: 'Overview' });
+        await fireEvent.click(
+            within(screen.getByRole('navigation', { name: 'Document sections' })).getByRole('button', { name: 'Activities' }),
+        );
+        await screen.findByRole('heading', { level: 1, name: 'Activities' });
+        expect(screen.getByRole('tab', { name: 'All days' }).getAttribute('aria-selected')).toBe('true');
+        await fireEvent.click(screen.getByRole('tab', { name: 'Day view' }));
+        expect(screen.getByLabelText('Activity date')).toHaveProperty('value', 'Jul 26, 2026');
+
+        await startCommandOpen(harness, 2);
+        harness.completeLatestParser(harness.successfulParserResult());
+        await waitFor(() => {
+            expect(screen.getByLabelText('Activity date')).toHaveProperty('value', 'Jul 27, 2026');
+        });
+        expect(screen.getByRole('button', { name: 'UTC Day (00:00 – 24:00)', pressed: true })).toBeTruthy();
+        expect(screen.queryByRole('button', { name: 'Return to Activities' })).toBeNull();
+    });
+
+    it('keeps the activity date and tab after a failed replacement-file open', async () => {
+        const harness = createViewerDocumentHarness();
+        renderWorkflow(harness);
+        await openActivities(harness);
+        await fireEvent.click(screen.getByRole('button', { name: 'Previous day' }));
+        await fireEvent.click(screen.getByRole('tab', { name: 'Calendar' }));
+        await startCommandOpen(harness, 2);
+        harness.completeLatestParser({ error: classifyParseError('malformedData'), ok: false });
+        await screen.findByRole('heading', { name: 'This file could not be opened' });
+        await fireEvent.click(screen.getByRole('button', { name: 'Return to current document' }));
+        expect(screen.getByRole('tab', { name: 'Calendar' }).getAttribute('aria-selected')).toBe('true');
+        await fireEvent.click(screen.getByRole('tab', { name: 'Day view' }));
+        expect(screen.getByLabelText('Activity date')).toHaveProperty('value', 'Jul 26, 2026');
+    });
+
     it('presents normalized vehicle associations and opens their canonical source', async () => {
         const harness = createViewerDocumentHarness();
         renderWorkflow(harness);
@@ -448,11 +505,7 @@ describe('viewer open workflow', () => {
         const navigator = screen.getByRole('navigation', { name: 'Document sections' });
         await fireEvent.click(within(navigator).getByRole('button', { name: 'Integrity' }));
         expect(await screen.findByRole('heading', { name: 'Integrity', level: 1 })).toBeTruthy();
-        expect(
-            screen.getByText(
-                'No verification action is available in this build, so this screen does not claim a signature result.',
-            ),
-        ).toBeTruthy();
+        expect(screen.getByText('Signatures have not been checked. Use Verify signatures to request a check.')).toBeTruthy();
         expect(screen.getByText('No per-item verification evidence is available.')).toBeTruthy();
 
         await fireEvent.click(within(navigator).getByRole('button', { name: 'Drivers & cards' }));

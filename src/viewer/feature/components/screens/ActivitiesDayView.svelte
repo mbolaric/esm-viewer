@@ -43,9 +43,12 @@
     } from '../../helpers/viewer-labels.js';
     import { useViewerContext } from '../../viewer-context.js';
 
+    import type { IActivityViewState } from '../../controllers/viewer-document-session.svelte.js';
+
     type ActivityOrigin = ActivityInterval['origin'];
 
     interface IProps {
+        viewState: IDocumentScopedValue<IActivityViewState>;
         dateSelectionStatus: 'idle' | 'unavailable';
         dayCount: number;
         enabled: boolean;
@@ -69,6 +72,7 @@
     }
 
     let {
+        viewState,
         dateSelectionStatus,
         dayCount,
         enabled,
@@ -97,8 +101,8 @@
         inferredGap: 'activities.origin.inferredGap',
         recorded: 'activities.origin.recorded',
     } satisfies Readonly<Record<ActivityOrigin, TranslationKey>>;
-    let timelineVariant = $state<IntervalTimelineVariant>('lanes');
-    let viewMode = $state<'utc' | 'shift'>('utc');
+    const timelineVariant = $derived(viewState.value.timelineVariant);
+    const viewMode = $derived(viewState.value.aggregationMode);
 
     const datePickerLocalisation = $derived(createActivityDatePickerLocalisation(viewerContext));
     const columns = $derived([
@@ -273,6 +277,7 @@
             onnext();
         }
     }
+
     function isRecordSelected(record: IActivityRecordViewModel): boolean {
         return record.record === selectedRecord;
     }
@@ -403,7 +408,7 @@
             <SegmentedControl
                 ariaLabel={translationService.translate('activities.viewMode.aria')}
                 onchange={(mode: 'shift' | 'utc') => {
-                    viewMode = mode;
+                    viewState.set({ ...viewState.value, aggregationMode: mode });
                 }}
                 options={[
                     {
@@ -541,7 +546,7 @@
         <SegmentedControl
             ariaLabel={translationService.translate('activities.timeline.styleHeading')}
             onchange={(variant: IntervalTimelineVariant) => {
-                timelineVariant = variant;
+                viewState.set({ ...viewState.value, timelineVariant: variant });
             }}
             options={[
                 {

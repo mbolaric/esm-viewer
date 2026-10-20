@@ -2,7 +2,7 @@
     import type { RawDataNodeKind } from '#viewer-application';
     import type { JsonPointer } from '#viewer-domain';
     import type { IRawDataExplorerViewModel } from '#viewer-presentation';
-    import { Button, focusOnMount, Icon } from '#ui';
+    import { Button, Icon, ScreenHeader, type IInlineNoticeAction } from '#ui';
     import { untrack } from 'svelte';
 
     import {
@@ -19,9 +19,10 @@
         initialPath: JsonPointer | null;
         oncopy: (value: string) => Promise<boolean>;
         revealRequest: IRawDataRevealRequest | null;
+        returnAction?: IInlineNoticeAction | undefined;
     }
 
-    let { explorer, initialPath, oncopy, revealRequest }: IProps = $props();
+    let { explorer, initialPath, oncopy, revealRequest, returnAction = undefined }: IProps = $props();
 
     const translationService = useViewerTranslationService();
     const nodeKindTranslationKeys = {
@@ -165,10 +166,8 @@
 </script>
 
 <article class="raw-data">
-    <header class="screen-header">
-        <h1 tabindex="-1" use:focusOnMount>
-            {translationService.translate('navigator.section.rawData')}
-        </h1>
+    <div class="screen-header">
+        <ScreenHeader heading={translationService.translate('navigator.section.rawData')} backAction={returnAction} />
         <div class="evidence-panel search">
             <label for="raw-data-search">
                 {translationService.translate('rawData.search.label')}
@@ -213,7 +212,7 @@
                 </p>
             {/if}
         </div>
-    </header>
+    </div>
 
     {#if snapshot.error !== null}
         <p class="evidence-error" role="status">

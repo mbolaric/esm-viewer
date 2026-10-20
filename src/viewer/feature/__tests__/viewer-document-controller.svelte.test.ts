@@ -7,6 +7,15 @@ import { isJsonPointer, type IntegrityAssessment, type IntegrityFailureCode, typ
 
 import { createViewerDocumentHarness, type IViewerDocumentHarness } from './viewer-document-harness.js';
 
+async function openSyntheticCard(harness: IViewerDocumentHarness): Promise<void> {
+    const opening = harness.controller.open();
+    await waitFor(() => {
+        expect(harness.parserRequestCount()).toBe(1);
+    });
+    harness.completeLatestParser(harness.successfulParserResult());
+    await opening;
+}
+
 async function openSyntheticCardWithReopenToken(): Promise<{
     readonly candidate: ReopenToken;
     readonly harness: IViewerDocumentHarness;
@@ -16,13 +25,7 @@ async function openSyntheticCardWithReopenToken(): Promise<{
         throw new TypeError('The reopen-token fixture must be valid.');
     }
     const harness = createViewerDocumentHarness({ reopenToken: candidate });
-    const opening = harness.controller.open();
-
-    await waitFor(() => {
-        expect(harness.parserRequestCount()).toBe(1);
-    });
-    harness.completeLatestParser(harness.successfulParserResult());
-    await opening;
+    await openSyntheticCard(harness);
 
     return { candidate, harness };
 }
@@ -376,6 +379,27 @@ describe('ViewerDocumentController', () => {
         await harness.controller.dispose();
     });
 
+    it('can retry a rejected verification without reopening or reparsing the document', async () => {
+        let attempts = 0;
+        const verified = successfulVerifyMock(() => undefined);
+        const harness = createViewerDocumentHarness({
+            loadErcRootCertificateMock: successfulCertificateLoader(),
+            verifyMock: () => {
+                attempts += 1;
+                return attempts === 1 ? Promise.reject(new Error('Synthetic verification rejection')) : verified();
+            },
+        });
+        await openSyntheticCard(harness);
+        await harness.controller.verifyDocument();
+        expect(harness.controller.snapshot.current?.integrity.status).toBe('failed');
+        expect(harness.controller.verifying).toBe(false);
+        await harness.controller.verifyDocument();
+        expect(harness.controller.snapshot.current?.integrity.status).toBe('valid');
+        expect(attempts).toBe(2);
+        expect(harness.parserRequestCount()).toBe(1);
+        await harness.controller.dispose();
+    });
+
     it('reports a failed certificate load without contacting the parser', async () => {
         const harness = createViewerDocumentHarness({
             loadErcRootCertificateMock: () =>
@@ -387,13 +411,7 @@ describe('ViewerDocumentController', () => {
                 throw new TypeError('The parser must not be reached after a certificate failure.');
             },
         });
-        const opening = harness.controller.open();
-
-        await waitFor(() => {
-            expect(harness.parserRequestCount()).toBe(1);
-        });
-        harness.completeLatestParser(harness.successfulParserResult());
-        await opening;
+        await openSyntheticCard(harness);
 
         await harness.controller.verifyDocument();
 
