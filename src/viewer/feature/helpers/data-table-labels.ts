@@ -1,4 +1,4 @@
-import type { IDataTableLabels } from '#ui';
+import type { IDataTableLabels, IDataTablePaginationLabels } from '#ui';
 
 import type { ViewerTranslationService } from '../viewer-context.js';
 
@@ -12,5 +12,19 @@ export function createViewerDataTableLabels(translationService: ViewerTranslatio
             placeholder: translationService.translate('table.filterPlaceholder'),
         },
         pinColumn: translationService.translate('table.pinColumn'),
+    };
+}
+
+export function createViewerDataTablePaginationLabels(translationService: ViewerTranslationService): IDataTablePaginationLabels {
+    return {
+        navigation: translationService.translate('table.pagination'),
+        nextPage: translationService.translate('rawData.search.next'),
+        previousPage: translationService.translate('rawData.search.previous'),
+        rowsPerPage: translationService.translate('table.rowsPerPage'),
+        status: ({ start, end, total }) =>
+            translationService.translate('table.filterResultCount', {
+                shown: start === end ? String(end) : `${String(start)}–${String(end)}`,
+                total: String(total),
+            }),
     };
 }

@@ -358,6 +358,8 @@ export const es = {
     'eventsFaults.recordsHeading': 'Registros cronológicos',
     'eventsFaults.recordsShown': 'Registros mostrados',
     'table.clearFilter': 'Borrar filtro',
+    'table.pagination': 'Páginas de la tabla',
+    'table.rowsPerPage': 'Filas por página',
     'table.columns': 'Columnas',
     'table.filter': 'Filtrar registros',
     'table.pinColumn': 'Mantener columna visible',

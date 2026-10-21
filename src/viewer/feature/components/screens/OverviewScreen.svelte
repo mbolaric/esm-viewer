@@ -7,12 +7,18 @@
     } from '../../helpers/viewer-labels.js';
     import type { JsonPointer, TachographWarningCode } from '#viewer-domain';
     import type { IDocumentOverviewViewModel, IdentityViewModel } from '#viewer-presentation';
-    import { Button, focusOnMount, Icon, KpiCard, ReferenceLinkButton } from '#ui';
+    import { Button, DataTable, focusOnMount, Icon, KpiCard, ReferenceLinkButton, type IDataTablePaginationState } from '#ui';
+    import { createViewerDataTablePaginationLabels } from '../../helpers/data-table-labels.js';
+    import type { IDocumentScopedValue } from '../../controllers/document-scoped-value.svelte.js';
+    import type { IOverviewViewState } from '../../controllers/viewer-document-session.svelte.js';
 
     import type { TranslationKey } from '#i18n-locales';
     import { useViewerTranslationService } from '../../viewer-context.js';
 
+    type WarningRow = IDocumentOverviewViewModel['warningGroups'][number]['rows'][number];
+
     interface IProps {
+        viewState: IDocumentScopedValue<IOverviewViewState>;
         onopenintegrity: () => void;
         onopensource: (path: JsonPointer) => void;
         onverify: () => void;
@@ -20,7 +26,7 @@
         viewModel: IDocumentOverviewViewModel;
     }
 
-    let { onopenintegrity, onopensource, onverify, verifying, viewModel }: IProps = $props();
+    let { onopenintegrity, onopensource, onverify, verifying, viewModel, viewState }: IProps = $props();
 
     const translationService = useViewerTranslationService();
     const warningTranslationKeys = {
@@ -52,7 +58,155 @@
             ? displayValue(identity.vehicleIdentificationNumber)
             : translationService.translate('overview.identity.missing');
     }
+
+    const warningColumns = $derived([
+        { id: 'source', label: translationService.translate('overview.warnings.sourceReference'), cell: warningSourceCell },
+    ]);
+    const warningPaginationLabels = $derived(createViewerDataTablePaginationLabels(translationService));
+
+    function identityKey(identity: IdentityViewModel): string {
+        return `identity:${identity.identity.source.generation}:${identity.identity.source.path}`;
+    }
+
+    function setExpanded(key: string, event: Event): void {
+        if (!(event.currentTarget instanceof HTMLDetailsElement)) return;
+        const sections = viewState.value.expandedSections;
+        const open = event.currentTarget.open;
+        if (open === sections.includes(key)) return;
+        viewState.set({
+            ...viewState.value,
+            expandedSections: open ? [...sections, key] : sections.filter((section) => section !== key),
+        });
+    }
+
+    function setWarningPagination(code: TachographWarningCode, pagination: IDataTablePaginationState): void {
+        viewState.set({ ...viewState.value, warningPagination: { ...viewState.value.warningPagination, [code]: pagination } });
+    }
+
+    function warningKey(row: WarningRow): string {
+        return row.key;
+    }
 </script>
+
+{#snippet identityHeading(identity: IdentityViewModel)}
+    <div class="identity-hero-header">
+        <div class="identity-hero-title-group">
+            <h3 class="identity-subheading">
+                {identity.kind === 'driver'
+                    ? translationService.translate('overview.identity.driver')
+                    : translationService.translate('overview.identity.vehicle')}
+            </h3>
+            <div class="identity-hero-title">
+                <Icon name={identity.kind === 'driver' ? 'creditCard' : 'truck'} />
+                <span class="identity-hero-name">
+                    {#if identity.kind === 'driver'}
+                        <span>{displayValue(identity.identity.firstNames)}</span>
+                        <span>{displayValue(identity.identity.surname)}</span>
+                    {:else}
+                        <span>{registrationNumber(identity)}</span>
+                    {/if}
+                </span>
+            </div>
+        </div>
+        <div class="identity-badges">
+            <span class="badge">{translateGeneration(identity.identity.source.generation, translationService)}</span>
+            <span class="badge badge-accent">
+                {identity.kind === 'driver'
+                    ? displayValue(identity.identity.issuingMemberState)
+                    : registrationMemberState(identity)}
+            </span>
+        </div>
+    </div>
+{/snippet}
+
+{#snippet identityDetails(identity: IdentityViewModel)}
+    <dl class="evidence-details bento-details">
+        {#if identity.kind === 'driver'}
+            <div>
+                <dt>{translationService.translate('overview.identity.cardNumber')}</dt>
+                <dd><code>{identity.identity.cardNumber}</code></dd>
+            </div>
+            <div>
+                <dt>{translationService.translate('overview.identity.cardHolderBirthDate')}</dt>
+                <dd>
+                    {identity.cardHolderBirthDate?.display ?? translationService.translate('overview.identity.missing')}
+                </dd>
+            </div>
+            <div>
+                <dt>{translationService.translate('overview.identity.issuingMemberState')}</dt>
+                <dd>{displayValue(identity.identity.issuingMemberState)}</dd>
+            </div>
+            <div>
+                <dt>{translationService.translate('overview.identity.cardIssueDate')}</dt>
+                <dd>
+                    {identity.cardIssueDate?.display ?? translationService.translate('overview.identity.missing')}
+                </dd>
+            </div>
+            <div>
+                <dt>{translationService.translate('overview.identity.cardValidityBegin')}</dt>
+                <dd>
+                    {identity.cardValidityBegin?.display ?? translationService.translate('overview.identity.missing')}
+                </dd>
+            </div>
+            <div>
+                <dt>{translationService.translate('overview.identity.cardExpiryDate')}</dt>
+                <dd>
+                    {identity.cardExpiryDate?.display ?? translationService.translate('overview.identity.missing')}
+                </dd>
+            </div>
+            <div>
+                <dt>{translationService.translate('overview.identity.cardIssuingAuthorityName')}</dt>
+                <dd>
+                    {identity.cardIssuingAuthorityName ?? translationService.translate('overview.identity.missing')}
+                </dd>
+            </div>
+            <div>
+                <dt>{translationService.translate('technical.field.licenceNumber')}</dt>
+                <dd>{displayValue(identity.licenceNumber)}</dd>
+            </div>
+            <div>
+                <dt>{translationService.translate('technical.field.licenceIssuingAuthority')}</dt>
+                <dd>{displayValue(identity.licenceIssuingAuthority)}</dd>
+            </div>
+            <div>
+                <dt>{translationService.translate('technical.field.licenceIssuingMemberState')}</dt>
+                <dd>{displayValue(identity.licenceIssuingMemberState)}</dd>
+            </div>
+        {:else}
+            <div>
+                <dt>{translationService.translate('overview.identity.registrationMemberState')}</dt>
+                <dd>{registrationMemberState(identity)}</dd>
+            </div>
+            <div>
+                <dt>{translationService.translate('overview.identity.vehicleIdentificationNumber')}</dt>
+                <dd><code>{vehicleIdentificationNumber(identity)}</code></dd>
+            </div>
+        {/if}
+        <div class="full-width-detail">
+            <dt>{translationService.translate('overview.identity.sourceReference')}</dt>
+            <dd class="source-reference">
+                <code>{identity.identity.source.path}</code>
+                <ReferenceLinkButton
+                    onopen={() => onopensource(identity.identity.source.path)}
+                    openLabel={translationService.translate('overview.openSource')}
+                    path={identity.identity.source.path}
+                />
+            </dd>
+        </div>
+    </dl>
+{/snippet}
+
+{#snippet warningSourceCell(row: WarningRow)}
+    <div class="source-reference">
+        <code>{row.warning.source.path}</code>
+        <ReferenceLinkButton
+            onopen={() => onopensource(row.warning.source.path)}
+            openLabel={translationService.translate('overview.openSource')}
+            path={row.warning.source.path}
+            tooltipFloating
+        />
+    </div>
+{/snippet}
 
 <article class="overview wide-workspace">
     <h1 tabindex="-1" use:focusOnMount>
@@ -120,115 +274,28 @@
             {:else}
                 <div class="identity-list">
                     {#each viewModel.identities as identity (identity.identity)}
-                        <section class="identity-record">
-                            <div class="identity-hero-header">
-                                <div class="identity-hero-title-group">
-                                    <h3 class="identity-subheading">
-                                        {identity.kind === 'driver'
-                                            ? translationService.translate('overview.identity.driver')
-                                            : translationService.translate('overview.identity.vehicle')}
-                                    </h3>
-                                    <div class="identity-hero-title">
-                                        <Icon name={identity.kind === 'driver' ? 'creditCard' : 'truck'} />
-                                        <span class="identity-hero-name">
-                                            {#if identity.kind === 'driver'}
-                                                <span>{displayValue(identity.identity.firstNames)}</span>
-                                                <span>{displayValue(identity.identity.surname)}</span>
-                                            {:else}
-                                                <span>{registrationNumber(identity)}</span>
-                                            {/if}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="identity-badges">
-                                    <span class="badge badge-accent">
-                                        {identity.kind === 'driver'
-                                            ? displayValue(identity.identity.issuingMemberState)
-                                            : registrationMemberState(identity)}
-                                    </span>
-                                </div>
-                            </div>
-
-                            <dl class="evidence-details bento-details">
-                                {#if identity.kind === 'driver'}
-                                    <div>
-                                        <dt>{translationService.translate('overview.identity.cardNumber')}</dt>
-                                        <dd><code>{identity.identity.cardNumber}</code></dd>
-                                    </div>
-                                    <div>
-                                        <dt>{translationService.translate('overview.identity.cardHolderBirthDate')}</dt>
-                                        <dd>
-                                            {identity.cardHolderBirthDate?.display ??
-                                                translationService.translate('overview.identity.missing')}
-                                        </dd>
-                                    </div>
-                                    <div>
-                                        <dt>{translationService.translate('overview.identity.issuingMemberState')}</dt>
-                                        <dd>{displayValue(identity.identity.issuingMemberState)}</dd>
-                                    </div>
-                                    <div>
-                                        <dt>{translationService.translate('overview.identity.cardIssueDate')}</dt>
-                                        <dd>
-                                            {identity.cardIssueDate?.display ??
-                                                translationService.translate('overview.identity.missing')}
-                                        </dd>
-                                    </div>
-                                    <div>
-                                        <dt>{translationService.translate('overview.identity.cardValidityBegin')}</dt>
-                                        <dd>
-                                            {identity.cardValidityBegin?.display ??
-                                                translationService.translate('overview.identity.missing')}
-                                        </dd>
-                                    </div>
-                                    <div>
-                                        <dt>{translationService.translate('overview.identity.cardExpiryDate')}</dt>
-                                        <dd>
-                                            {identity.cardExpiryDate?.display ??
-                                                translationService.translate('overview.identity.missing')}
-                                        </dd>
-                                    </div>
-                                    <div>
-                                        <dt>{translationService.translate('overview.identity.cardIssuingAuthorityName')}</dt>
-                                        <dd>
-                                            {identity.cardIssuingAuthorityName ??
-                                                translationService.translate('overview.identity.missing')}
-                                        </dd>
-                                    </div>
-                                    <div>
-                                        <dt>{translationService.translate('technical.field.licenceNumber')}</dt>
-                                        <dd>{displayValue(identity.licenceNumber)}</dd>
-                                    </div>
-                                    <div>
-                                        <dt>{translationService.translate('technical.field.licenceIssuingAuthority')}</dt>
-                                        <dd>{displayValue(identity.licenceIssuingAuthority)}</dd>
-                                    </div>
-                                    <div>
-                                        <dt>{translationService.translate('technical.field.licenceIssuingMemberState')}</dt>
-                                        <dd>{displayValue(identity.licenceIssuingMemberState)}</dd>
-                                    </div>
-                                {:else}
-                                    <div>
-                                        <dt>{translationService.translate('overview.identity.registrationMemberState')}</dt>
-                                        <dd>{registrationMemberState(identity)}</dd>
-                                    </div>
-                                    <div>
-                                        <dt>{translationService.translate('overview.identity.vehicleIdentificationNumber')}</dt>
-                                        <dd><code>{vehicleIdentificationNumber(identity)}</code></dd>
-                                    </div>
-                                {/if}
-                                <div class="full-width-detail">
-                                    <dt>{translationService.translate('overview.identity.sourceReference')}</dt>
-                                    <dd class="source-reference">
-                                        <code>{identity.identity.source.path}</code>
-                                        <ReferenceLinkButton
-                                            onopen={() => onopensource(identity.identity.source.path)}
-                                            openLabel={translationService.translate('overview.openSource')}
-                                            path={identity.identity.source.path}
+                        {#if viewModel.identities.length > 1}
+                            {@const key = identityKey(identity)}
+                            <details
+                                class="identity-record"
+                                open={viewState.value.expandedSections.includes(key)}
+                                ontoggle={(event) => setExpanded(key, event)}
+                            >
+                                <summary class="identity-summary">
+                                    <div class="identity-summary-heading">
+                                        <Icon
+                                            name={viewState.value.expandedSections.includes(key) ? 'chevronDown' : 'chevronRight'}
                                         />
-                                    </dd>
-                                </div>
-                            </dl>
-                        </section>
+                                        <div>{@render identityHeading(identity)}</div>
+                                    </div>
+                                </summary>
+                                {#if viewState.value.expandedSections.includes(key)}{@render identityDetails(identity)}{/if}
+                            </details>
+                        {:else}
+                            <section class="identity-record">
+                                {@render identityHeading(identity)}{@render identityDetails(identity)}
+                            </section>
+                        {/if}
                     {/each}
                 </div>
             {/if}
@@ -386,28 +453,41 @@
             {#if viewModel.warnings.length === 0}
                 <p>{translationService.translate('overview.warnings.empty')}</p>
             {:else}
-                <ul class="warning-list">
-                    {#each viewModel.warnings as warning (warning)}
-                        <li>
-                            <div class="warning-content">
-                                <strong>
-                                    {translationService.translate(warningTranslationKeys[warning.code])}
-                                </strong>
-                                <span>
-                                    {translationService.translate('overview.warnings.sourceReference')}
-                                    <code>{warning.source.path}</code>
-                                </span>
-                            </div>
-                            <span class="warning-action">
-                                <ReferenceLinkButton
-                                    onopen={() => onopensource(warning.source.path)}
-                                    openLabel={translationService.translate('overview.openSource')}
-                                    path={warning.source.path}
-                                />
-                            </span>
-                        </li>
+                <div class="warning-groups">
+                    {#each viewModel.warningGroups as group (group.code)}
+                        {@const key = `warning:${group.code}`}
+                        <details
+                            class="warning-group"
+                            open={viewState.value.expandedSections.includes(key)}
+                            ontoggle={(event) => setExpanded(key, event)}
+                        >
+                            <summary
+                                ><Icon
+                                    name={viewState.value.expandedSections.includes(key) ? 'chevronDown' : 'chevronRight'}
+                                /><span>{translationService.translate(warningTranslationKeys[group.code])}</span><span
+                                    class="badge badge-warning">{group.count.display}</span
+                                ></summary
+                            >
+                            {#if viewState.value.expandedSections.includes(key)}
+                                <div class="warning-table">
+                                    <DataTable
+                                        caption={translationService.translate(warningTranslationKeys[group.code])}
+                                        columns={warningColumns}
+                                        fillHeight
+                                        layout="contained"
+                                        rowKey={warningKey}
+                                        rows={group.rows}
+                                        paginationLabels={warningPaginationLabels}
+                                        initialPagination={viewState.value.warningPagination[group.code]}
+                                        onpaginationchange={(pagination: IDataTablePaginationState) =>
+                                            setWarningPagination(group.code, pagination)}
+                                        showTitleRow={false}
+                                    />
+                                </div>
+                            {/if}
+                        </details>
                     {/each}
-                </ul>
+                </div>
             {/if}
         </section>
 
@@ -449,8 +529,63 @@
 </article>
 
 <style>
+    .warning-groups {
+        display: grid;
+        gap: var(--space-stack);
+    }
+
+    .identity-summary,
+    .warning-group > summary {
+        cursor: pointer;
+        list-style: none;
+    }
+
+    .identity-summary::-webkit-details-marker,
+    .warning-group > summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .identity-summary-heading,
+    .warning-group > summary {
+        display: flex;
+        align-items: center;
+        gap: var(--space-actions);
+    }
+
+    .identity-summary-heading > div,
+    .warning-group > summary > span {
+        min-inline-size: var(--size-zero);
+        overflow-wrap: anywhere;
+    }
+
+    .identity-summary-heading > div {
+        flex: var(--layout-overview-warning-flex);
+    }
+
+    .identity-summary .identity-hero-header {
+        margin-block-end: var(--space-none);
+        padding-block-end: var(--space-none);
+        border-block-end: none;
+    }
+
+    .warning-group > summary {
+        padding-block: var(--space-row-block);
+    }
+
+    .warning-group > summary > .badge {
+        margin-inline-start: auto;
+    }
+
+    .warning-table {
+        display: flex;
+        flex-direction: column;
+        block-size: var(--size-table-section-min-block);
+        min-inline-size: var(--size-zero);
+    }
+
     .overview-bento-grid {
         display: grid;
+        align-items: start;
         grid-template-columns: var(--layout-overview-bento-columns);
         gap: var(--space-section);
     }
@@ -575,8 +710,7 @@
     }
 
     .identity-list,
-    .identity-record,
-    .warning-list {
+    .identity-record {
         display: grid;
         gap: var(--space-stack);
     }
@@ -607,13 +741,11 @@
     }
 
     dt,
-    .note,
-    .warning-list span {
+    .note {
         color: var(--color-text-muted);
     }
 
-    dt,
-    .warning-list span {
+    dt {
         font-size: var(--font-size-metadata);
     }
 
@@ -632,52 +764,6 @@
 
     code {
         font-family: var(--font-family-source);
-    }
-
-    .warning-list {
-        padding: var(--space-none);
-        list-style: none;
-        inline-size: var(--size-full);
-        max-inline-size: var(--size-full);
-        min-inline-size: var(--size-zero);
-    }
-
-    .warning-list li {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: var(--space-actions);
-        padding-block: var(--space-row-block);
-        border-block-end: var(--border-region);
-        inline-size: var(--size-full);
-        max-inline-size: var(--size-full);
-        min-inline-size: var(--size-zero);
-    }
-
-    .warning-list li:last-child {
-        border-block-end: none;
-    }
-
-    .warning-content {
-        display: grid;
-        flex: var(--layout-overview-warning-flex);
-        min-inline-size: var(--space-none);
-        max-inline-size: var(--size-full);
-        gap: var(--space-compact);
-        overflow-wrap: anywhere;
-        word-break: break-word;
-    }
-
-    .warning-content strong {
-        overflow-wrap: anywhere;
-        word-break: break-word;
-    }
-
-    .warning-action {
-        flex: var(--layout-overview-action-flex);
-        display: flex;
-        align-items: center;
     }
 
     .integrity-value {

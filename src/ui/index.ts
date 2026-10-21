@@ -35,6 +35,7 @@ export type {
     IDataTablePaginationLabels,
     IDataTablePageStatus,
     IDataTablePaginationPreferencesStore,
+    IDataTablePaginationState,
 } from './data-table/data-table-pagination.js';
 export { default as DatePicker } from './date-picker/DatePicker.svelte';
 export { default as Dialog } from './controls/Dialog.svelte';

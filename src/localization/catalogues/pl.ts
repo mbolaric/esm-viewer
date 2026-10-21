@@ -353,6 +353,8 @@ export const pl = {
     'eventsFaults.recordsHeading': 'Rekordy chronologiczne',
     'eventsFaults.recordsShown': 'Wyświetlone rekordy',
     'table.clearFilter': 'Wyczyść filtr',
+    'table.pagination': 'Strony tabeli',
+    'table.rowsPerPage': 'Wierszy na stronę',
     'table.columns': 'Kolumny',
     'table.filter': 'Filtruj rekordy',
     'table.pinColumn': 'Zachowaj widoczność kolumny',

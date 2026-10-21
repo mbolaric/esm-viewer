@@ -20,3 +20,8 @@ export interface IDataTablePaginationPreferencesStore {
     getPageSize(preferenceKey: string): DataTablePageSize;
     setPageSize(preferenceKey: string, pageSize: DataTablePageSize): void;
 }
+
+export interface IDataTablePaginationState {
+    readonly page: number;
+    readonly pageSize: DataTablePageSize;
+}

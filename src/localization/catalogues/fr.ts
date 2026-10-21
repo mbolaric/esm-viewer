@@ -359,6 +359,8 @@ export const fr = {
     'eventsFaults.recordsHeading': 'Enregistrements chronologiques',
     'eventsFaults.recordsShown': 'Enregistrements affichés',
     'table.clearFilter': 'Effacer le filtre',
+    'table.pagination': 'Pages du tableau',
+    'table.rowsPerPage': 'Lignes par page',
     'table.columns': 'Colonnes',
     'table.filter': 'Filtrer les enregistrements',
     'table.pinColumn': 'Garder la colonne visible',

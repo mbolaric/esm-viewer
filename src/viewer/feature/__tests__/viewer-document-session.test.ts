@@ -15,6 +15,10 @@ describe('ViewerDocumentSession', () => {
     it('resets every filter, search, speed range, and activity link when another document opens', () => {
         const session = new ViewerDocumentSession();
         session.syncDocumentKey('first');
+        session.overviewView.set({
+            expandedSections: ['warning:unsupportedData'],
+            warningPagination: { unsupportedData: { page: 2, pageSize: 25 } },
+        });
         session.activityView.set({ dayIndex: 2, tab: 'calendar', aggregationMode: 'shift', timelineVariant: 'band' });
         session.eventFaultFilter.set('fault');
         session.placesSearchText.set('Berlin');
@@ -30,6 +34,7 @@ describe('ViewerDocumentSession', () => {
             aggregationMode: 'utc',
             timelineVariant: 'lanes',
         });
+        expect(session.overviewView.value).toEqual({ expandedSections: [], warningPagination: {} });
         expect(session.eventFaultFilter.value).toBe('all');
         expect(session.placesSearchText.value).toBe('');
         expect(session.speedRangeStart.value).toBeNull();
@@ -42,11 +47,13 @@ describe('ViewerDocumentSession', () => {
         const session = new ViewerDocumentSession();
         session.syncDocumentKey('first');
         session.technicalSearchText.set('VIN');
+        session.overviewView.set({ expandedSections: ['identity:g1:/identity'], warningPagination: {} });
         session.activityView.set({ ...session.activityView.value, dayIndex: 1, tab: 'allDays' });
 
         session.syncDocumentKey('first');
 
         expect(session.technicalSearchText.value).toBe('VIN');
+        expect(session.overviewView.value.expandedSections).toEqual(['identity:g1:/identity']);
         expect(session.activityView.value).toMatchObject({ dayIndex: 1, tab: 'allDays' });
     });
 

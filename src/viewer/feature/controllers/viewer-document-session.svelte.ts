@@ -1,9 +1,14 @@
 import type { AssociationGenerationFilter, EventFaultTypeFilter, LocationRecordTypeFilter } from '#viewer-application';
-import type { IntervalTimelineVariant } from '#ui';
-import type { UtcTimestamp } from '#viewer-domain';
+import type { IDataTablePaginationState, IntervalTimelineVariant } from '#ui';
+import type { TachographWarningCode, UtcTimestamp } from '#viewer-domain';
 import type { IActivityInfringementPinViewModel } from '#viewer-presentation';
 
 import { createDocumentScopedValue, type IDocumentScopedValue } from './document-scoped-value.svelte.js';
+
+export interface IOverviewViewState {
+    readonly expandedSections: readonly string[];
+    readonly warningPagination: Readonly<Partial<Record<TachographWarningCode, IDataTablePaginationState>>>;
+}
 
 export interface IActivityViewState {
     readonly dayIndex: number | null;
@@ -25,6 +30,8 @@ export class ViewerDocumentSession {
     public readonly associationFilter = this.scoped<AssociationGenerationFilter>('all');
     public readonly eventFaultFilter = this.scoped<EventFaultTypeFilter>('all');
     public readonly locationFilter = this.scoped<LocationRecordTypeFilter>('all');
+
+    public readonly overviewView = this.scoped<IOverviewViewState>({ expandedSections: [], warningPagination: {} });
 
     public readonly activityView = this.scoped<IActivityViewState>({
         dayIndex: null,

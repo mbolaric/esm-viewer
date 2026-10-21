@@ -440,6 +440,20 @@ Opening another document clears the source-return context.
   (span 12) at <= 68rem (1088px), and collapses detail grids from 2 columns to 1
   column at <= 56rem (896px). Above the grid, KPI tiles display active days,
   activity intervals, events/faults, warnings, and security alerts.
+  The layout and all existing fields remain. A single identity stays fully visible;
+  multiple identities are individually expandable, with only name/registration,
+  application generation and issuing state visible when collapsed. Expansion reveals
+  every identity/licence field, card validity date or VIN, and canonical source link.
+  Warning groups use the existing translated warning types and preserve every warning, source
+  and total; expanding a group uses the shared paginated DataTable in a bounded-height
+  area. Its reusable contained layout wraps long sources within the available width,
+  with the header and pagination remaining outside the scrolling rows. Source actions
+  reuse the shared floating tooltip to avoid clipping inside the table. Identity/group
+  expansion and warning page/size belong to the document session, survive source
+  drilldown and return, and reset on a new document. Source return focuses the
+  originating source action when no selected record takes precedence, bringing
+  the restored warning or identity back into view. Card notes retain their
+  complete text, generation and source. Overview adds no duplicate section links.
 
 - **Activities** — the selected day/application entry, tab, UTC/duty-shift totals mode
   and timeline style belong to the opened-document session. They survive section

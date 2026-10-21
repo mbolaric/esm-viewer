@@ -1268,6 +1268,8 @@ export const de = {
     'speed.unitDistance': 'Kilometer',
     'status.warnings': 'Warnungen:',
     'table.clearFilter': 'Filter zurücksetzen',
+    'table.pagination': 'Tabellenseiten',
+    'table.rowsPerPage': 'Zeilen pro Seite',
     'table.columns': 'Spalten',
     'table.filter': 'Datensätze filtern',
     'table.filterPlaceholder': 'Aktuelle Datensätze durchsuchen…',

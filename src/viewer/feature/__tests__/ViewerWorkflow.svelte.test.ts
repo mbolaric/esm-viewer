@@ -192,7 +192,12 @@ describe('viewer open workflow', () => {
 
         const warningsSection = sectionForHeading('Warnings and unsupported data');
         expect(warningsSection.textContent).toContain('Some source data is not normalized by this viewer.');
-        expect(within(warningsSection).getByText('/unsupported/0')).toBeTruthy();
+        const warningSummary = within(warningsSection)
+            .getByText('Some source data is not normalized by this viewer.')
+            .closest('summary');
+        if (!(warningSummary instanceof HTMLElement)) throw new TypeError('The warning group must have a summary.');
+        await fireEvent.click(warningSummary);
+        expect(await within(warningsSection).findByText('/unsupported/0')).toBeTruthy();
 
         expect(within(navigator).getByRole('heading', { name: 'Summary' })).toBeTruthy();
         expect(within(navigator).getByRole('heading', { name: 'Records' })).toBeTruthy();
@@ -280,6 +285,29 @@ describe('viewer open workflow', () => {
 
         await fireEvent.click(within(navigator).getByRole('button', { name: 'Overview' }));
         expect(await screen.findByRole('heading', { name: 'Overview' })).toBeTruthy();
+    });
+
+    it('restores Overview warning expansion and reading position after opening a source', async () => {
+        const harness = createViewerDocumentHarness();
+        renderWorkflow(harness);
+        await startOpen(harness);
+        harness.completeLatestParser(harness.successfulParserResult());
+        await screen.findByRole('heading', { name: 'Overview', level: 1 });
+        const warnings = sectionForHeading('Warnings and unsupported data');
+        const summary = within(warnings).getByText('Some source data is not normalized by this viewer.').closest('summary');
+        if (!(summary instanceof HTMLElement)) throw new TypeError('Missing warning group.');
+        await fireEvent.click(summary);
+        await within(warnings).findByText('/unsupported/0');
+        screen.getByRole('main').scrollTop = 420;
+        await fireEvent.click(screen.getByRole('button', { name: 'Open in Raw Data: /identity' }));
+        await screen.findByRole('heading', { name: 'Raw data', level: 1 });
+        await fireEvent.click(screen.getByRole('button', { name: 'Return to Overview' }));
+        const restoredSource = await screen.findByRole('button', { name: 'Open in Raw Data: /identity' });
+        await waitFor(() => {
+            expect(document.activeElement).toBe(restoredSource);
+        });
+        expect(screen.getByRole('main').scrollTop).toBe(420);
+        expect(within(sectionForHeading('Warnings and unsupported data')).getByText('/unsupported/0')).toBeTruthy();
     });
 
     it('presents activity days, viewer totals, selectable records, and canonical sources', async () => {

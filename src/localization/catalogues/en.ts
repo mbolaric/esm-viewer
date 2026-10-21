@@ -348,6 +348,8 @@ export const en = {
     'eventsFaults.recordsHeading': 'Chronological records',
     'eventsFaults.recordsShown': 'Records shown',
     'table.clearFilter': 'Clear filter',
+    'table.pagination': 'Table pages',
+    'table.rowsPerPage': 'Rows per page',
     'table.columns': 'Columns',
     'table.filter': 'Filter records',
     'table.pinColumn': 'Keep column visible',

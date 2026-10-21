@@ -22,6 +22,7 @@ import {
     createSourceReference,
     createTachographEvent,
     createTachographFault,
+    createTachographWarning,
     createVehicleUnitCardSlotStatusTechnicalRecord,
     createVehicleUnitControlActivityTechnicalRecord,
     createVehicleUnitDownloadPeriodTechnicalRecord,
@@ -1345,6 +1346,32 @@ describe('document view models', () => {
                 searchValues: ['cardNumber', '/identity/cardNumber', '"1234567890123456"', 'string'],
             });
         }
+    });
+
+    it('groups overview warnings without deduplicating equal source pointers', () => {
+        const harness = createHarness();
+        const content = harness.document.content;
+        if (content.documentKind !== 'driverCard' || content.applications[0] === undefined)
+            throw new TypeError('A driver application is required.');
+        const warnings = [
+            createTachographWarning('invalidValue', cardSource('/same')),
+            createTachographWarning('unsupportedData', cardSource('/unsupported')),
+            createTachographWarning('invalidValue', cardSource('/same')),
+        ];
+        const viewModel = createDocumentOverviewViewModel(
+            createOpenedTachographDocument(harness.document.source, {
+                ...content,
+                applications: [{ ...content.applications[0], warnings }],
+            }),
+            localisation('en', 'Europe/Berlin'),
+        );
+        expect(viewModel.warningGroups.map((group) => [group.code, group.count.display])).toEqual([
+            ['invalidValue', 'number:2'],
+            ['unsupportedData', 'number:1'],
+        ]);
+        expect(viewModel.warningGroups[0]?.rows.map((row) => row.key)).toEqual(['0', '2']);
+        expect(viewModel.warningGroups[0]?.rows.map((row) => row.warning)).toEqual([warnings[0], warnings[2]]);
+        expect(createDocumentOverviewViewModel(harness.document, localisation('en', 'UTC')).warningGroups).toEqual([]);
     });
 
     it('exposes decoded card notes with generation and canonical source in the overview', () => {

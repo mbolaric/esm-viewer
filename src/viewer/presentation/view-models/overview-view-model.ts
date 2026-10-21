@@ -15,6 +15,7 @@ import {
     type IntegrityAssessment,
     type IVehicleIdentity,
     type TachographGeneration,
+    type TachographWarningCode,
     type UtcTimestamp,
 } from '#viewer-domain';
 
@@ -73,6 +74,30 @@ export interface ICardNotesViewModel {
     readonly generation: TachographGeneration;
     readonly source: ISourceReference<TachographGeneration, 'driverCard'>;
     readonly text: string;
+}
+
+interface IOverviewWarningRow {
+    readonly key: string;
+    readonly warning: ITachographWarning;
+}
+
+interface IOverviewWarningGroup {
+    readonly code: TachographWarningCode;
+    readonly count: IFormattedValue<number>;
+    readonly rows: readonly IOverviewWarningRow[];
+}
+
+function groupOverviewWarnings(
+    warnings: readonly ITachographWarning[],
+    localisation: ViewerLocalisationService,
+): readonly IOverviewWarningGroup[] {
+    const groups = new Map<TachographWarningCode, IOverviewWarningRow[]>();
+    warnings.forEach((warning, index) => {
+        const rows = groups.get(warning.code) ?? [];
+        rows.push({ key: String(index), warning });
+        groups.set(warning.code, rows);
+    });
+    return Array.from(groups, ([code, rows]) => ({ code, count: formatNumber(rows.length, localisation), rows }));
 }
 
 export function createDocumentContentCountsViewModel(
@@ -181,6 +206,7 @@ export function createDocumentOverviewViewModel(
         sha256: document.source.sha256,
         timeZone: localisation.timeZone,
         warnings: projection.warnings,
+        warningGroups: groupOverviewWarnings(projection.warnings, localisation),
     };
 }
 export interface IDocumentOverviewViewModel {
@@ -201,4 +227,5 @@ export interface IDocumentOverviewViewModel {
     readonly sha256: OpenedTachographDocument['source']['sha256'];
     readonly timeZone: string;
     readonly warnings: readonly ITachographWarning[];
+    readonly warningGroups: readonly IOverviewWarningGroup[];
 }

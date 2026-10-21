@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { tick, type Snippet } from 'svelte';
+    import { settled, type Snippet } from 'svelte';
 
     import {
         documentKindIcon,
@@ -88,6 +88,7 @@
 
     // Passed to section snippets; each destructures needed context.
     interface ISourceReturnContext {
+        readonly path: JsonPointer;
         readonly section: DocumentWorkspaceSection;
         readonly record: DocumentSectionRecord | null;
         readonly infringement: IActivityInfringementPinViewModel | null;
@@ -222,6 +223,7 @@
         if (selection !== null && selection.projection.section !== 'rawData') {
             const main = workspaceElement?.querySelector('main');
             sourceReturnContext = {
+                path,
                 section: selection.projection.section,
                 record: selection.selectedRecord,
                 infringement: session.selectedActivityInfringement.value,
@@ -254,18 +256,23 @@
             }
         }
         const documentKey = documentSessionKey;
-        await tick();
+        await settled();
         if (documentSessionKey !== documentKey) {
             return;
         }
         const main = workspaceElement?.querySelector('main');
+        const sourceButton = Array.from(main?.querySelectorAll<HTMLButtonElement>('button[aria-label]') ?? []).find((button) =>
+            button.getAttribute('aria-label')?.endsWith(`: ${origin.path}`),
+        );
         const target =
-            main?.querySelector<HTMLElement>('tr[aria-selected="true"] button') ?? main?.querySelector<HTMLElement>('h1');
-        target?.focus({ preventScroll: true });
+            main?.querySelector<HTMLElement>('tr[aria-selected="true"] button') ??
+            sourceButton ??
+            main?.querySelector<HTMLElement>('h1');
         if (main !== null && main !== undefined) {
             main.scrollTop = origin.scrollTop;
             main.scrollLeft = origin.scrollLeft;
         }
+        target?.focus({ preventScroll: target !== sourceButton });
     }
 
     function clearSelectedRecord(): void {
@@ -485,6 +492,7 @@ top-level snippets are needed for it to reference them at all.
 -->
 {#snippet overviewSection({ overview: currentOverview }: ISectionSnippetContext)}
     <OverviewScreen
+        viewState={session.overviewView}
         onopenintegrity={() => selectSection('integrity')}
         onopensource={openRawDataSource}
         onverify={verifyDocumentSignatures}

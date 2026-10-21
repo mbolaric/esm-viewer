@@ -354,6 +354,8 @@ export const hr = {
     'eventsFaults.recordsHeading': 'Kronološki zapisi',
     'eventsFaults.recordsShown': 'Prikazani zapisi',
     'table.clearFilter': 'Očisti filtar',
+    'table.pagination': 'Stranice tablice',
+    'table.rowsPerPage': 'Redaka po stranici',
     'table.columns': 'Stupci',
     'table.filter': 'Filtriraj zapise',
     'table.pinColumn': 'Zadrži stupac vidljivim',

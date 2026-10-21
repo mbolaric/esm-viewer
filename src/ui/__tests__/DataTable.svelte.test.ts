@@ -5,7 +5,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import DataTable from '../data-table/DataTable.svelte';
 import type { IDataTableColumn } from '../data-table/data-table-column.js';
 import type { IDataTableLabels } from '../data-table/data-table-labels.js';
-import type { IDataTablePaginationLabels, IDataTablePaginationPreferencesStore } from '../data-table/data-table-pagination.js';
+import type {
+    IDataTablePaginationLabels,
+    IDataTablePaginationPreferencesStore,
+    IDataTablePaginationState,
+} from '../data-table/data-table-pagination.js';
 import type { ITableToolingBinding } from '../data-table/table-tooling.js';
 
 afterEach(() => {
@@ -82,6 +86,8 @@ interface IRenderDataTableOptions {
     readonly onfilterchange?: (text: string) => void;
     readonly onsort?: (columnId: string) => void;
     readonly ontogglecolumn?: (columnId: string) => void;
+    readonly initialPagination?: IDataTablePaginationState;
+    readonly onpaginationchange?: (state: IDataTablePaginationState) => void;
     readonly paginationLabels?: IDataTablePaginationLabels;
     readonly paginationPreferenceKey?: string;
     readonly paginationPreferencesStore?: IDataTablePaginationPreferencesStore;
@@ -216,6 +222,22 @@ describe('DataTable', () => {
 
         const region = screen.getByRole('region', { name: 'Records' });
         expect(region.classList.contains('fill-height')).toBe(true);
+    });
+
+    it('restores an initial page and reports changes for the owning view to retain', async () => {
+        const changed = vi.fn();
+        renderDataTable({
+            initialPagination: { page: 2, pageSize: 25 },
+            onpaginationchange: changed,
+            paginationLabels,
+            rows: paginatedRows,
+        });
+        expect(screen.getByText('Record 26')).toBeTruthy();
+        expect(screen.queryByText('Record 1')).toBeNull();
+        expect(changed).not.toHaveBeenCalled();
+        await fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+        expect(changed).toHaveBeenLastCalledWith({ page: 3, pageSize: 25 });
+        expect(screen.getByText('Record 51')).toBeTruthy();
     });
 
     it('paginates rows with an accessible status and bounded page controls', async () => {

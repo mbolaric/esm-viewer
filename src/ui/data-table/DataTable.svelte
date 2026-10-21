@@ -9,6 +9,7 @@
         DataTablePageSize,
         IDataTablePaginationLabels,
         IDataTablePaginationPreferencesStore,
+        IDataTablePaginationState,
     } from './data-table-pagination.js';
     import SearchInput from '../controls/SearchInput.svelte';
 
@@ -25,7 +26,7 @@
         filterText?: string;
         hiddenColumnIds?: ReadonlySet<string>;
         labels?: IDataTableLabels | undefined;
-        layout?: 'comparison' | 'standard' | 'wide';
+        layout?: 'comparison' | 'contained' | 'standard' | 'wide';
         noWrap?: boolean;
         onfilterchange?: (text: string) => void;
         onsort?: (columnId: string) => void;
@@ -35,6 +36,8 @@
         paginationPreferencesStore?: IDataTablePaginationPreferencesStore | undefined;
         // Stable persistence key for columnPreferencesStore.
         preferenceKey?: string;
+        initialPagination?: IDataTablePaginationState | undefined;
+        onpaginationchange?: ((state: IDataTablePaginationState) => void) | undefined;
         // Marks rows as selectable and reports which one is selected.
         isRowSelected?: ((row: TRow) => boolean) | undefined;
         rowKey: (row: TRow) => string;
@@ -63,6 +66,8 @@
         paginationPreferenceKey = undefined,
         paginationPreferencesStore = undefined,
         preferenceKey = undefined,
+        initialPagination = undefined,
+        onpaginationchange = undefined,
         isRowSelected = undefined,
         rowKey,
         rows,
@@ -79,12 +84,14 @@
     let columnWidths = $state<readonly number[]>([]);
     let scrollbarPadding = $state<number>(0);
     let containerWidth = $state<number>(Number.POSITIVE_INFINITY);
-    let currentPage = $state(1);
+    let currentPage = $state(untrack(() => initialPagination?.page ?? 1));
     let pageSize = $state<DataTablePageSize>(
-        untrack(() =>
-            paginationPreferenceKey !== undefined && paginationPreferencesStore !== undefined
-                ? paginationPreferencesStore.getPageSize(paginationPreferenceKey)
-                : 50,
+        untrack(
+            () =>
+                initialPagination?.pageSize ??
+                (paginationPreferenceKey !== undefined && paginationPreferencesStore !== undefined
+                    ? paginationPreferencesStore.getPageSize(paginationPreferenceKey)
+                    : 50),
         ),
     );
 
@@ -95,16 +102,24 @@
     const firstDisplayedRow = $derived(rows.length === 0 ? 0 : firstRowIndex + 1);
     const visibleRows = $derived(paginationLabels === undefined ? rows : rows.slice(firstRowIndex, lastRowIndex));
 
+    function notifyPagination(): void {
+        onpaginationchange?.({ page: activePage, pageSize });
+    }
+
     function resetPagination(): void {
         currentPage = 1;
+        notifyPagination();
         if (bodyScrollElement !== undefined) {
             bodyScrollElement.scrollTop = 0;
         }
     }
 
+    let previousRows = untrack(() => rows);
     $effect(() => {
-        void rows;
-        resetPagination();
+        if (rows !== previousRows) {
+            previousRows = rows;
+            resetPagination();
+        }
     });
 
     const effectiveHiddenColumnIds = $derived(hiddenColumnIds ?? tooling?.hiddenColumnIds);
@@ -140,6 +155,7 @@
 
     function showPreviousPage(): void {
         currentPage = Math.max(1, activePage - 1);
+        notifyPagination();
         if (bodyScrollElement !== undefined) {
             bodyScrollElement.scrollTop = 0;
         }
@@ -147,6 +163,7 @@
 
     function showNextPage(): void {
         currentPage = Math.min(pageCount, activePage + 1);
+        notifyPagination();
         if (bodyScrollElement !== undefined) {
             bodyScrollElement.scrollTop = 0;
         }
@@ -462,6 +479,7 @@
             <table
                 aria-label={caption}
                 class:comparison={layout === 'comparison'}
+                class:contained={layout === 'contained'}
                 class:no-wrap={noWrap}
                 class:wide={layout === 'wide'}
                 class="data-table"
@@ -505,6 +523,7 @@
             <table
                 aria-hidden="true"
                 class:comparison={layout === 'comparison'}
+                class:contained={layout === 'contained'}
                 class:no-wrap={noWrap}
                 class:wide={layout === 'wide'}
                 class="data-table header-table"
@@ -526,6 +545,7 @@
             <table
                 aria-label={caption}
                 class:comparison={layout === 'comparison'}
+                class:contained={layout === 'contained'}
                 class:no-wrap={noWrap}
                 class:wide={layout === 'wide'}
                 class="data-table body-table"
@@ -723,6 +743,11 @@
     .data-table.no-wrap th,
     :global(.data-table.no-wrap td) {
         white-space: nowrap;
+    }
+
+    .data-table.contained {
+        min-inline-size: var(--size-zero);
+        table-layout: fixed;
     }
 
     .data-table.wide {
