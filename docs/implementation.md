@@ -448,7 +448,9 @@ Opening another document clears the source-return context.
   and total; expanding a group uses the shared paginated DataTable in a bounded-height
   area. Its reusable contained layout wraps long sources within the available width,
   with the header and pagination remaining outside the scrolling rows. Source actions
-  reuse the shared floating tooltip to avoid clipping inside the table. Identity/group
+  reuse the shared floating tooltip to avoid clipping inside the table. Card/group
+  grid tracks can shrink after viewport or zoom changes without retaining an
+  oversized table width. Identity/group
   expansion and warning page/size belong to the document session, survive source
   drilldown and return, and reset on a new document. Source return focuses the
   originating source action when no selected record takes precedence, bringing

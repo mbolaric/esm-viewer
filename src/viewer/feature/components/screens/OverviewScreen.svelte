@@ -531,6 +531,7 @@
 <style>
     .warning-groups {
         display: grid;
+        grid-template-columns: var(--layout-panel-columns);
         gap: var(--space-stack);
     }
 
@@ -592,6 +593,7 @@
 
     .bento-card {
         display: grid;
+        grid-template-columns: var(--layout-panel-columns);
         align-content: start;
         gap: var(--space-stack);
     }
