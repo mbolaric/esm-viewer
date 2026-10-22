@@ -233,7 +233,8 @@ quarantine attribute (`xattr -cr`) or allow the application in macOS Privacy
 
 ESM Viewer depends on a pinned build of the
 [`esm-parser`](https://github.com/mbolaric/esm-parser) Rust crate (vendored
-as a git submodule under `vendor/esm-parser`), compiled natively into the
+as a git submodule under `vendor/esm-parser`, version 0.5.0 at commit
+`197500e`), compiled natively into the
 Tauri host rather than run as WASM in a worker. Normalizers trust the
 parser's generated TypeScript declarations rather than re-validating every
 field at runtime, so an upstream serialization change is expected to fail
@@ -302,6 +303,14 @@ lifecycle: it preserves a pending replacement's `opening` status and candidate
 name, as well as existing open or cleanup errors. Cancelling or failing a
 replacement retains the current document's updated assessment; a successful
 replacement uses the new document's own assessment.
+
+Control activities preserve every flag in the parser’s numeric bitmask as a
+readonly list of domain actions, displayed together in the viewer and exports.
+Zero means no recorded control actions; reserved bits display an unknown action.
+Unrecognized numeric calibration purposes and event/fault codes normalize to
+`unknown`. GNSS anomalies, external GNSS authentication failures, motion/activity
+inconsistencies, and ITS interface faults have dedicated domain codes and labels.
+The parser’s optional write feature remains disabled.
 
 Run `pnpm parser:sync-types` after updating the `vendor/esm-parser`
 submodule pin to resync the generated WASM/native boundary declarations.
@@ -1734,7 +1743,7 @@ verify dispatch independently of a display. Standalone packaging remains in
   current `vendor/esm-parser` pin rather than assumed stable across
   parser upgrades.
 - Vehicle Unit downloads support full verification (certificate chain and
-  recorded data files via `esm-parser` 0.4.0, §5.1); files lacking data records
+  recorded data files via `esm-parser` 0.5.0, §5.1); files lacking data records
   fall back to certificate-chain-only verification. Gen2 Company/Control card
   applications are unsigned by design and always report `unsupported`.
 - Release installers (§3) are built but not code-signed or notarized on any

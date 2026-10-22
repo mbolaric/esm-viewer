@@ -162,7 +162,7 @@ export interface ITechnicalSnapshotStateValue {
 
 export interface ITechnicalControlTypeValue {
     readonly kind: 'controlType';
-    readonly value: CardControlActivityType;
+    readonly value: readonly CardControlActivityType[];
 }
 
 export interface ITechnicalSpecificConditionTypeValue {
@@ -309,7 +309,7 @@ function cardReferenceFields(
 
 function controlActivityFields(
     leadingFields: readonly ITechnicalFieldViewModel[],
-    controlType: CardControlActivityType,
+    controlType: readonly CardControlActivityType[],
     downloadPeriodBegin: UtcTimestamp | null,
     downloadPeriodEnd: UtcTimestamp | null,
     controlCard: IRecordedCardReference | null,

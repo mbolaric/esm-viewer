@@ -30,7 +30,7 @@ function application(): Gen2DriverCard {
             controlDownloadPeriodBegin: '2026-06-17 08:00:00 UTC',
             controlDownloadPeriodEnd: '2026-06-18 08:00:00 UTC',
             controlTime: '2026-06-18 10:00:00 UTC',
-            controlType: 'CardDownloaded',
+            controlType: 0x80,
             controlVehicleRegistration: vehicleRegistration(),
         },
         currentUsage: {
@@ -97,7 +97,7 @@ describe('driver-card technical normalization', () => {
             licenceNumber: 'LICENCE-123',
         });
         expect(controlRecord).toMatchObject({
-            controlType: 'cardDownloaded',
+            controlType: ['cardDownloaded'],
             registrationNumber: 'TEST-123',
         });
         expect(conditionRecord).toMatchObject({

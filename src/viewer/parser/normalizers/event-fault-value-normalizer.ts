@@ -6,6 +6,10 @@ import type {
 } from '../generated/esm_parser.js';
 
 const eventFaultCodes = {
+    GNSSAnomaly: 'gnssAnomaly',
+    GNSSExternalGNSSFacilityAuthenticationFailure: 'gnssExternalFacilityAuthenticationFailure',
+    VuMotionDataAndDriverActivityInconsistency: 'vuMotionDataAndDriverActivityInconsistency',
+    REITSInterfaceFault: 'recordingEquipmentItsInterfaceFault',
     CardConflict: 'cardConflict',
     CardInsertionWhileDriving: 'cardInsertionWhileDriving',
     CardNoFurtherDetails: 'cardNoFurtherDetails',
@@ -14,11 +18,9 @@ const eventFaultCodes = {
     GNSSExternalGNSSFacilityCertificateExpired: 'gnssExternalFacilityCertificateExpired',
     GNSSExternalGNSSReceiverFault: 'gnssExternalReceiverFault',
     GNSSInternalGNSSReceiverFault: 'gnssInternalReceiverFault',
-    GNSSNofurtherDetails: 'gnssNoFurtherDetails',
     GNSSNoGNSSPositionData: 'gnssNoPositionData',
     GNSSTamperDetectionOfGNSS: 'gnssTamperDetected',
     InsertionOfNonValidCard: 'insertionOfNonValidCard',
-    ITSNoFurtherDetails: 'itsNoFurtherDetails',
     LastCardSessionNotCorrectlyClosed: 'lastCardSessionNotCorrectlyClosed',
     MotionDataError: 'motionDataError',
     NoFurtherDetails: 'noFurtherDetails',
@@ -30,7 +32,6 @@ const eventFaultCodes = {
     REPrinterFault: 'recordingEquipmentPrinterFault',
     RESensorFault: 'recordingEquipmentSensorFault',
     REVUInternalFault: 'recordingEquipmentVuInternalFault',
-    RCMNoFurtherDetails: 'remoteCommunicationNoFurtherDetails',
     RCMRemoteCommunicationModuleCommunicationFault: 'remoteCommunicationModuleCommunicationFault',
     RCMRemoteCommunicationModuleFault: 'remoteCommunicationModuleFault',
     SensorAuthenticationFailure: 'sensorAuthenticationFailure',
@@ -41,7 +42,6 @@ const eventFaultCodes = {
     SensorUnauthorisedCaseOpening: 'sensorUnauthorisedCaseOpening',
     TimeConflict: 'timeConflict',
     TimeOverlap: 'timeOverlap',
-    Unknown: 'unknown',
     VehicleMotionConflict: 'vehicleMotionConflict',
     VuCardDataInputIntegrityError: 'vuCardDataInputIntegrityError',
     VuHardwareSabotage: 'vuHardwareSabotage',
@@ -52,7 +52,7 @@ const eventFaultCodes = {
     VuTachographCardAuthenticationFailure: 'vuTachographCardAuthenticationFailure',
     VuUnauthorisedCaseOpening: 'vuUnauthorisedCaseOpening',
     VuUnauthorisedChangeOfMotionSensor: 'vuUnauthorisedChangeOfMotionSensor',
-} satisfies Readonly<Record<ParserEventFaultType, EventFaultCode>>;
+} satisfies Readonly<Record<Exclude<ParserEventFaultType, number>, EventFaultCode>>;
 
 const eventFaultPurposes = {
     ActiveEventOrFault: 'active',
@@ -67,7 +67,7 @@ const eventFaultPurposes = {
 } satisfies Readonly<Record<ParserEventFaultRecordPurpose, EventFaultRecordPurpose>>;
 
 export function normalizeParserEventFaultCode(value: ParserEventFaultType): EventFaultCode {
-    return eventFaultCodes[value];
+    return typeof value === 'number' ? 'unknown' : eventFaultCodes[value];
 }
 
 export function normalizeParserEventFaultPurpose(value: ParserEventFaultRecordPurpose): EventFaultRecordPurpose {

@@ -87,7 +87,7 @@ function viewModel(): ITechnicalSectionViewModel {
     const controlRecord = createCardControlActivityTechnicalRecord({
         controlCard: null,
         controlledAt: timestamp(Date.UTC(2026, 5, 18, 10)),
-        controlType: 'cardDownloaded',
+        controlType: ['cardDownloaded', 'vehicleUnitDownloaded'],
         downloadPeriodBegin: null,
         downloadPeriodEnd: null,
         registrationMemberState: null,
@@ -122,7 +122,7 @@ function viewModel(): ITechnicalSectionViewModel {
                 key: 'controlType',
                 value: {
                     kind: 'controlType',
-                    value: 'cardDownloaded',
+                    value: ['cardDownloaded', 'vehicleUnitDownloaded'],
                 },
             },
             {
@@ -228,7 +228,7 @@ describe('TechnicalScreen', () => {
         });
         expect(table.classList.contains('wide')).toBe(true);
         expect(table.querySelector('.evidence-details')?.classList.contains('dense')).toBe(true);
-        expect(within(table).getByText('Card downloaded')).toBeTruthy();
+        expect(within(table).getByText('Card downloaded, Vehicle Unit downloaded')).toBeTruthy();
         expect(within(table).getByText('Control card')).toBeTruthy();
         expect(within(table).getByText('Out-of-scope period started')).toBeTruthy();
         expect(within(table).getByText('Not recorded')).toBeTruthy();

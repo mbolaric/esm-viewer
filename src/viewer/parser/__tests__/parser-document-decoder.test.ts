@@ -829,7 +829,7 @@ describe('decodeParserDocument', () => {
                     {
                         controlCardNumber: fullCardNumber('SYNTHETIC0003', 'ControlCard'),
                         controlTime: '2026-06-15 09:00:00 UTC',
-                        controlType: 'VUDownloaded',
+                        controlType: 0x40,
                         downloadPeriodBeginTime: '2026-06-01 00:00:00 UTC',
                         downloadPeriodEndTime: '2026-06-15 09:00:00 UTC',
                     },
@@ -1061,7 +1061,7 @@ describe('decodeParserDocument', () => {
                 {
                     controlCardNumberAndGeneration: cardAndGeneration('SYNTHETIC0003'),
                     controlTime: '2026-06-15 09:00:00 UTC',
-                    controlType: 'VUDownloaded',
+                    controlType: 0x40,
                     downloadPeriodBeginTime: '2026-06-01 00:00:00 UTC',
                     downloadPeriodEndTime: '2026-06-15 09:00:00 UTC',
                 },

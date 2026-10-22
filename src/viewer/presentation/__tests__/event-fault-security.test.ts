@@ -5,6 +5,10 @@ import { classifyEventFaultSecurity, type EventFaultSecurityCategory } from '../
 
 // Exhaustive compile-time mapping: new EventFaultCodes must be classified here.
 const eventFaultCodes: readonly EventFaultCode[] = [
+    'gnssAnomaly',
+    'gnssExternalFacilityAuthenticationFailure',
+    'vuMotionDataAndDriverActivityInconsistency',
+    'recordingEquipmentItsInterfaceFault',
     'cardConflict',
     'cardInsertionWhileDriving',
     'cardNoFurtherDetails',
@@ -54,6 +58,10 @@ const eventFaultCodes: readonly EventFaultCode[] = [
 ];
 
 const expectedCategory: Readonly<Record<EventFaultCode, EventFaultSecurityCategory>> = {
+    gnssAnomaly: 'operationalNotice',
+    gnssExternalFacilityAuthenticationFailure: 'securityCritical',
+    vuMotionDataAndDriverActivityInconsistency: 'securityCritical',
+    recordingEquipmentItsInterfaceFault: 'sensorDiagnostic',
     cardConflict: 'securityCritical',
     cardInsertionWhileDriving: 'operationalNotice',
     cardNoFurtherDetails: 'operationalNotice',

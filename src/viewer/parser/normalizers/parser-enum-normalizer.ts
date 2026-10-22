@@ -35,17 +35,15 @@ const calibrationPurposes: Readonly<Partial<Record<ParserCalibrationPurpose, Cal
     PeriodicInspection: 'periodicInspection',
     Reserved: 'reserved',
     TimeAdjustmentWithoutCalibration: 'timeAdjustmentWithoutCalibration',
-    Unknown: 'unknown',
     VRNEntryByCompany: 'vehicleRegistrationNumberEntryByCompany',
 };
 
-const cardControlActivityTypes: Readonly<Partial<Record<ParserControlType, CardControlActivityType>>> = {
-    CalibrationParameters: 'calibrationParameters',
-    CardDownloaded: 'cardDownloaded',
-    DisplayUsed: 'displayUsed',
-    PrintingDone: 'printingDone',
-    Unknown: 'unknown',
-    VUDownloaded: 'vehicleUnitDownloaded',
+const cardControlActivityTypes: Readonly<Record<number, CardControlActivityType>> = {
+    0x80: 'cardDownloaded',
+    0x40: 'vehicleUnitDownloaded',
+    0x20: 'printingDone',
+    0x10: 'displayUsed',
+    0x08: 'calibrationParameters',
 };
 
 const dailyWorkPeriodEntryTypes: Readonly<Partial<Record<ParserEntryTypeDailyWorkPeriod, DailyWorkPeriodEntryType>>> = {
@@ -106,11 +104,23 @@ export function normalizeParserActivityKind(value: ParserActivityType): Activity
 }
 
 export function normalizeParserCalibrationPurpose(value: ParserCalibrationPurpose): CalibrationPurpose | null {
-    return normalizeParserEnum(value, calibrationPurposes);
+    return typeof value === 'number' ? 'unknown' : normalizeParserEnum(value, calibrationPurposes);
 }
 
-export function normalizeParserCardControlActivityType(value: ParserControlType): CardControlActivityType | null {
-    return normalizeParserEnum(value, cardControlActivityTypes);
+export function normalizeParserCardControlActivityType(value: ParserControlType): readonly CardControlActivityType[] | null {
+    if (!Number.isInteger(value) || value < 0 || value > 0xff) {
+        return null;
+    }
+    if (value === 0) {
+        return ['none'];
+    }
+    const types = Object.entries(cardControlActivityTypes)
+        .filter(([mask]) => (value & Number(mask)) !== 0)
+        .map(([, type]) => type);
+    if ((value & 0x07) !== 0) {
+        types.push('unknown');
+    }
+    return types;
 }
 
 export function normalizeParserDailyWorkPeriodEntryType(value: ParserEntryTypeDailyWorkPeriod): DailyWorkPeriodEntryType | null {

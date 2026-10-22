@@ -69,7 +69,7 @@ describe('driver-card technical evidence', () => {
         const valid = createCardControlActivityTechnicalRecord({
             controlCard: null,
             controlledAt: controlledAtValue,
-            controlType: 'cardDownloaded',
+            controlType: ['cardDownloaded'],
             downloadPeriodBegin: periodBeginValue,
             downloadPeriodEnd: periodEndValue,
             registrationMemberState: null,
@@ -79,7 +79,7 @@ describe('driver-card technical evidence', () => {
         const invalid = createCardControlActivityTechnicalRecord({
             controlCard: null,
             controlledAt: controlledAtValue,
-            controlType: 'cardDownloaded',
+            controlType: ['cardDownloaded'],
             downloadPeriodBegin: periodEndValue,
             downloadPeriodEnd: periodBeginValue,
             registrationMemberState: null,

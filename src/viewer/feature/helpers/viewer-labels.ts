@@ -394,6 +394,7 @@ const calibrationPurposeTranslationKeys = {
 } satisfies Readonly<Record<CalibrationPurpose, TranslationKey>>;
 
 const controlTypeTranslationKeys = {
+    none: 'technical.controlType.none',
     calibrationParameters: 'technical.controlType.calibrationParameters',
     cardDownloaded: 'technical.controlType.cardDownloaded',
     displayUsed: 'technical.controlType.displayUsed',
@@ -422,8 +423,11 @@ export function translateCalibrationPurpose(purpose: CalibrationPurpose, transla
     return translationService.translate(calibrationPurposeTranslationKeys[purpose]);
 }
 
-export function translateControlType(controlType: CardControlActivityType, translationService: ViewerTranslationService): string {
-    return translationService.translate(controlTypeTranslationKeys[controlType]);
+export function translateControlType(
+    controlType: readonly CardControlActivityType[],
+    translationService: ViewerTranslationService,
+): string {
+    return controlType.map((type) => translationService.translate(controlTypeTranslationKeys[type])).join(', ');
 }
 
 export function translateSpecificConditionType(
@@ -578,6 +582,10 @@ const eventFaultCodeTranslationKeys = {
     gnssExternalReceiverFault: 'eventsFaults.code.gnssExternalReceiverFault',
     gnssInternalReceiverFault: 'eventsFaults.code.gnssInternalReceiverFault',
     gnssNoFurtherDetails: 'eventsFaults.code.gnssNoFurtherDetails',
+    gnssAnomaly: 'eventsFaults.code.gnssAnomaly',
+    gnssExternalFacilityAuthenticationFailure: 'eventsFaults.code.gnssExternalFacilityAuthenticationFailure',
+    vuMotionDataAndDriverActivityInconsistency: 'eventsFaults.code.vuMotionDataAndDriverActivityInconsistency',
+    recordingEquipmentItsInterfaceFault: 'eventsFaults.code.recordingEquipmentItsInterfaceFault',
     gnssNoPositionData: 'eventsFaults.code.gnssNoPositionData',
     gnssTamperDetected: 'eventsFaults.code.gnssTamperDetected',
     insertionOfNonValidCard: 'eventsFaults.code.insertionOfNonValidCard',

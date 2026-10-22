@@ -24,7 +24,7 @@ export type TechnicalHexIdentifier = string & {
 };
 
 export type CardControlActivityType =
-    'calibrationParameters' | 'cardDownloaded' | 'displayUsed' | 'printingDone' | 'unknown' | 'vehicleUnitDownloaded';
+    'none' | 'calibrationParameters' | 'cardDownloaded' | 'displayUsed' | 'printingDone' | 'unknown' | 'vehicleUnitDownloaded';
 
 export type SpecificConditionType =
     'ferryTrainCrossing' | 'ferryTrainCrossingEnd' | 'outOfScopeBegin' | 'outOfScopeEnd' | 'unknown';
@@ -261,7 +261,7 @@ export interface IVehicleUnitTimeAdjustmentTechnicalRecord {
 export interface IVehicleUnitControlActivityTechnicalRecord {
     readonly controlCard: IRecordedCardReference | null;
     readonly controlledAt: UtcTimestamp;
-    readonly controlType: CardControlActivityType;
+    readonly controlType: readonly CardControlActivityType[];
     readonly downloadPeriodBegin: UtcTimestamp | null;
     readonly downloadPeriodEnd: UtcTimestamp | null;
     readonly generation: TachographGeneration;
@@ -305,7 +305,7 @@ export interface ICardCurrentUsageTechnicalRecord {
 export interface ICardControlActivityTechnicalRecord {
     readonly controlCard: IRecordedCardReference | null;
     readonly controlledAt: UtcTimestamp;
-    readonly controlType: CardControlActivityType;
+    readonly controlType: readonly CardControlActivityType[];
     readonly downloadPeriodBegin: UtcTimestamp | null;
     readonly downloadPeriodEnd: UtcTimestamp | null;
     readonly generation: TachographGeneration;
@@ -392,7 +392,7 @@ export function isTechnicalText(value: unknown, maximumLength: number): value is
 export interface ICardControlActivityTechnicalRecordInput {
     readonly controlCard: IRecordedCardReference | null;
     readonly controlledAt: UtcTimestamp;
-    readonly controlType: CardControlActivityType;
+    readonly controlType: readonly CardControlActivityType[];
     readonly downloadPeriodBegin: UtcTimestamp | null;
     readonly downloadPeriodEnd: UtcTimestamp | null;
     readonly registrationMemberState: RecordedIssuingMemberState | null;

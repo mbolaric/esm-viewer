@@ -3,6 +3,10 @@ import type { ISourceReference } from './source-reference.js';
 import type { UtcTimestamp } from './time.js';
 
 export type EventFaultCode =
+    | 'gnssAnomaly'
+    | 'gnssExternalFacilityAuthenticationFailure'
+    | 'vuMotionDataAndDriverActivityInconsistency'
+    | 'recordingEquipmentItsInterfaceFault'
     | 'cardConflict'
     | 'cardInsertionWhileDriving'
     | 'cardNoFurtherDetails'

@@ -546,7 +546,7 @@ describe('document view models', () => {
         const control = createCardControlActivityTechnicalRecord({
             controlCard: null,
             controlledAt,
-            controlType: 'cardDownloaded',
+            controlType: ['cardDownloaded'],
             downloadPeriodBegin: null,
             downloadPeriodEnd: null,
             registrationMemberState: null,
@@ -609,7 +609,7 @@ describe('document view models', () => {
             key: 'controlType',
             value: {
                 kind: 'controlType',
-                value: 'cardDownloaded',
+                value: ['cardDownloaded'],
             },
         });
         expect(viewModel.totalCount).toEqual({
@@ -1173,7 +1173,7 @@ describe('document view models', () => {
                 issuingMemberState,
             },
             controlledAt,
-            controlType: 'cardDownloaded',
+            controlType: ['cardDownloaded'],
             downloadPeriodBegin: utc(Date.UTC(2026, 4, 15)),
             downloadPeriodEnd: utc(Date.UTC(2026, 4, 20)),
             source: vehicleUnitSource('/transferResParams/0/data/Control/vuControlActivityRecordArray/records/0'),
@@ -1197,7 +1197,7 @@ describe('document view models', () => {
                             key: 'controlType',
                             value: {
                                 kind: 'controlType',
-                                value: 'cardDownloaded',
+                                value: ['cardDownloaded'],
                             },
                         },
                         {

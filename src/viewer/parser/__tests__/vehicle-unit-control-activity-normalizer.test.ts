@@ -70,7 +70,7 @@ function gen1Control(overrides: Partial<Gen1VuControlActivityRecord> = {}): Gen1
     return {
         controlCardNumber: fullCardNumber(),
         controlTime: '2025-01-01 10:00:00 UTC',
-        controlType: 'CardDownloaded',
+        controlType: 0x80,
         downloadPeriodBeginTime: '2024-12-15 00:00:00 UTC',
         downloadPeriodEndTime: '2024-12-20 00:00:00 UTC',
         ...overrides,
@@ -178,7 +178,7 @@ function gen2Control(overrides: Partial<Gen2VuControlActivityRecord> = {}): Gen2
             generation: 2,
         },
         controlTime: '2025-01-02 11:00:00 UTC',
-        controlType: 'VUDownloaded',
+        controlType: 0x40,
         downloadPeriodBeginTime: '2024-12-21 00:00:00 UTC',
         downloadPeriodEndTime: '2024-12-22 00:00:00 UTC',
         ...overrides,
@@ -191,7 +191,7 @@ describe('normalizeVehicleUnitControlActivity', () => {
             data: {
                 Control: gen1Overview([
                     gen1Control({
-                        controlType: 'CalibrationParameters',
+                        controlType: 0x08,
                     }),
                 ]),
             },
@@ -206,7 +206,7 @@ describe('normalizeVehicleUnitControlActivity', () => {
         const record = result.records[0];
         expect(record?.kind).toBe('vehicleUnitControlActivityTechnicalRecord');
         if (record?.kind === 'vehicleUnitControlActivityTechnicalRecord') {
-            expect(record.controlType).toBe('calibrationParameters');
+            expect(record.controlType).toEqual(['calibrationParameters']);
             expect(record.controlledAt).toBe(1_735_725_600_000);
             expect(record.downloadPeriodBegin).toBe(1_734_220_800_000);
             expect(record.downloadPeriodEnd).toBe(1_734_652_800_000);
@@ -223,7 +223,7 @@ describe('normalizeVehicleUnitControlActivity', () => {
             data: {
                 Control: gen2Overview([
                     gen2Control({
-                        controlType: 'PrintingDone',
+                        controlType: 0x20,
                     }),
                 ]),
             },
@@ -238,7 +238,7 @@ describe('normalizeVehicleUnitControlActivity', () => {
         const record = result.records[0];
         expect(record?.kind).toBe('vehicleUnitControlActivityTechnicalRecord');
         if (record?.kind === 'vehicleUnitControlActivityTechnicalRecord') {
-            expect(record.controlType).toBe('printingDone');
+            expect(record.controlType).toEqual(['printingDone']);
             expect(record.controlledAt).toBe(1_735_815_600_000);
             expect(record.controlCard?.cardNumber).toBe('SYNTHETIC0000001');
             expect(record.generation).toBe('g2');
