@@ -234,7 +234,7 @@ quarantine attribute (`xattr -cr`) or allow the application in macOS Privacy
 ESM Viewer depends on a pinned build of the
 [`esm-parser`](https://github.com/mbolaric/esm-parser) Rust crate (vendored
 as a git submodule under `vendor/esm-parser`, version 0.5.0 at commit
-`197500e`), compiled natively into the
+`f31a2bd`), compiled natively into the
 Tauri host rather than run as WASM in a worker. Normalizers trust the
 parser's generated TypeScript declarations rather than re-validating every
 field at runtime, so an upstream serialization change is expected to fail
@@ -311,6 +311,18 @@ Unrecognized numeric calibration purposes and event/fault codes normalize to
 `unknown`. GNSS anomalies, external GNSS authentication failures, motion/activity
 inconsistencies, and ITS interface faults have dedicated domain codes and labels.
 The parser’s optional write feature remains disabled.
+
+Optional card IC/ICC identification may be absent without rejecting an otherwise
+valid card or emitting invalid-value warnings. Gen2v2 VU overviews use registration
+identification records, retaining the registration country alongside the number.
+Border crossings take their timestamp from the authenticated GNSS record; card
+and VU loading operations retain authenticated positions and odometers without
+inventing country or region fields absent from those records. Gen2v2 VU activity
+sections include bounded border-crossing and load/unload record arrays, and their
+GNSS accumulated-driving positions retain authentication status. Newly decoded
+card authentication sections, workshop calibration additions, and VU map/calibration
+metadata remain available in source inspection; dedicated projections for those
+additional fields are not provided.
 
 Run `pnpm parser:sync-types` after updating the `vendor/esm-parser`
 submodule pin to resync the generated WASM/native boundary declarations.

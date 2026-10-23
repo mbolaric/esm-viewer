@@ -4,6 +4,7 @@ import {
     type IRecordedCardReference,
     type ITachographWarning,
     type TachographGeneration,
+    type TachographLocationRecord,
 } from '#viewer-domain';
 
 import { normalizeWrappedCardReference } from '../card/full-card-identity-normalizer.js';
@@ -13,11 +14,15 @@ import type {
     Gen2FullCardNumberAndGeneration,
     Gen2PlaceAuthRecord,
     Gen2PlaceRecord,
+    Gen2VuBorderCrossingRecord,
+    Gen2VuLoadUnloadRecord,
 } from '../generated/esm_parser.js';
 import {
     appendNormalizedLocation,
     normalizeAccumulatedDrivingPositionRecord,
+    normalizeBorderCrossingRecord,
     normalizeDailyWorkPeriodPlaceRecord,
+    normalizeLoadUnloadRecord,
     type DailyWorkPeriodPlacePositionShape,
     type INormalizedLocationValue,
 } from '../normalizers/location-value-normalizer.js';
@@ -27,7 +32,7 @@ import type { IVehicleUnitActivitySection } from './vehicle-unit-activity-normal
 import { decodeVehicleUnitCountedRecords, decodeVehicleUnitRecordArray } from './vehicle-unit-record-array.js';
 
 export interface INormalizedVehicleUnitLocations {
-    readonly locations: readonly (IAccumulatedDrivingPosition | IDailyWorkPeriodPlace)[];
+    readonly locations: readonly TachographLocationRecord[];
     readonly warnings: readonly ITachographWarning[];
 }
 
@@ -222,11 +227,52 @@ function normalizeGen2Positions(
     };
 }
 
+function normalizeGen2BorderAndLoadRecords(
+    section: Exclude<IVehicleUnitActivitySection, { readonly generation: 'g1' }>,
+    nationAlphaCodes: ParserNationAlphaCodes,
+): INormalizedVehicleUnitLocations {
+    const locations: TachographLocationRecord[] = [];
+    const warnings: ITachographWarning[] = [];
+    const arrays = [
+        ['vuBorderCrossingRecordArray', 'VuBorderCrossingRecord', section.activity.vuBorderCrossingRecordArray],
+        ['vuLoadUnloadRecordArray', 'VuLoadUnloadRecord', section.activity.vuLoadUnloadRecordArray],
+    ] as const;
+    for (const [key, recordType, value] of arrays) {
+        if (value === null) {
+            continue;
+        }
+        const pathTokens = [...section.rootPath, key];
+        const records = decodeVehicleUnitRecordArray<Gen2VuBorderCrossingRecord | Gen2VuLoadUnloadRecord>(
+            value,
+            maximumLocationRecordsPerSection,
+            recordType,
+        );
+        if (section.generation !== 'g2v2' || records === null) {
+            warnings.push(warning('inconsistentData', section.generation, pathTokens));
+            continue;
+        }
+        for (const [index, record] of records.entries()) {
+            const recordPath = [...pathTokens, 'records', index];
+            const input = {
+                generation: section.generation,
+                nationAlphaCodes,
+                pathTokens: recordPath,
+                source: source(section.generation, recordPath),
+                warning,
+            };
+            const normalized =
+                'countryLeft' in record ? normalizeBorderCrossingRecord(record, input) : normalizeLoadUnloadRecord(record, input);
+            appendNormalizedLocation<TachographLocationRecord>(normalized, locations, warnings);
+        }
+    }
+    return { locations, warnings };
+}
+
 export function normalizeVehicleUnitLocations(
     activitySections: readonly IVehicleUnitActivitySection[],
     nationAlphaCodes: ParserNationAlphaCodes,
 ): INormalizedVehicleUnitLocations {
-    const locations: (IAccumulatedDrivingPosition | IDailyWorkPeriodPlace)[] = [];
+    const locations: TachographLocationRecord[] = [];
     const warnings: ITachographWarning[] = [];
     for (const section of activitySections) {
         if (section.generation === 'g1') {
@@ -238,8 +284,9 @@ export function normalizeVehicleUnitLocations(
 
         const places = normalizeGen2Places(section, nationAlphaCodes);
         const positions = normalizeGen2Positions(section, nationAlphaCodes);
-        locations.push(...places.locations, ...positions.locations);
-        warnings.push(...places.warnings, ...positions.warnings);
+        const borderAndLoadRecords = normalizeGen2BorderAndLoadRecords(section, nationAlphaCodes);
+        locations.push(...places.locations, ...positions.locations, ...borderAndLoadRecords.locations);
+        warnings.push(...places.warnings, ...positions.warnings, ...borderAndLoadRecords.warnings);
     }
 
     return {

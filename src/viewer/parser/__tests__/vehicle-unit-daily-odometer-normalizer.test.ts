@@ -19,6 +19,8 @@ function gen1Activity(overrides: Partial<Gen1VUActivity> = {}): Gen1VUActivity {
 
 function gen2Activity(overrides: Partial<Gen2VUActivity> = {}): Gen2VUActivity {
     return {
+        vuBorderCrossingRecordArray: null,
+        vuLoadUnloadRecordArray: null,
         dateOfDayDownloadedRecordArray: {
             noOfRecords: 1,
             recordSize: 4,

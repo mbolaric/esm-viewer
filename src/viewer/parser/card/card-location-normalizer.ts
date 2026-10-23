@@ -126,7 +126,7 @@ export function normalizeCardLocations(
             [...pathTokens, 'loadUnloadOperations'],
             'cardLoadUnloadRecords',
             true,
-            (record, recordPath) => normalizeLoadUnloadRecord(record, { ...context(recordPath), nationAlphaCodes }),
+            (record, recordPath) => normalizeLoadUnloadRecord(record, context(recordPath)),
         ),
         normalizeCyclicSection(
             loadTypeEntries && {

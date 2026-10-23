@@ -189,6 +189,7 @@ function benchmarkControlParameter(): ParserGen2VehicleUnitTransferParameter {
         trepId: 'Gen2Overview',
         vehicleIdentificationNumberRecordArray: recordArray('VehicleIdentificationNumber', ['WVWZZZ1JZXW000001']),
         vehicleRegistrationNumberRecordArray: recordArray('VehicleRegistrationNumber', ['TEST-123']),
+        vehicleRegistrationIdentificationRecordArray: null,
         vuCertificateRaw: [],
         vuCertificateRecordArray: recordArray('VuCertificate', []),
         vuCompanyLocksRecordArray: recordArray('VuCompanyLocksRecord', []),

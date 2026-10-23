@@ -9,12 +9,12 @@ import {
 
 import type {
     Gen1VuOverview,
-    Gen2VehicleIdentificationNumberRecordArray,
-    Gen2VehicleRegistrationNumberRecordArray,
+    Gen2DataInfoGenericRecordArray,
     Gen2VUOverview,
     RecordType,
     VUTransferResponseParameterID,
 } from '../generated/esm_parser.js';
+import { normalizeVehicleRegistration } from '../card/card-vehicle-registration-normalizer.js';
 import { createNormalizationSourceContext } from '../normalization-source.js';
 import type { ParserVehicleUnitTransferParameter } from '../decoders/parser-result-types.js';
 import { normalizeParserNation, type ParserNationAlphaCodes } from '../normalizers/parser-value-normalizer.js';
@@ -25,8 +25,8 @@ interface IVehicleUnitIdentityNormalization {
     readonly warnings: readonly ITachographWarning[];
 }
 
-interface IStringRecordArrayDecode {
-    readonly value: string | null;
+interface IRecordArrayDecode<TRecord> {
+    readonly value: TRecord | null;
     readonly warnings: readonly ITachographWarning[];
 }
 
@@ -34,12 +34,15 @@ const overviewTypeIds: ReadonlySet<VUTransferResponseParameterID> = new Set(['Ge
 
 const { source, warning } = createNormalizationSourceContext('vehicleUnit');
 
-function decodeSingleStringRecordArray(
-    value: Gen2VehicleIdentificationNumberRecordArray | Gen2VehicleRegistrationNumberRecordArray,
+function decodeSingleRecordArray<TRecord>(
+    value: Gen2DataInfoGenericRecordArray<TRecord> | null,
     generation: TachographGeneration,
     pathTokens: readonly (number | string)[],
-    recordType: Extract<RecordType, 'VehicleIdentificationNumber' | 'VehicleRegistrationNumber'>,
-): IStringRecordArrayDecode {
+    recordType: RecordType,
+): IRecordArrayDecode<TRecord> {
+    if (value === null) {
+        return { value: null, warnings: [warning('missingValue', generation, pathTokens)] };
+    }
     const records = decodeVehicleUnitRecordArray(value, 1, recordType);
     if (records === null) {
         return {
@@ -106,6 +109,7 @@ function normalizeGen2Overview(
     expectedTypeId: VUTransferResponseParameterID,
     generation: TachographGeneration,
     pathTokens: readonly (number | string)[],
+    nationAlphaCodes: ParserNationAlphaCodes,
 ): IVehicleUnitIdentityNormalization {
     if (overview.trepId !== expectedTypeId) {
         return {
@@ -115,20 +119,13 @@ function normalizeGen2Overview(
     }
 
     const vehicleIdentificationPath = [...pathTokens, 'vehicleIdentificationNumberRecordArray'];
-    const vehicleRegistrationPath = [...pathTokens, 'vehicleRegistrationNumberRecordArray'];
-    const vehicleIdentification = decodeSingleStringRecordArray(
+    const vehicleIdentification = decodeSingleRecordArray(
         overview.vehicleIdentificationNumberRecordArray,
         generation,
         vehicleIdentificationPath,
         'VehicleIdentificationNumber',
     );
-    const vehicleRegistration = decodeSingleStringRecordArray(
-        overview.vehicleRegistrationNumberRecordArray,
-        generation,
-        vehicleRegistrationPath,
-        'VehicleRegistrationNumber',
-    );
-    const warnings: ITachographWarning[] = [...vehicleIdentification.warnings, ...vehicleRegistration.warnings];
+    const warnings: ITachographWarning[] = [...vehicleIdentification.warnings];
 
     const vehicleIdentificationNumber = isVehicleIdentificationNumber(vehicleIdentification.value)
         ? vehicleIdentification.value
@@ -137,14 +134,49 @@ function normalizeGen2Overview(
         warnings.push(warning('invalidValue', generation, [...vehicleIdentificationPath, 'records', 0]));
     }
 
-    const registrationNumber = isVehicleRegistrationNumber(vehicleRegistration.value) ? vehicleRegistration.value : null;
-    if (vehicleRegistration.value !== null && registrationNumber === null) {
-        warnings.push(warning('invalidValue', generation, [...vehicleRegistrationPath, 'records', 0]));
+    let registrationNumber: IVehicleIdentity['registrationNumber'] = null;
+    let registrationMemberState: IVehicleIdentity['registrationMemberState'] = null;
+    const vehicleRegistrationPath = [
+        ...pathTokens,
+        generation === 'g2v2' ? 'vehicleRegistrationIdentificationRecordArray' : 'vehicleRegistrationNumberRecordArray',
+    ];
+    if (generation === 'g2v2') {
+        const decoded = decodeSingleRecordArray(
+            overview.vehicleRegistrationIdentificationRecordArray,
+            generation,
+            vehicleRegistrationPath,
+            'VehicleRegistrationIdentification',
+        );
+        warnings.push(...decoded.warnings);
+        if (decoded.value !== null) {
+            const registration = normalizeVehicleRegistration(
+                decoded.value,
+                generation,
+                [...vehicleRegistrationPath, 'records', 0],
+                nationAlphaCodes,
+                warning,
+            );
+            registrationNumber = registration.number;
+            registrationMemberState = registration.memberState;
+            warnings.push(...registration.warnings);
+        }
+    } else {
+        const decoded = decodeSingleRecordArray(
+            overview.vehicleRegistrationNumberRecordArray,
+            generation,
+            vehicleRegistrationPath,
+            'VehicleRegistrationNumber',
+        );
+        warnings.push(...decoded.warnings);
+        registrationNumber = isVehicleRegistrationNumber(decoded.value) ? decoded.value : null;
+        if (decoded.value !== null && registrationNumber === null) {
+            warnings.push(warning('invalidValue', generation, [...vehicleRegistrationPath, 'records', 0]));
+        }
     }
 
     return {
         identity: createVehicleIdentity({
-            registrationMemberState: null,
+            registrationMemberState,
             registrationNumber,
             source: source(generation, pathTokens),
             vehicleIdentificationNumber,
@@ -210,5 +242,5 @@ export function normalizeVehicleUnitIdentity(
 
     return isGen1
         ? normalizeGen1Overview(overview, generation, overviewPath, nationAlphaCodes)
-        : normalizeGen2Overview(overview, parameter.typeId, generation, overviewPath);
+        : normalizeGen2Overview(overview, parameter.typeId, generation, overviewPath, nationAlphaCodes);
 }

@@ -41,6 +41,8 @@ function gen1Condition(overrides: Partial<SpecificConditionRecord> = {}): Specif
 
 function gen2Activity(records: SpecificConditionRecord[]): Gen2VUActivity {
     return {
+        vuBorderCrossingRecordArray: null,
+        vuLoadUnloadRecordArray: null,
         dateOfDayDownloadedRecordArray: {
             noOfRecords: 0,
             recordSize: 0,

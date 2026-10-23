@@ -117,6 +117,12 @@ function gen1Calibration(): Gen1VuCalibrationRecord {
 function gen2Calibration(): Gen2VuCalibrationRecord {
     return {
         ...gen1Calibration(),
+        sensorSerialNumber: null,
+        sensorGnssSerialNumber: null,
+        rcmSerialNumber: null,
+        byDefaultLoadType: null,
+        calibrationCountry: null,
+        calibrationCountryTimestamp: null,
         isGen2V2: true,
         sealDataVu: {
             sealRecords: [],
@@ -150,6 +156,7 @@ function gen2Identification(): Gen2VuIdentification {
         isGen2V2: true,
         vuAbility: 2,
         vuGeneration: 2,
+        vuDigitalMapVersion: null,
     };
 }
 
@@ -175,7 +182,8 @@ function gen2Overview(): Gen2VUOverview {
         signatureRecordArray: recordArray('Signature', []),
         trepId: 'Gen2v2Overview',
         vehicleIdentificationNumberRecordArray: recordArray('VehicleIdentificationNumber', []),
-        vehicleRegistrationNumberRecordArray: recordArray('VehicleRegistrationNumber', []),
+        vehicleRegistrationNumberRecordArray: null,
+        vehicleRegistrationIdentificationRecordArray: recordArray('VehicleRegistrationIdentification', []),
         vuCertificateRaw: [],
         vuCertificateRecordArray: recordArray('VuCertificate', []),
         vuCompanyLocksRecordArray: recordArray('VuCompanyLocksRecord', []),
@@ -254,7 +262,7 @@ function embeddedCardRecord(structureVersion = 2): Gen2VuCardRecord {
         },
         cardNumber: {
             cardConsecutiveindex: '',
-            cardIssuingMemberState: 'DriverCard',
+            equipmentType: 'DriverCard',
             cardReplacementindex: '',
             cardRenewalindex: '',
             identification: '',
@@ -941,7 +949,7 @@ describe('embedded card snapshot normalization', () => {
             cardIssuingMemberState: 'Germany',
             cardNumber: {
                 cardConsecutiveindex: '',
-                cardIssuingMemberState: 'DriverCard',
+                equipmentType: 'DriverCard',
                 cardRenewalindex: '1',
                 cardReplacementindex: '0',
                 identification: 'SYNTHETIC00000',

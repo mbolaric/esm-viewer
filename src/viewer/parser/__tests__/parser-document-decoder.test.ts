@@ -587,6 +587,7 @@ describe('decodeParserDocument', () => {
         expect(result.value).toMatchObject({
             generation: 'g2v2',
             identity: {
+                registrationMemberState: 'D',
                 registrationNumber: 'TEST-123',
                 vehicleIdentificationNumber: 'WVWZZZ1JZXW000001',
             },
@@ -1096,7 +1097,7 @@ describe('decodeParserDocument', () => {
             },
             cardNumber: {
                 cardConsecutiveindex: '',
-                cardIssuingMemberState: 'DriverCard',
+                equipmentType: 'DriverCard',
                 cardReplacementindex: '',
                 cardRenewalindex: '',
                 identification: '',
@@ -1124,6 +1125,7 @@ describe('decodeParserDocument', () => {
             similarEventsNumber: 2,
         };
         const identification: Gen2VuIdentification = {
+            vuDigitalMapVersion: null,
             isGen2V2: true,
             vuAbility: 2,
             vuApprovalNumber: 'APPROVAL',
@@ -1144,6 +1146,12 @@ describe('decodeParserDocument', () => {
             },
         };
         const calibration: Gen2VuCalibrationRecord = {
+            sensorSerialNumber: null,
+            sensorGnssSerialNumber: null,
+            rcmSerialNumber: null,
+            byDefaultLoadType: null,
+            calibrationCountry: null,
+            calibrationCountryTimestamp: null,
             authorisedSpeed: 90,
             calibrationPurpose: 'PeriodicInspection',
             isGen2V2: true,

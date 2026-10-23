@@ -117,11 +117,12 @@ function gen2Overview(controls: Gen2VuControlActivityRecord[]): Gen2VUOverview {
             recordType: 'VehicleIdentificationNumber',
             records: ['WVWZZZ1JZXW000001'],
         },
-        vehicleRegistrationNumberRecordArray: {
+        vehicleRegistrationNumberRecordArray: null,
+        vehicleRegistrationIdentificationRecordArray: {
             noOfRecords: 1,
-            recordSize: 15,
-            recordType: 'VehicleRegistrationNumber',
-            records: ['1234ABC'],
+            recordSize: 16,
+            recordType: 'VehicleRegistrationIdentification',
+            records: [{ vehicleRegistrationNation: 'Germany', vehicleRegistrationNumber: '1234ABC' }],
         },
         vuCertificateRaw: [],
         vuCertificateRecordArray: {

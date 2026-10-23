@@ -131,7 +131,7 @@ function identification(): NonNullable<Gen1DriverCard['identification']> {
             cardIssuingMemberState: 'Germany',
             cardNumber: {
                 cardConsecutiveindex: '',
-                cardIssuingMemberState: 'DriverCard',
+                equipmentType: 'DriverCard',
                 cardRenewalindex: '1',
                 cardReplacementindex: '0',
                 identification: 'SYNTHETIC00000',
@@ -232,6 +232,8 @@ export function gen2DriverCard(overrides: Partial<Gen2DriverCard> = {}): Gen2Dri
         },
         applicationIdentificationV2: null,
         borderCrossings: null,
+        placesAuthentication: null,
+        gnssPlacesAuthentication: null,
         caCertificate: null,
         cardCertificate: null,
         cardChipIdentification: cardChipIdentification(),
@@ -366,7 +368,10 @@ export function gen2VuOverview(typeId: 'Gen2Overview' | 'Gen2v2Overview'): Gen2V
         signatureRecordArray: recordArray('Signature', []),
         trepId: typeId,
         vehicleIdentificationNumberRecordArray: recordArray('VehicleIdentificationNumber', ['WVWZZZ1JZXW000001']),
-        vehicleRegistrationNumberRecordArray: recordArray('VehicleRegistrationNumber', ['TEST-123']),
+        vehicleRegistrationNumberRecordArray:
+            typeId === 'Gen2Overview' ? recordArray('VehicleRegistrationNumber', ['TEST-123']) : null,
+        vehicleRegistrationIdentificationRecordArray:
+            typeId === 'Gen2v2Overview' ? recordArray('VehicleRegistrationIdentification', [vehicleRegistration()]) : null,
         vuCertificateRaw: [],
         vuCertificateRecordArray: recordArray('VuCertificate', []),
         vuCompanyLocksRecordArray: recordArray('VuCompanyLocksRecord', []),
@@ -384,6 +389,8 @@ export function gen2VuActivity(isGen2V2 = false): Gen2VUActivity {
         vuActivityDailyRecordArray: recordArray('ActivityChangeInfo', []),
         vuCardIWRecordArray: recordArray('VuCardIWRecord', []),
         vuGnssadRecordArray: recordArray('VuGNSSADRecord', []),
+        vuBorderCrossingRecordArray: null,
+        vuLoadUnloadRecordArray: null,
         vuPlaceDailyWorkPeriodRecordArray: {
             isGen2V2,
             ...recordArray('VuPlaceDailyWorkPeriodRecord', []),

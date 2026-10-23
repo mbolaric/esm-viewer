@@ -35,7 +35,6 @@ import type {
     Gen2PlaceAuthRecord,
     Gen2PlaceRecord,
     Gen2VuGnssadRecord,
-    OdometerShort,
     RegionNumeric,
 } from '../generated/esm_parser.js';
 import {
@@ -253,10 +252,7 @@ interface IRequiredPlaceAndOdometer {
 // Accumulated-driving positions, border crossings and load/unload operations all carry a required GNSS place and
 // the odometer reading at that place.
 function normalizeRequiredPlaceAndOdometer(
-    value: {
-        readonly gnssPlaceRecord: Gen2GnssPlaceAuthRecord | Gen2GnssPlaceRecord;
-        readonly vehicleOdometerValue: OdometerShort;
-    },
+    value: Gen2GnssAccumulatedDrivingRecord | Gen2VuGnssadRecord | Gen2BorderCrossingRecord | Gen2LoadUnloadRecord,
     input: {
         readonly generation: TachographGeneration;
         readonly pathTokens: readonly (number | string)[];
@@ -264,13 +260,24 @@ function normalizeRequiredPlaceAndOdometer(
     },
     warnings: ITachographWarning[],
 ): IRequiredPlaceAndOdometer {
-    const position = normalizeGnssPositionEvidence(
-        value.gnssPlaceRecord,
-        input.generation,
-        [...input.pathTokens, 'gnssPlaceRecord'],
-        'required',
-        input.warning,
-    );
+    const authenticated = 'gnssPlaceAuthRecord' in value && (!('isGen2V2' in value) || value.isGen2V2);
+    const place =
+        authenticated && 'gnssPlaceAuthRecord' in value
+            ? value.gnssPlaceAuthRecord
+            : 'gnssPlaceRecord' in value
+              ? value.gnssPlaceRecord
+              : null;
+    const placePath = [...input.pathTokens, authenticated ? 'gnssPlaceAuthRecord' : 'gnssPlaceRecord'];
+    const position =
+        place === null
+            ? { value: null, warnings: [input.warning('missingValue', input.generation, placePath)] }
+            : normalizeGnssPositionEvidence(
+                  place,
+                  input.generation,
+                  placePath,
+                  authenticated ? 'authenticatedRequired' : 'required',
+                  input.warning,
+              );
     warnings.push(...position.warnings);
     const odometer = normalizeParserOdometerWithWarning(
         value.vehicleOdometerValue,
@@ -321,9 +328,9 @@ export function normalizeBorderCrossingRecord(
     input: IBorderCrossingNormalizationInput,
 ): INormalizedLocationValue<IBorderCrossing> {
     const warnings: ITachographWarning[] = [];
-    const crossedAt = normalizeParserUtcTimestamp(value.timeStamp);
+    const crossedAt = normalizeParserUtcTimestamp(value.gnssPlaceAuthRecord.timeStamp);
     if (!isRecordedParserTimestamp(crossedAt)) {
-        warnings.push(input.warning('invalidValue', input.generation, [...input.pathTokens, 'timeStamp']));
+        warnings.push(input.warning('invalidValue', input.generation, [...input.pathTokens, 'gnssPlaceAuthRecord', 'timeStamp']));
     }
     const rawCountryLeft = value.countryLeft;
     const countryLeft = rawCountryLeft === 'Unknown' ? null : normalizeParserNation(rawCountryLeft, input.nationAlphaCodes);
@@ -356,7 +363,6 @@ export function normalizeBorderCrossingRecord(
 
 interface ILoadUnloadOperationNormalizationInput {
     readonly generation: TachographGeneration;
-    readonly nationAlphaCodes: ParserNationAlphaCodes;
     readonly pathTokens: readonly (number | string)[];
     readonly source: ISourceReference;
     readonly warning: ParserWarningFactory;
@@ -369,9 +375,6 @@ export function normalizeLoadUnloadRecord(
     const warnings: ITachographWarning[] = [];
     const operationAt = normalizeParserUtcTimestamp(value.timeStamp);
     const operationType = normalizeParserOperationType(value.operationType);
-    const rawCountry = value.country;
-    const country = rawCountry === 'Unknown' ? null : normalizeParserNation(rawCountry, input.nationAlphaCodes);
-    const region = decodeDailyWorkPeriodRegion(value.region);
 
     if (!isRecordedParserTimestamp(operationAt)) {
         warnings.push(input.warning('invalidValue', input.generation, [...input.pathTokens, 'timeStamp']));
@@ -379,21 +382,18 @@ export function normalizeLoadUnloadRecord(
     if (operationType === null) {
         warnings.push(input.warning('unsupportedData', input.generation, [...input.pathTokens, 'operationType']));
     }
-    if (country === null && rawCountry !== 'Unknown') {
-        warnings.push(input.warning('unsupportedData', input.generation, [...input.pathTokens, 'country']));
-    }
     const { odometer, position } = normalizeRequiredPlaceAndOdometer(value, input, warnings);
 
     return {
         value: !isRecordedParserTimestamp(operationAt)
             ? null
             : createLoadUnloadOperation({
-                  country,
+                  country: null,
                   odometer,
                   operationAt,
                   operationType: operationType ?? 'unknown',
                   position,
-                  region: region.status === 'known' ? region.value : null,
+                  region: null,
                   source: input.source,
               }),
         warnings: warnings,

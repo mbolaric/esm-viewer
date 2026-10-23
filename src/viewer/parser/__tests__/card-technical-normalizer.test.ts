@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { Gen2DriverCard } from '../generated/esm_parser.js';
 import { normalizeCardTechnicalData } from '../card/card-technical-normalizer.js';
 import { decodeParserNationAlphaCodes, type ParserNationAlphaCodes } from '../normalizers/parser-value-normalizer.js';
-import { fullCardNumber, gen2DriverCard, vehicleRegistration } from './parser-fixtures.js';
+import { fullCardNumber, gen1DriverCard, gen2DriverCard, vehicleRegistration } from './parser-fixtures.js';
 
 function nationAlphaCodes(): ParserNationAlphaCodes {
     const decoded = decodeParserNationAlphaCodes({
@@ -59,6 +59,18 @@ function application(): Gen2DriverCard {
 }
 
 describe('driver-card technical normalization', () => {
+    it.each(['g1', 'g2'] as const)('accepts absent IC and ICC identification for %s', (generation) => {
+        const overrides = { cardChipIdentification: null, cardIccIdentification: null };
+        const raw = generation === 'g1' ? gen1DriverCard(overrides) : gen2DriverCard(overrides);
+        const result = normalizeCardTechnicalData(raw, generation, ['cardDataResponses'], nationAlphaCodes());
+
+        expect(result.warnings).toEqual([]);
+        expect(
+            result.records.some((record) => record.kind === 'cardChipTechnicalData' || record.kind === 'cardIccTechnicalData'),
+        ).toBe(false);
+        expect(result.records.some((record) => record.kind === 'cardApplicationTechnicalData')).toBe(true);
+    });
+
     it('normalizes identification, operational records, and canonical source paths', () => {
         const result = normalizeCardTechnicalData(application(), 'g2v2', ['cardDataResponses', 'Gen2'], nationAlphaCodes());
 
@@ -152,6 +164,9 @@ describe('driver-card technical normalization', () => {
 
     it('rejects semantically inconsistent technical values', () => {
         const raw = application();
+        if (raw.cardChipIdentification === null) {
+            throw new Error('Synthetic chip identification must be present.');
+        }
         const result = normalizeCardTechnicalData(
             {
                 ...raw,
@@ -179,6 +194,9 @@ describe('driver-card technical normalization', () => {
 
     it('normalizes control activity with null download period timestamps without warnings', () => {
         const raw = application();
+        if (raw.cardChipIdentification === null) {
+            throw new Error('Synthetic chip identification must be present.');
+        }
         if (raw.controlActivityData === null) {
             throw new Error('Synthetic technical records must be populated.');
         }

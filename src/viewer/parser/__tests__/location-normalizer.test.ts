@@ -1,11 +1,20 @@
 import { describe, expect, it } from 'vitest';
 
 import { normalizeCardLocations } from '../card/card-location-normalizer.js';
+import type { Gen2VuBorderCrossingRecord, Gen2VuLoadUnloadRecord } from '../generated/esm_parser.js';
 import type { ParserGen2VehicleUnitTransferParameter } from '../decoders/parser-result-types.js';
 import { decodeParserNationAlphaCodes, type ParserNationAlphaCodes } from '../normalizers/parser-value-normalizer.js';
 import { normalizeVehicleUnitActivitySections } from '../vehicle-unit/vehicle-unit-activity-normalizer.js';
 import { normalizeVehicleUnitLocations } from '../vehicle-unit/vehicle-unit-location-normalizer.js';
-import { fullCardNumber, gen1DriverCard, gen2DriverCard, gnssPlaceRecord, recordArray } from './parser-fixtures.js';
+import {
+    cardAndGeneration,
+    fullCardNumber,
+    gen1DriverCard,
+    gen2DriverCard,
+    gen2VuActivity,
+    gnssPlaceRecord,
+    recordArray,
+} from './parser-fixtures.js';
 
 function nationAlphaCodes(): ParserNationAlphaCodes {
     const decoded = decodeParserNationAlphaCodes({
@@ -178,11 +187,17 @@ describe('location normalization', () => {
                         signatureRecordArray: null,
                         vuActivityDailyRecordArray: recordArray('ActivityChangeInfo', []),
                         vuCardIWRecordArray: recordArray('VuCardIWRecord', []),
+                        vuBorderCrossingRecordArray: null,
+                        vuLoadUnloadRecordArray: null,
                         vuGnssadRecordArray: recordArray('VuGNSSADRecord', [
                             {
                                 cardNumberAndGenCodriverSlot: coDriverCard,
                                 cardNumberAndGenDriverSlot: driverCard,
-                                gnssPlaceRecord: gnssPlaceRecord('2026-06-18 11:38:57 UTC', 40.4421, -3.6875),
+                                gnssPlaceRecord: null,
+                                gnssPlaceAuthRecord: {
+                                    ...gnssPlaceRecord('2026-06-18 11:38:57 UTC', 40.4421, -3.6875),
+                                    authenticationStatus: 1,
+                                },
                                 isGen2V2: true,
                                 timeStamp: '2026-06-18 11:39:00 UTC',
                                 vehicleOdometerValue: 12_470,
@@ -245,9 +260,116 @@ describe('location normalization', () => {
                 cardNumber: 'SYNTHETIC0000001',
             },
             kind: 'accumulatedDrivingPosition',
+            position: { authenticationStatus: 1 },
             source: {
                 path: '/transferResParams/0/data/Activity/vuGnssadRecordArray/records/0',
             },
         });
+    });
+
+    it('reads card border timestamps and loading positions from authenticated GNSS records', () => {
+        const place = { ...gnssPlaceRecord('2026-06-18 11:38:57 UTC', 40.4421, -3.6875), authenticationStatus: 1 };
+        const application = gen2DriverCard({
+            borderCrossings: {
+                borderCrossingPointerNewestRecord: 0,
+                cardBorderCrossingRecords: [
+                    {
+                        countryLeft: 'Germany',
+                        countryEntered: 'Unknown',
+                        gnssPlaceAuthRecord: place,
+                        vehicleOdometerValue: 12_470,
+                    },
+                ],
+            },
+            loadUnloadOperations: {
+                loadUnloadPointerNewestRecord: 0,
+                cardLoadUnloadRecords: [
+                    {
+                        timeStamp: '2026-06-18 11:39:00 UTC',
+                        operationType: 'Load',
+                        gnssPlaceAuthRecord: place,
+                        vehicleOdometerValue: 12_471,
+                    },
+                ],
+            },
+        });
+        const result = normalizeCardLocations(application, 'g2v2', ['cardDataResponses', 'gen2'], nationAlphaCodes());
+
+        expect(result.warnings).toEqual([]);
+        expect(result.locations).toMatchObject([
+            {
+                kind: 'borderCrossing',
+                countryLeft: 'D',
+                countryEntered: null,
+                crossedAt: Date.UTC(2026, 5, 18, 11, 38, 57),
+                position: { authenticationStatus: 1 },
+                odometer: 12_470,
+            },
+            {
+                kind: 'loadUnloadOperation',
+                country: null,
+                region: null,
+                operationAt: Date.UTC(2026, 5, 18, 11, 39),
+                position: { authenticationStatus: 1 },
+                odometer: 12_471,
+            },
+        ]);
+    });
+
+    it.each([false, true])('normalizes VU border and load arrays with bounded validation (inconsistent: %s)', (inconsistent) => {
+        const place = { ...gnssPlaceRecord('2026-06-18 11:38:57 UTC', 40.4421, -3.6875), authenticationStatus: 1 };
+        const cards = { cardNumberAndGenDriverSlot: cardAndGeneration(), cardNumberAndGenCodriverSlot: cardAndGeneration() };
+        const crossings = recordArray<Gen2VuBorderCrossingRecord>('VuBorderCrossingRecord', [
+            {
+                ...cards,
+                countryLeft: 'Germany',
+                countryEntered: 'Germany',
+                gnssPlaceAuthRecord: place,
+                vehicleOdometerValue: 12_470,
+            },
+        ]);
+        const activity = {
+            ...gen2VuActivity(true),
+            vuBorderCrossingRecordArray: { ...crossings, noOfRecords: inconsistent ? 2 : 1 },
+            vuLoadUnloadRecordArray: recordArray<Gen2VuLoadUnloadRecord>('VuLoadUnloadRecord', [
+                {
+                    ...cards,
+                    timeStamp: '2026-06-18 11:39:00 UTC',
+                    operationType: 'Unload',
+                    gnssPlaceAuthRecord: place,
+                    vehicleOdometerValue: 12_471,
+                },
+            ]),
+        };
+        const sections = normalizeVehicleUnitActivitySections(
+            [{ data: { Activity: activity }, position: 0, typeId: 'Gen2v2Activities' }],
+            'g2v2',
+        );
+        const result = normalizeVehicleUnitLocations(sections.sections, nationAlphaCodes());
+
+        expect(sections.warnings).toEqual([]);
+        expect(result.locations).toHaveLength(inconsistent ? 1 : 2);
+        expect(result.locations.at(-1)).toMatchObject({
+            kind: 'loadUnloadOperation',
+            country: null,
+            region: null,
+            odometer: 12_471,
+            position: { authenticationStatus: 1 },
+            source: { path: '/transferResParams/0/data/Activity/vuLoadUnloadRecordArray/records/0' },
+        });
+        if (inconsistent) {
+            expect(result.warnings).toMatchObject([
+                { code: 'inconsistentData', source: { path: '/transferResParams/0/data/Activity/vuBorderCrossingRecordArray' } },
+            ]);
+        } else {
+            expect(result.warnings).toEqual([]);
+            expect(result.locations[0]).toMatchObject({
+                kind: 'borderCrossing',
+                countryLeft: 'D',
+                countryEntered: 'D',
+                crossedAt: Date.UTC(2026, 5, 18, 11, 38, 57),
+                source: { path: '/transferResParams/0/data/Activity/vuBorderCrossingRecordArray/records/0' },
+            });
+        }
     });
 });

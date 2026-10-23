@@ -163,6 +163,9 @@ function normalizeChipTechnicalData(
 ): INormalizedCardTechnicalData {
     const recordPath = [...pathTokens, 'cardChipIdentification'];
     const value = application.cardChipIdentification;
+    if (value === null) {
+        return { records: [], warnings: [] };
+    }
 
     const serialBytes = decodeBytes(value.icSerialNumber, 4);
     const manufacturingBytes = decodeBytes(value.icManufacturingReferences, 4);
@@ -199,6 +202,9 @@ function normalizeIccTechnicalData(
 ): INormalizedCardTechnicalData {
     const recordPath = [...pathTokens, 'cardIccIdentification'];
     const value = application.cardIccIdentification;
+    if (value === null) {
+        return { records: [], warnings: [] };
+    }
     const extendedSerialNumber = normalizeTechnicalExtendedSerialNumber(value.cardExtendedSerialNumber);
     if (
         value.cardApprovalNumber.length > 8 ||
