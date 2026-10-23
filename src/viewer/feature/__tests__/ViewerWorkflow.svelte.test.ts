@@ -1,4 +1,5 @@
 import { classifyParseError } from '#contracts';
+import { createSourceReference, isJsonPointer } from '#viewer-domain';
 import { cleanup, fireEvent, screen, waitFor, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
@@ -285,6 +286,46 @@ describe('viewer open workflow', () => {
 
         await fireEvent.click(within(navigator).getByRole('button', { name: 'Overview' }));
         expect(await screen.findByRole('heading', { name: 'Overview' })).toBeTruthy();
+    });
+
+    it('opens Raw data at the top after scrolling an automatically verified Integrity view', async () => {
+        const path = '/identity';
+        if (!isJsonPointer(path)) {
+            throw new TypeError('The verification source fixture must be a valid JSON pointer.');
+        }
+        const source = createSourceReference('driverCard', 'g1', path);
+        const harness = createViewerDocumentHarness({
+            preferencesAutoRun: true,
+            verifyMock: () =>
+                Promise.resolve({
+                    ok: true,
+                    value: {
+                        status: 'valid',
+                        items: [{ generation: 'g1', recordId: 'Identity', status: 'valid', source }],
+                    },
+                }),
+        });
+        renderWorkflow(harness);
+        await startOpen(harness);
+        harness.completeLatestParser(harness.successfulParserResult());
+        await screen.findByRole('heading', { name: 'Overview', level: 1 });
+        const navigator = screen.getByRole('navigation', { name: 'Document sections' });
+        await fireEvent.click(within(navigator).getByRole('button', { name: 'Integrity' }));
+        await screen.findByRole('heading', { name: 'Integrity', level: 1 });
+        await screen.findByText('Identity', { selector: 'code' });
+        const main = screen.getByRole('main');
+        main.scrollTop = 3200;
+        main.scrollLeft = 120;
+
+        await fireEvent.click(within(navigator).getByRole('button', { name: 'Raw data' }));
+
+        const heading = await screen.findByRole('heading', { name: 'Raw data', level: 1 });
+        await waitFor(() => {
+            expect(main.scrollTop).toBe(0);
+            expect(main.scrollLeft).toBe(0);
+        });
+        expect(document.activeElement).toBe(heading);
+        expect(screen.getByRole('tree', { name: 'Decoded evidence tree' })).toBeTruthy();
     });
 
     it('restores Overview warning expansion and reading position after opening a source', async () => {

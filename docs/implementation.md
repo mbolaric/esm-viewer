@@ -1638,7 +1638,11 @@ color-contrast, layout-dependent target size, and viewport-zoom metadata —
 are excluded from the automated run and are covered by manual and visual
 review instead, not skipped outright. Screen changes move focus to the shared
 level-one screen heading, including Compliance, so keyboard and screen-reader
-users receive the new section context. `src/ui/styles/tokens.css` also
+users receive the new section context. After the mounted screen finishes updating,
+the shared main viewport explicitly resets both scroll offsets so a long screen
+such as Integrity cannot leave the next screen outside the visible area.
+Returning from a Raw Data source link then restores the saved reading position.
+`src/ui/styles/tokens.css` also
 defines a `@media (forced-colors: active)` block, so Windows High Contrast
 Mode gets its own token overrides rather than relying on the default theme
 colors remaining legible under forced colors. The operating-system
