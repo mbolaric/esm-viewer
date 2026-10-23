@@ -706,6 +706,15 @@
         -webkit-overflow-scrolling: touch;
     }
 
+    /* Standard scrollbar properties override WebKit's sized native scrollbar styling. */
+    @supports selector(::-webkit-scrollbar) {
+        .table-body-scroll,
+        .table-scroll {
+            scrollbar-width: auto;
+            scrollbar-color: auto;
+        }
+    }
+
     .table-scroll::-webkit-scrollbar {
         height: var(--size-scrollbar);
         width: var(--size-scrollbar);

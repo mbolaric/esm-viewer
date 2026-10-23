@@ -54,7 +54,7 @@ describe('responsive shell layout', () => {
             /\.document-workspace \.main-content \{[\s\S]*?grid-template-rows: var\(--layout-shell-main-rows\);/,
         );
         expect(recordSectionLayout).toMatch(
-            /article\.fill-height \{[\s\S]*?position: relative;[\s\S]*?min-block-size: var\(--size-full\);/,
+            /article\.fill-height \{[\s\S]*?position: relative;[\s\S]*?block-size: var\(--size-full\);[\s\S]*?min-block-size: min-content;/,
         );
         expect(recordSectionLayout).not.toMatch(/article\.fill-height \{[^}]*overflow/);
         expect(recordSectionLayout).toMatch(/article\.fill-height :global\(\.table-section\) \{\s*min-block-size: auto;/);

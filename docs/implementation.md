@@ -161,7 +161,12 @@ When the available block size cannot contain that table floor, the owning
 screen scrolls vertically while the table retains its independent bounded row
 viewport and horizontal data scrolling. Intermediate evidence and history
 panels propagate the same minimum, and short viewports reduce table-screen
-spacing. Its content security policy allows scripts only
+spacing. Fill-height record layouts use a definite available block size with a
+content minimum so flex children fill the first render and resize consistently.
+Table scrollbars use the existing sized native WebKit styling where supported,
+without standard scrollbar properties overriding that styling; other engines
+retain standard scrollbar colors and thickness.
+Its content security policy allows scripts only
 from `'self'` (no remote or inline script execution), consistent with the
 app making no runtime network calls. `connect-src` permits only `'self'`,
 `ipc://localhost` and `http://ipc.localhost`, the exact local Tauri IPC origins.

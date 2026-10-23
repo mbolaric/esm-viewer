@@ -51,15 +51,16 @@
     }
 
     /*
-     * Fills at least the main area's actual height so the table takes the remaining
-     * space. When that height cannot hold the table floor, the article grows to its
+     * A definite height lets flex children fill the available space on the first
+     * layout. When that height cannot hold the table floor, the article grows to its
      * content and the main area scrolls, keeping the main area's end padding below the
      * table and avoiding a nested scroll region. Positioned so absolutely placed
      * descendants stay within its bounds.
      */
     article.fill-height {
         position: relative;
-        min-block-size: var(--size-full);
+        block-size: var(--size-full);
+        min-block-size: min-content;
         display: flex;
         flex-direction: column;
     }
